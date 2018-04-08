@@ -1,0 +1,5 @@
+include README.rst
+include LICENSE
+include straditize/widgets/icons/*.png
+include straditize/widgets/docs/*.rst
+include straditize/widgets/docs/*.png

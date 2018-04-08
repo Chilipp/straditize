@@ -1,0 +1,6 @@
+# indices per bar. Each row contains the indices for one bar
+# in ../bar_diagram.png
+0 3 
+8 11
+11 14
+17 20
