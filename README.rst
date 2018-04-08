@@ -55,3 +55,5 @@ dependencies via::
 It can then be started from the command line via::
 
     straditize
+
+.. _anaconda: https://www.continuum.io/downloads
