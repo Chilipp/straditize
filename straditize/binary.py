@@ -980,8 +980,7 @@ class DataReader(LabelSelection):
         except ValueError:  # probably none of the lines is thick enough
             if all(len(indices) < min_lw for indices in np.split(
                     locs, np.where(np.diff(locs) != 1)[0]+1)):
-                raise ValueError("All found lines are thicker then the "
-                                 "minimum linewidth %1.0f" % min_lw)
+                return np.array([])
             else:
                 raise
         return selection
