@@ -29,7 +29,7 @@ def start_app(fname=None, output=None, xlim=None, ylim=None,
     full: bool
         If True, the image is digitzed and x- and ylim are set to the entire
         share of the array
-    reader_type: { 'area' | 'bars' | 'rounded bars' }
+    reader_type: { 'area' | 'bars' | 'rounded bars' | 'stacked area' | 'line' }
         Specify the reader type
     %(psyplot_gui.start_app.parameters.no_fnames|output)s
     """
@@ -114,7 +114,8 @@ def get_parser(create=True):
         'Straditizer options',
         'Options specific pollen diagram digitization')
     parser.update_arg('reader_type', short='rt',
-                      choices=['area', 'bars', 'rounded bars'],
+                      choices=['area', 'bars', 'rounded bars',
+                               'stacked area', 'line'],
                       group=stradi_grp)
     parser.append2help('reader_type', '. Default: %(default)s')
     parser.update_arg('xlim', type=int, nargs=2, metavar='val',

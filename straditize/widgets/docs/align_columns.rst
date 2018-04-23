@@ -1,14 +1,18 @@
+.. _align-cols:
+
 Align the columns vertically
 ============================
 Sometimes the columns are not aligned properly which makes it hard to identify
 where the exact measurement is located and might lead to misinterpretations
-of measurements.
+of measurements. To correct this, we implemented a methodology to align the
+columns.
 
-To correct this, move the marks for each column to the vertical positions that
-should have the same y-value for each column.
+After having clicked the :guilabel:`Align columns` button, multiple marks are
+created. To correct the vertical displacement, move those marks to the vertical
+position in each column, that should be on the same vertical level.
 
-Click the horizontal line for selecting multiple marks, click the vertical line
-for selecting only one mark.
+You can select the horizontal lines for moving multiple marks and the vertical
+line for selecting only one mark.
 
 1. Select one mark on one column by clicking on it's vertical line
 

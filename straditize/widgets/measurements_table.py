@@ -205,7 +205,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             self.update_lines()
 
     def insertRow(self, irow):
-        """Insert a row into the :attr:`df`
+        """Insert a row into the table
 
         Parameters
         ----------
@@ -244,11 +244,6 @@ class MultiCrossMarksView(QTableView):
     _fit2selection_cid = None
 
     def __init__(self, marks, full_df, *args, **kwargs):
-        """
-        Parameters
-        ----------
-        %(DataFrameModel.parameters)s
-        """
         QTableView.__init__(self)
         self.full_df = full_df
         model = self.init_model(marks, *args, **kwargs)

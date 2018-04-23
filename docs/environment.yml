@@ -1,0 +1,14 @@
+name: straditize_docs
+channels:
+    - chilipp/label/dev
+    - conda-forge
+dependencies:
+    - python=3.6
+    - psyplot-gui
+    - pygments
+    - sphinx
+    - psy-simple
+    - sphinx-argparse
+    - autodocsumm
+    - scikit-image
+    - scipy

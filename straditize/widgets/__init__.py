@@ -9,6 +9,7 @@ from psyplot_gui.compat.qtcompat import (
 from psyplot_gui.common import (
     DockMixin, get_icon as get_psy_icon, PyErrorMessage)
 import numpy as np
+import glob
 
 
 if with_qt5:
@@ -80,7 +81,7 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     hidden = True
 
-    title = 'Pollen diagram digitization'
+    title = 'Stratigraphic diagram digitization'
 
     window_layout_action = None
 
@@ -139,6 +140,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         item.addChild(child)
         self.tree.addTopLevelItem(item)
         self.tree.setItemWidget(child, 0, self.plot_control)
+        self.add_info_button(item, 'plot_control.rst')
 
         self.marker_control = MarkerControl(self)
         item = QTreeWidgetItem(0)
@@ -147,6 +149,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         item.addChild(child)
         self.tree.addTopLevelItem(item)
         self.tree.setItemWidget(child, 0, self.marker_control)
+        self.add_info_button(item, 'marker_control.rst')
 
         # ---------------------------------------------------------------------
         # ----------------------------- Toolbars ------------------------------
@@ -154,11 +157,17 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.selection_toolbar = SelectionToolbar(self, 'Selection toolbar')
 
         # ---------------------------------------------------------------------
+        # ----------------------------- InfoButton ----------------------------
+        # ---------------------------------------------------------------------
+        self.info_button = InfoButton(self, get_doc_file('straditize.rst'))
+
+        # ---------------------------------------------------------------------
         # --------------------------- Layouts ---------------------------------
         # ---------------------------------------------------------------------
 
         btn_box = QHBoxLayout()
         btn_box.addWidget(self.refresh_button)
+        btn_box.addWidget(self.info_button)
         btn_box.addStretch(0)
         btn_box.addWidget(self.apply_button)
         btn_box.addWidget(self.cancel_button)
@@ -258,8 +267,8 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.marker_control.refresh()
         self.axes_translations.refresh()
 
-    def add_info_button(self, child, title, fname=None, rst=None, files=None):
-        button = InfoButton(self, title, fname=fname, rst=rst, files=files)
+    def add_info_button(self, child, fname=None, rst=None, name=None):
+        button = InfoButton(self, fname=fname, rst=rst, name=name)
         self.tree.setItemWidget(child, 1, button)
         return button
 
@@ -343,20 +352,27 @@ class StraditizerControlBase(object):
         btn.setEnabled(True)
         self.straditizer_widgets.refresh_button.setEnabled(False)
 
+    def add_info_button(self, child, fname=None, rst=None, name=None):
+        return self.straditizer_widgets.add_info_button(
+            child, fname, rst, name)
+
 
 class InfoButton(QToolButton):
     """A button to display help informations in the help explorer"""
 
-    def __init__(self, parent, title, fname=None, rst=None, files=None):
+    def __init__(self, parent, fname=None, rst=None, name=None):
         if fname is None and rst is None:
             raise ValueError("Either `fname` or `rst` must be specified!")
         elif fname is not None and rst is not None:
             raise ValueError("Either `fname` or `rst` must be specified! "
                              "Not both!")
+        elif rst is not None and name is None:
+            raise ValueError("A title must be specified for the rst document!")
         self.fname = fname
         self.rst = rst
-        self.files = files
-        self.title = title
+        self.files = glob.glob(get_doc_file('*.rst')) + glob.glob(
+            get_doc_file('*.png')) + glob.glob(get_icon('*.png'))
+        self.name = name
         QToolButton.__init__(self, parent)
         self.setIcon(QIcon(get_psy_icon('info.png')))
         self.clicked.connect(self.show_docs)
@@ -365,7 +381,9 @@ class InfoButton(QToolButton):
         from psyplot_gui.main import mainwindow
         if self.fname is not None:
             rst = read_doc_file(self.fname)
+            name = osp.splitext(osp.basename(self.fname))[0]
         else:
             rst = self.rst
+            name = self.name
         mainwindow.help_explorer.show_rst(
-            rst, self.title, files=self.files)
+            rst, name, files=list(set(self.files) - {self.fname}))

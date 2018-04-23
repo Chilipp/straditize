@@ -19,6 +19,7 @@ class AxesTranslations(StraditizerControlBase):
         self.widgets2disable = [self.btn_marks_for_x, self.btn_marks_for_y]
 
     def setup_children(self, item):
+        self.add_info_button(item, 'axes_translations.rst')
         child = QTreeWidgetItem(0)
         item.addChild(child)
         self.tree.setItemWidget(child, 0, self.btn_marks_for_x)

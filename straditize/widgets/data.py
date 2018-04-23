@@ -28,7 +28,8 @@ else:
     from itertools import zip_longest, filterfalse
 
 
-reader_types = ['area', 'bars', 'rounded bars', 'stacked area']
+reader_types = ['area', 'bars', 'rounded bars', 'stacked area',
+                'line']
 
 
 def int_list2str(numbers):
@@ -546,6 +547,8 @@ class DigitizingControl(StraditizerControlBase):
 
     def setup_children(self, item):
 
+        self.add_info_button(item, 'straditize_steps.rst')
+
         # 0: start parts before creating the reader
         vbox_start = QVBoxLayout()
         hbox_start = QHBoxLayout()
@@ -563,11 +566,13 @@ class DigitizingControl(StraditizerControlBase):
         child.addChild(child2)
         self.tree.setItemWidget(child2, 0, w)
         self.tree.expandItem(child)
+        self.add_info_button(child2, 'select_data_part.rst')
 
         # init reader
         child4 = QTreeWidgetItem(0)
         child.addChild(child4)
         self.tree.setItemWidget(child4, 0, self.btn_init_reader)
+        self.add_info_button(child4, 'select_reader.rst')
 
         child = QTreeWidgetItem(0)
         item.addChild(child)
@@ -587,7 +592,7 @@ class DigitizingControl(StraditizerControlBase):
         w.setLayout(vbox_cols)
         self.tree.setItemWidget(child, 0, w)
         self.button = self.straditizer_widgets.add_info_button(
-            child, 'select-column-starts', 'select_column_starts.rst')
+            child, 'select_column_starts.rst')
 
         # 1: column specific readers
         child = QTreeWidgetItem(0)
@@ -595,6 +600,7 @@ class DigitizingControl(StraditizerControlBase):
         item.addChild(child)
         child2 = QTreeWidgetItem(0)
         child.addChild(child2)
+        self.add_info_button(child, 'child_readers.rst')
 
         w = QWidget()
         hbox = QHBoxLayout()
@@ -609,6 +615,7 @@ class DigitizingControl(StraditizerControlBase):
         child = QTreeWidgetItem(0)
         child.setText(0, 'Exaggerations')
         item.addChild(child)
+        self.add_info_button(child, 'exaggerations.rst')
 
         child2 = QTreeWidgetItem(0)
         child.addChild(child2)
@@ -640,11 +647,13 @@ class DigitizingControl(StraditizerControlBase):
         child = QTreeWidgetItem(0)
         child.setText(0, 'Remove features')
         item.addChild(child)
+        self.add_info_button(child, 'removing_features.rst')
 
         # disconnected parts
         dc_child = QTreeWidgetItem(0)
         child.addChild(dc_child)
         self.tree.setItemWidget(dc_child, 0, self.btn_show_disconnected_parts)
+        self.add_info_button(dc_child, 'remove_disconnected_parts.rst')
 
         dc_child2 = QTreeWidgetItem(0)
         grid = QGridLayout()
@@ -664,11 +673,13 @@ class DigitizingControl(StraditizerControlBase):
         child.addChild(end_child)
         self.tree.setItemWidget(end_child, 0,
                                 self.btn_show_parts_at_column_ends)
+        self.add_info_button(end_child, 'remove_col_ends.rst')
 
         # cross column features
         cross_child = QTreeWidgetItem(0)
         child.addChild(cross_child)
         self.tree.setItemWidget(cross_child, 0, self.btn_show_cross_column)
+        self.add_info_button(cross_child, 'remove_cross_column.rst')
 
         cross_child2 = QTreeWidgetItem(0)
         hbox = QHBoxLayout()
@@ -684,6 +695,7 @@ class DigitizingControl(StraditizerControlBase):
         small_child = QTreeWidgetItem(0)
         child.addChild(small_child)
         self.tree.setItemWidget(small_child, 0, self.btn_show_small_parts)
+        self.add_info_button(small_child, 'remove_small_parts.rst')
 
         small_child2 = QTreeWidgetItem(0)
         hbox = QHBoxLayout()
@@ -704,6 +716,7 @@ class DigitizingControl(StraditizerControlBase):
         w.setLayout(hbox)
         child.addChild(line_child)
         self.tree.setItemWidget(line_child, 0, w)
+        self.add_info_button(line_child, 'remove_lines.rst')
 
         w = QWidget()
         line_child2 = QTreeWidgetItem(0)
@@ -741,6 +754,7 @@ class DigitizingControl(StraditizerControlBase):
         self.digitize_item = child = QTreeWidgetItem(0)
         item.addChild(child)
         self.tree.setItemWidget(child, 0, self.btn_digitize)
+        self.add_info_button(child, 'digitize.rst')
 
         # 5: bar splitter
         self.bar_split_child = QTreeWidgetItem(0)
@@ -771,6 +785,7 @@ class DigitizingControl(StraditizerControlBase):
         child2 = QTreeWidgetItem(0)
         child.addChild(child2)
         self.tree.setItemWidget(child2, 0, w)
+        self.add_info_button(child, 'measurements.rst')
 
     def init_reader(self):
         """Initialize the reader"""

@@ -54,6 +54,8 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 docs/index.doctree
+docs/gui/
+docs/api/
 
 # test results
 matplotlibrc

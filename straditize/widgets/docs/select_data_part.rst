@@ -1,6 +1,13 @@
-Select the data region
-======================
-Select the corners of the diagram without the numbers of the axes.
+.. _select-data:
+
+Select the diagram part
+=======================
+The second step involves selecting the diagram part (see the
+:ref:`terminology`) by clicking the :guilabel:`Select data part` button in the
+digitization control.
+
+The goal is to select the two outer corners of the diagram and try to avoid
+vertical and horizontal axes or axes description.
 
 1. :kbd:`Shift` - leftclick on the data diagram. This will create a mark at
    your current mouse location.

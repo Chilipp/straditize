@@ -2064,6 +2064,14 @@ class DataReader(LabelSelection):
                 pass
 
 
+class LineDataReader(DataReader):
+    """A data reader for digitizing line diagrams
+
+    This class does not have a significantly different behaviour than the
+    base :class:`DataReader` class, but might be improved with more specific
+    features in the future"""
+
+
 class BarDataReader(DataReader):
     """A DataReader for digitizing bar pollen diagrams"""
 
@@ -2512,4 +2520,5 @@ readers = {
     'area': DataReader,
     'bars': BarDataReader,
     'rounded bars': RoundedBarDataReader,
+    'line': LineDataReader,
     }

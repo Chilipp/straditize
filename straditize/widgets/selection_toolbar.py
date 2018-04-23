@@ -2,7 +2,7 @@
 from itertools import chain
 import six
 import numpy as np
-from straditize.widgets import get_icon, StraditizerControlBase
+from straditize.widgets import get_icon, StraditizerControlBase, InfoButton
 from psyplot_gui.compat.qtcompat import (
     QIcon, QtCore, QComboBox, QToolBar, with_qt5, QMenu, Qt, QLabel,
     QCheckBox)
@@ -327,6 +327,11 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
                      'the current selection')
         a.setCheckable(True)
         type_group.addAction(a)
+
+        # info button
+        self.addSeparator()
+        self.info_button = InfoButton(self, 'selection_toolbar.rst')
+        self.addWidget(self.info_button)
 
         # selection appearence options
         self.addSeparator()
