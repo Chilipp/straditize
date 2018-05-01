@@ -525,6 +525,26 @@ class Straditizer(LabelSelection):
         intercept = y_data[0] - slope * y_px[0]
         return intercept + slope * coord
 
+    def data2px_y(self, coord):
+        """Transform the data coordinates into pixel coordinates
+
+        Parameters
+        ----------
+        coord: 1D np.ndarray
+            The coordinate values
+
+        Returns
+        -------
+        np.ndarray
+            The numpy array with transformed coordinates"""
+        y_px = self.yaxis_px
+        y_data = self.yaxis_data
+        diff_px = np.diff(y_px)[0]
+        diff_data = np.diff(y_data)[0]
+        slope = diff_px / diff_data
+        intercept = y_px[0] - slope * y_data[0]
+        return intercept + slope * coord
+
     def remove_marks(self):
         """Remove any drawn marks"""
         if self.marks is not None:
@@ -728,7 +748,7 @@ class Straditizer(LabelSelection):
         self._new_mark = _new_mark
         return ret
 
-    def marks_for_measurements(self, *args, **kwargs):
+    def marks_for_measurements(self):
         def _new_mark(pos, artists=[]):
             return cm.CrossMarks(
                 pos, zorder=2, idx_v=idx_v, idx_h=idx_h,
@@ -760,7 +780,7 @@ class Straditizer(LabelSelection):
         reader = self.data_reader
         if reader.full_df is None:
             reader.digitize()
-        df = reader._get_measurement_locs(*args, **kwargs)
+        df = reader.measurement_locs()
         full_df = reader.full_df
         self.remove_marks()
         ax = self.ax
@@ -809,13 +829,13 @@ class Straditizer(LabelSelection):
             self.data_reader.rough_locs = joined
         self.remove_marks()
 
-    def marks_for_measurements_sep(self, nrows=3, *args, **kwargs):
+    def marks_for_measurements_sep(self, nrows=3):
         def _new_mark(pos, ax, artists=[]):
             idx_h = all_idx_h[ax]
             ret = cm.CrossMarks(
                 pos, zorder=2, idx_v=idx_v, idx_h=idx_h,
                 xlim=(0, idx_h.max()),
-                alpha=0.5, linewidth=0.5, selectable=['h'], auto_hide=True,
+                alpha=0.5, linewidth=1.5, selectable=['h'],
                 marker='x', connected_artists=artists,
                 ax=ax, select_props={'c': 'r', 'lw': 2.0})
             if self.marks:
@@ -863,7 +883,7 @@ class Straditizer(LabelSelection):
         reader = self.data_reader
         if reader.full_df is None:
             reader.digitize()
-        df = reader._get_measurement_locs(*args, **kwargs)
+        df = reader.measurement_locs
         full_df = reader._full_df.copy(True)
         full_df['nextrema'] = reader.found_extrema_per_row()
         self.remove_marks()
@@ -885,12 +905,18 @@ class Straditizer(LabelSelection):
             ax.set_title(col)
         all_idx_h = dict(zip(axes, map(
             pd.Index, map(np.arange, full_df.max(axis=0).values))))
-        self.marks = marks = list(chain.from_iterable(
-            new_mark_and_range(key, row, indices)
-            for (key, row), (key2, indices) in zip(
-                df.iterrows(), reader.rough_locs.iterrows())))
+        if not len(df):
+            self.marks = marks = []
+        else:
+            self.marks = marks = list(chain.from_iterable(
+                new_mark_and_range(key, row, indices)
+                for (key, row), (key2, indices) in zip(
+                    df.iterrows(), reader.rough_locs.iterrows())))
         for ax, idx in all_idx_h.items():
-            ax.set_xlim(idx.min(), idx.max())
+            if ~np.isnan(idx.min()):
+                ax.set_xlim(idx.min(), idx.max())
+            elif ax is axes[-1]:
+                ax.set_xlim(0, 1)
 
         if marks:
             marks[0].connect_marks(marks)

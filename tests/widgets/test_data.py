@@ -209,6 +209,17 @@ class DigitizerTest(bt.StraditizeWidgetsTestCase):
         ref.columns = full_df.columns
         self.assertFrameEqual(full_df, ref, check_index_type=False)
 
+    def test_load_measurements(self):
+        """Test loading measurements from a file"""
+        self.test_digitize()
+        fname = self.get_fig_path(osp.join('data', 'data.csv'))
+        ref = pd.read_csv(fname, index_col=0, dtype=float)
+        ref.index = ref.index.astype(int)
+        ref.columns = ref.columns.astype(int)
+        self.digitizer.load_measurements(fname)
+        self.assertFrameEqual(ref, self.reader.measurement_locs,
+                              check_names=False)
+
 
 class ChildReaderFrameworkTest(bt.StraditizeWidgetsTestCase):
     """Test the column specific reader framework"""
@@ -310,7 +321,7 @@ class ChildReaderFrameworkTest(bt.StraditizeWidgetsTestCase):
         self.reader.digitize()
 
         # compare the measurements
-        QTest.mouseClick(self.digitizer.btn_edit_measurements, Qt.LeftButton)
+        QTest.mouseClick(self.digitizer.btn_find_measurements, Qt.LeftButton)
         QTest.mouseClick(self.straditizer_widgets.apply_button, Qt.LeftButton)
         self.assertFrameEqual(
             self.reader._get_measurement_locs(), ref)

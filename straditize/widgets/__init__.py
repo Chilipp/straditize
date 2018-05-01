@@ -215,6 +215,7 @@ class StraditizerWidgets(QWidget, DockMixin):
             mainwindow.resizeDocks([self.dock], [hsize], Qt.Horizontal)
             self.tree.resizeColumnToContents(0)
             self.tree.resizeColumnToContents(1)
+        self.info_button.click()
 
     def to_dock(self, main, *args, **kwargs):
         ret = super(StraditizerWidgets, self).to_dock(main, *args, **kwargs)
@@ -267,9 +268,12 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.marker_control.refresh()
         self.axes_translations.refresh()
 
-    def add_info_button(self, child, fname=None, rst=None, name=None):
+    def add_info_button(self, child, fname=None, rst=None, name=None,
+                        connections=[]):
         button = InfoButton(self, fname=fname, rst=rst, name=name)
         self.tree.setItemWidget(child, 1, button)
+        for btn in connections:
+            btn.clicked.connect(button.click)
         return button
 
 
@@ -352,9 +356,10 @@ class StraditizerControlBase(object):
         btn.setEnabled(True)
         self.straditizer_widgets.refresh_button.setEnabled(False)
 
-    def add_info_button(self, child, fname=None, rst=None, name=None):
+    def add_info_button(self, child, fname=None, rst=None, name=None,
+                        connections=[]):
         return self.straditizer_widgets.add_info_button(
-            child, fname, rst, name)
+            child, fname, rst, name, connections)
 
 
 class InfoButton(QToolButton):

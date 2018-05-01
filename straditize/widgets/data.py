@@ -2,10 +2,12 @@
 """
 from __future__ import division
 import warnings
+import os
 import six
 import glob
 import re
 import numpy as np
+import pandas as pd
 from straditize.widgets import (
     StraditizerControlBase, read_doc_file, get_doc_file, get_icon)
 from psyplot_gui.compat.qtcompat import (
@@ -13,7 +15,7 @@ from psyplot_gui.compat.qtcompat import (
     Qt, QHBoxLayout, QVBoxLayout, QWidget, QTreeWidgetItem, QtGui,
     QTableWidget, QTableWidgetItem, QtCore, QMenu, QAction, with_qt5,
     QIcon, QIntValidator, QTreeWidget, QToolBar, QGridLayout, QCheckBox,
-    QInputDialog)
+    QInputDialog, QFileDialog)
 from itertools import chain
 
 if with_qt5:
@@ -290,6 +292,14 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_digitize = QPushButton('Digitize')
         self.btn_digitize.setToolTip('Digitize the binary file')
 
+        self.btn_find_measurements = QPushButton('Find measurements')
+        self.btn_find_measurements.setToolTip(
+            'Estimate positions of the measurements in the diagram')
+
+        self.btn_load_measurements = QPushButton('Load measurements')
+        self.btn_load_measurements.setToolTip(
+            'Load the measurements from a CSV file')
+
         self.btn_edit_measurements = QPushButton('Edit measurements')
         self.btn_edit_measurements.setToolTip(
             'Modify and edit the measurements')
@@ -321,7 +331,8 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_show_parts_at_column_ends,
             self.btn_show_small_parts, self.txt_min_size,
             self.btn_align_vertical,
-            self.btn_edit_measurements]
+            self.btn_edit_measurements, self.btn_find_measurements,
+            self.btn_load_measurements]
 
         self.init_reader_kws = {}
 
@@ -346,6 +357,8 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_show_parts_at_column_ends.clicked.connect(
             self.show_parts_at_column_ends)
         self.btn_align_vertical.clicked.connect(self.align_vertical)
+        self.btn_find_measurements.clicked.connect(self.find_measurements)
+        self.btn_load_measurements.clicked.connect(self.load_measurements)
         self.btn_edit_measurements.clicked.connect(self.edit_measurements)
         self.btn_reset_measurements.clicked.connect(self.reset_measurements)
         self.btn_show_small_parts.clicked.connect(self.show_small_parts)
@@ -525,9 +538,10 @@ class DigitizingControl(StraditizerControlBase):
                     self.txt_exag_factor]):
             return False
         elif (w is self.btn_reset_measurements and
-              self.straditizer.data_reader.measurement_locs is None):
+              self.straditizer.data_reader._measurement_locs is None):
             return False
-        elif (w in [self.btn_edit_measurements, self.btn_digitize_exag] and
+        elif (w in [self.btn_find_measurements, self.btn_edit_measurements,
+                    self.btn_load_measurements, self.btn_digitize_exag] and
               self.straditizer.data_reader.full_df is None):
             return False
         elif (w is self.btn_show_small_parts and
@@ -566,13 +580,15 @@ class DigitizingControl(StraditizerControlBase):
         child.addChild(child2)
         self.tree.setItemWidget(child2, 0, w)
         self.tree.expandItem(child)
-        self.add_info_button(child2, 'select_data_part.rst')
+        self.add_info_button(child2, 'select_data_part.rst',
+                             connections=[self.btn_select_data])
 
         # init reader
         child4 = QTreeWidgetItem(0)
         child.addChild(child4)
         self.tree.setItemWidget(child4, 0, self.btn_init_reader)
-        self.add_info_button(child4, 'select_reader.rst')
+        self.add_info_button(child4, 'select_reader.rst',
+                             connections=[self.btn_init_reader])
 
         child = QTreeWidgetItem(0)
         item.addChild(child)
@@ -592,7 +608,8 @@ class DigitizingControl(StraditizerControlBase):
         w.setLayout(vbox_cols)
         self.tree.setItemWidget(child, 0, w)
         self.button = self.straditizer_widgets.add_info_button(
-            child, 'select_column_starts.rst')
+            child, 'select_column_starts.rst',
+            connections=[self.btn_column_starts])
 
         # 1: column specific readers
         child = QTreeWidgetItem(0)
@@ -600,7 +617,8 @@ class DigitizingControl(StraditizerControlBase):
         item.addChild(child)
         child2 = QTreeWidgetItem(0)
         child.addChild(child2)
-        self.add_info_button(child, 'child_readers.rst')
+        self.add_info_button(child, 'child_readers.rst',
+                             connections=[self.btn_new_child_reader])
 
         w = QWidget()
         hbox = QHBoxLayout()
@@ -615,7 +633,8 @@ class DigitizingControl(StraditizerControlBase):
         child = QTreeWidgetItem(0)
         child.setText(0, 'Exaggerations')
         item.addChild(child)
-        self.add_info_button(child, 'exaggerations.rst')
+        self.add_info_button(child, 'exaggerations.rst',
+                             connections=[self.btn_new_exaggeration])
 
         child2 = QTreeWidgetItem(0)
         child.addChild(child2)
@@ -653,7 +672,8 @@ class DigitizingControl(StraditizerControlBase):
         dc_child = QTreeWidgetItem(0)
         child.addChild(dc_child)
         self.tree.setItemWidget(dc_child, 0, self.btn_show_disconnected_parts)
-        self.add_info_button(dc_child, 'remove_disconnected_parts.rst')
+        self.add_info_button(dc_child, 'remove_disconnected_parts.rst',
+                             connections=[self.btn_show_disconnected_parts])
 
         dc_child2 = QTreeWidgetItem(0)
         grid = QGridLayout()
@@ -673,13 +693,15 @@ class DigitizingControl(StraditizerControlBase):
         child.addChild(end_child)
         self.tree.setItemWidget(end_child, 0,
                                 self.btn_show_parts_at_column_ends)
-        self.add_info_button(end_child, 'remove_col_ends.rst')
+        self.add_info_button(end_child, 'remove_col_ends.rst',
+                             connections=[self.btn_show_parts_at_column_ends])
 
         # cross column features
         cross_child = QTreeWidgetItem(0)
         child.addChild(cross_child)
         self.tree.setItemWidget(cross_child, 0, self.btn_show_cross_column)
-        self.add_info_button(cross_child, 'remove_cross_column.rst')
+        self.add_info_button(cross_child, 'remove_cross_column.rst',
+                             connections=[self.btn_show_cross_column])
 
         cross_child2 = QTreeWidgetItem(0)
         hbox = QHBoxLayout()
@@ -695,7 +717,8 @@ class DigitizingControl(StraditizerControlBase):
         small_child = QTreeWidgetItem(0)
         child.addChild(small_child)
         self.tree.setItemWidget(small_child, 0, self.btn_show_small_parts)
-        self.add_info_button(small_child, 'remove_small_parts.rst')
+        self.add_info_button(small_child, 'remove_small_parts.rst',
+                             connections=[self.btn_show_small_parts])
 
         small_child2 = QTreeWidgetItem(0)
         hbox = QHBoxLayout()
@@ -716,7 +739,9 @@ class DigitizingControl(StraditizerControlBase):
         w.setLayout(hbox)
         child.addChild(line_child)
         self.tree.setItemWidget(line_child, 0, w)
-        self.add_info_button(line_child, 'remove_lines.rst')
+        self.add_info_button(line_child, 'remove_lines.rst',
+                             connections=[self.btn_remove_vlines,
+                                          self.btn_remove_hlines])
 
         w = QWidget()
         line_child2 = QTreeWidgetItem(0)
@@ -754,7 +779,8 @@ class DigitizingControl(StraditizerControlBase):
         self.digitize_item = child = QTreeWidgetItem(0)
         item.addChild(child)
         self.tree.setItemWidget(child, 0, self.btn_digitize)
-        self.add_info_button(child, 'digitize.rst')
+        self.add_info_button(child, 'digitize.rst',
+                             connections=[self.btn_digitize])
 
         # 5: bar splitter
         self.bar_split_child = QTreeWidgetItem(0)
@@ -766,26 +792,46 @@ class DigitizingControl(StraditizerControlBase):
         self.bar_split_child.setHidden(not self.tree_bar_split.filled)
 
         # 6: edit measurements button
+        child = QTreeWidgetItem(0)
+        child.setText(0, 'Edit measurements')
+        item.addChild(child)
+        self.add_info_button(child, 'measurements.rst')
+
+        find_child = QTreeWidgetItem(0)
+        child.addChild(find_child)
+        self.tree.setItemWidget(find_child, 0, self.btn_find_measurements)
+        self.add_info_button(find_child, 'find_measurements.rst',
+                             connections=[self.btn_find_measurements])
+
+        find_child2 = QTreeWidgetItem(0)
         measurements_box = QGridLayout()
         measurements_box.addWidget(QLabel('Minimum length'), 0, 0)
         measurements_box.addWidget(QLabel('Maximum length'), 0, 1)
         measurements_box.addWidget(self.txt_min_len, 1, 0)
         measurements_box.addWidget(self.txt_max_len, 1, 1)
+        w = QWidget()
+        w.setLayout(measurements_box)
+        find_child.addChild(find_child2)
+        self.tree.setItemWidget(find_child2, 0, w)
+
+        load_child = QTreeWidgetItem(0)
+        child.addChild(load_child)
+        self.tree.setItemWidget(load_child, 0, self.btn_load_measurements)
+        self.add_info_button(load_child, 'load_measurements.rst',
+                             connections=[self.btn_load_measurements])
+
+        edit_child = QTreeWidgetItem(0)
+        child.addChild(edit_child)
+        self.add_info_button(edit_child, 'edit_measurements.rst',
+                             connections=[self.btn_edit_measurements])
+
         hbox_cols = QHBoxLayout()
         hbox_cols.addWidget(self.btn_edit_measurements)
         hbox_cols.addWidget(self.btn_reset_measurements)
-        measurements_box.addLayout(hbox_cols, 2, 0, 1, 2)
-
         w = QWidget()
-        w.setLayout(measurements_box)
+        w.setLayout(hbox_cols)
 
-        child = QTreeWidgetItem(0)
-        child.setText(0, 'Edit measurements')
-        item.addChild(child)
-        child2 = QTreeWidgetItem(0)
-        child.addChild(child2)
-        self.tree.setItemWidget(child2, 0, w)
-        self.add_info_button(child, 'measurements.rst')
+        self.tree.setItemWidget(edit_child, 0, w)
 
     def init_reader(self):
         """Initialize the reader"""
@@ -901,15 +947,40 @@ class DigitizingControl(StraditizerControlBase):
             reader.end_column_selection,
             reader.draw_figure)
 
-    def edit_measurements(self):
-        from psyplot_gui.main import mainwindow
-        from straditize.widgets.measurements_table import MultiCrossMarksEditor
+    def find_measurements(self):
         kws = {}
         if self.txt_min_len.text().strip():
             kws['min_len'] = int(self.txt_min_len.text())
         if self.txt_max_len.text().strip():
             kws['max_len'] = int(self.txt_max_len.text())
-        fig, axes = self.straditizer.marks_for_measurements_sep(**kws)
+        self.straditizer.data_reader.add_measurements(
+            *self.straditizer.data_reader.find_measurements(**kws))
+        self.straditizer_widgets.refresh()
+
+    def load_measurements(self, fname=None):
+        if fname is None or not isinstance(fname, six.string_types):
+            fname = QFileDialog.getOpenFileName(
+                self.straditizer_widgets, 'Measurements', os.getcwd(),
+                'CSV files (*.csv);;'
+                'All files (*)'
+                )
+            if with_qt5:  # the filter is passed as well
+                fname = fname[0]
+        if not fname:
+            return
+        df = pd.read_csv(fname)
+        measurements = df.iloc[:, 0].values
+        try:
+            measurements = self.straditizer.data2px_y(measurements)
+        except ValueError:
+            pass
+        self.straditizer.data_reader.add_measurements(measurements.astype(int))
+        self.straditizer_widgets.refresh()
+
+    def edit_measurements(self):
+        from psyplot_gui.main import mainwindow
+        from straditize.widgets.measurements_table import MultiCrossMarksEditor
+        fig, axes = self.straditizer.marks_for_measurements_sep()
         self._measurements_fig = fig
         if mainwindow.figures:  # using psyplot backend
             fig_dock = self._measurements_fig.canvas.manager.window
@@ -1098,10 +1169,6 @@ class DigitizingControl(StraditizerControlBase):
     def select_data_part(self):
         self.straditizer.marks_for_data_selection()
         self.straditizer.draw_figure()
-        self.help_explorer.show_rst(
-            read_doc_file('select_data_part.rst'),
-            'select-data-part', files=list(map(get_doc_file, [
-                'select_mark.png', 'drag_mark.png', 'drag_mark2.png'])))
         self.connect2apply(self.straditizer.update_data_part,
                            self.straditizer.draw_figure,
                            self.straditizer_widgets.refresh)
@@ -1111,9 +1178,6 @@ class DigitizingControl(StraditizerControlBase):
     def align_vertical(self):
         """Create marks for vertical alignment of the columns"""
         self.straditizer.marks_for_vertical_alignment()
-        self.help_explorer.show_rst(
-            read_doc_file('align_columns.rst'), 'align-columns',
-            files=glob.glob(get_doc_file('align_column*.png')))
         self.straditizer.draw_figure()
         self.connect2apply(self.straditizer.align_columns,
                            self.straditizer.draw_figure)
@@ -1125,9 +1189,6 @@ class DigitizingControl(StraditizerControlBase):
         threshold = float(threshold) / 100. if threshold else None
         self.straditizer.marks_for_column_starts(threshold)
         self.straditizer.draw_figure()
-        self.help_explorer.show_rst(
-            read_doc_file('select_column_starts.rst'),
-            'select-column-starts')
         self.connect2apply(self.straditizer.update_column_starts,
                            self.refresh,
                            self.straditizer.draw_figure)
@@ -1139,137 +1200,10 @@ class DigitizingControl(StraditizerControlBase):
         threshold = float(threshold) / 100. if threshold else None
         self.straditizer.marks_for_column_ends(threshold)
         self.straditizer.draw_figure()
-        self.help_explorer.show_rst(
-            read_doc_file('select_column_ends.rst'),
-            'select-column-ends')
         self.connect2apply(self.straditizer.update_column_ends,
                            self.straditizer.draw_figure)
         self.connect2cancel(self.straditizer.remove_marks,
                             self.straditizer.draw_figure)
-
-#    def start_bc_colors_selection(self):
-#        self.selection_toolbar.data_obj = 'Straditizer'
-#        self.straditizer_widgets.cancel_button.clicked.connect(
-#            self._restore_colors)
-#        tb = self.selection_toolbar
-#        if not tb.select_action.isChecked():
-#            tb.select_action.setChecked(True)
-#            tb.toggle_selection()
-#        tb.add_select_action.setChecked(True)
-#        self._wand_enabled = tb.wand_action.isEnabled()
-#        tb.wand_action.setEnabled(False)
-#        tb.start_selection(self.straditizer.labels, [self.select_bc_colors])
-#        self._current_colors = self.bc_colors.colors[:]
-#        self.show_bc_colors_docs()
-#        self.straditizer_widgets.apply_button.setText('Set colors')
-#
-#    def show_bc_colors_docs(self):
-#        self.help_explorer.show_rst(
-#            read_doc_file('choose_background.rst'), 'choose-background',
-#            files=list(map(get_icon, ['new_selection.png', 'add_select.png',
-#                                      'remove_select.png', 'select.png'])))
-#
-#    def select_bc_colors(self, *args):
-#        slx, sly = self.straditizer_widgets.selection_toolbar.get_xy_slice(*args)
-#        arr = np.array(self.straditizer.image)[sly, slx]
-#        colors = list(map(np.array,
-#                          sorted(set(map(tuple, chain.from_iterable(arr))))))
-#        tb = self.selection_toolbar
-#        if tb.new_select_action.isChecked():
-#            self.bc_colors.colors.clear()
-#            self.bc_colors.colors.extend(colors)
-#        elif tb.add_select_action.isChecked():
-#            self.bc_colors.colors.extend(filter(
-#                lambda color: not any(np.all(c == color)
-#                                      for c in self.bc_colors.colors),
-#                colors))
-#        else:
-#            for color in colors:
-#                i = 0
-#                for c in self.bc_colors.colors[:]:
-#                    if np.all(c == color):
-#                        del self.bc_colors.colors[i]
-#                    else:
-#                        i += 1
-#        self.bc_colors.color_cells()
-#
-#    def _restore_colors(self):
-#        self.bc_colors.colors = self._current_colors
-#        self.bc_colors.color_cells()
-#
-#
-#class BCColors(QTableWidget):
-#
-#    def __init__(self, ncols=4, max_rows=15, *args, **kwargs):
-#        super(BCColors, self).__init__(*args, **kwargs)
-#        self.colors = [np.array([255, 255, 255, 255])]
-#        self.ncols = ncols
-#        self.max_rows = max_rows
-#        self.setColumnCount(ncols)
-#        self.setRowCount(1)
-#        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#        self.horizontalHeader().setHidden(True)
-#        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-#        self.verticalHeader().setHidden(True)
-#        self.setEditTriggers(QTableWidget.NoEditTriggers)
-#        self.setContextMenuPolicy(Qt.CustomContextMenu)
-#        self.customContextMenuRequested.connect(self.show_menu)
-#
-#    def color_cells(self):
-#        colors = self.colors
-#        self.setColumnCount(min(len(colors), self.ncols))
-#        ncols = self.columnCount()
-#        if not len(colors):
-#            self.setRowCount(0)
-#            return
-#        nrows = np.ceil(len(colors) / ncols).astype(int)
-#        self.setRowCount(nrows)
-#        row = 0
-#        for i, (color, _) in enumerate(zip_longest(
-#                colors, range(nrows * ncols), fillvalue=[255] * 4)):
-#            col = i % ncols
-#            if i and not col:
-#                row += 1
-#            item = QTableWidgetItem()
-#            self.setItem(row, col, item)
-#            item.setBackground(QtGui.QColor(*color))
-#        self.adjust_height()
-#
-#    def adjust_height(self):
-#        nrows = min(self.rowCount(), self.max_rows)
-#        h = self.rowHeight(0) * nrows
-#        self.setMaximumHeight(h)
-#        self.setMinimumHeight(h)
-#
-#    def sizeHint(self):
-#        s = super(BCColors, self).sizeHint()
-#        nrows = min(self.rowCount(), self.max_rows)
-#        return QtCore.QSize(s.width(), self.rowHeight(0) * nrows)
-#
-#    def show_menu(self, pos):
-#        item = self.itemAt(pos)
-#        if item is None:
-#            return
-#        menu = QMenu(self)
-#        remove_action = QAction('Remove color', self)
-#        menu.addAction(remove_action)
-#        remove_action.triggered.connect(self.remove_selected_colors)
-#        unselect_action = QAction('Unselect', self)
-#        menu.addAction(unselect_action)
-#        unselect_action.triggered.connect(self.unselect_all)
-#        menu.exec_(self.mapToGlobal(pos))
-#        return menu
-#
-#    def remove_selected_colors(self):
-#        selected = [item.column() + item.row() * self.ncols
-#                    for item in self.selectedItems()]
-#        self.colors = [c for i, c in enumerate(self.colors)
-#                       if i not in selected]
-#        self.color_cells()
-#
-#    def unselect_all(self):
-#        for item in self.selectedItems():
-#            item.setSelected(False)
 
 
 class BarSplitter(QTreeWidget, StraditizerControlBase):

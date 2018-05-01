@@ -36,7 +36,7 @@ The algorithm simply uses the distance of the most right data (black) pixel to
 the column start.
 
 
-.. _digitizing-bars
+.. _digitizing-bars:
 
 Digitizing bars
 ---------------
@@ -87,7 +87,7 @@ digitization control. To split one bar:
     :width: 1em
 
 
-.. _digitizing-stacked
+.. _digitizing-stacked:
 
 Digitizing stacked areas
 ------------------------

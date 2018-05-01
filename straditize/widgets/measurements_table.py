@@ -110,16 +110,25 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         return df.sort_index()
 
     def plot_lines(self):
+        if not self.rowCount():
+            return
         self.lines.extend(chain.from_iterable(
             ax.plot(s.values, s.index.values, c='r')
             for ax, (col, s) in zip(self.axes, self.df.items())))
         self.fig.canvas.draw_idle()
 
     def update_lines(self):
-        for l, (col, s) in zip(self.lines, self.df.items()):
-            l.set_xdata(s.values)
-            l.set_ydata(s.index.values)
-        self.fig.canvas.draw_idle()
+        if not self.lines:
+            self.plot_lines()
+        elif not self.rowCount():
+            for l in self.lines:
+                l.remove()
+            self.lines.clear()
+        else:
+            for l, (col, s) in zip(self.lines, self.df.items()):
+                l.set_xdata(s.values)
+                l.set_ydata(s.index.values)
+            self.fig.canvas.draw_idle()
 
     def remove_lines(self):
         for l in self.lines:
@@ -144,7 +153,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         return len(self.marks)
 
     def columnCount(self, index=QtCore.QModelIndex()):
-        return len(self.marks[0][1]) + 1
+        return len(self.axes) + 1
 
     def reset(self):
         self.beginResetModel()
@@ -204,7 +213,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             self.endRemoveRows()
             self.update_lines()
 
-    def insertRow(self, irow):
+    def insertRow(self, irow, xa=None, ya=None):
         """Insert a row into the table
 
         Parameters
@@ -212,9 +221,12 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         irow: int
             The row index. If `irow` is equal to the length of the
             :attr:`marks`, the rows will be appended"""
-        mark = self.marks[irow][1][0]
-        y = mark.y
-        new = self._new_mark(mark.xa, mark.ya)
+        if xa is None or ya is None:
+            mark = self.marks[min(irow, len(self.marks) - 1)][1][0]
+            new = self._new_mark(mark.xa, mark.ya)
+        else:
+            new = self._new_mark(xa, ya)
+        y = new[0].y
         for m in new:
             m.moved.connect(self.update_after_move)
         if irow == len(self.marks):
@@ -344,7 +356,8 @@ class MultiCrossMarksView(QTableView):
         rows, cols = self._selected_rows_and_cols()
         model = self.model()
         if not model.rowCount():
-            model.insertRows(0, 1)
+            model.insertRow(0, xa=self.full_df.iloc[0],
+                            ya=self.full_df.index[0])
         elif not rows and not cols:
             return
         else:
@@ -415,10 +428,9 @@ class MultiCrossMarksView(QTableView):
         mark = model.get_cell_mark(0, 1)
         mark.ax.set_ylim(ymax, ymin)
         for col, x in xvals.items():
-            xmin = min(x) - 10
-            xmax = max(x) + 10
             mark = marks[col]
-            mark.ax.set_xlim(xmin, xmax)
+            xmax = float(self.full_df.loc[col].max())
+            mark.ax.set_xlim(0, xmax)
             mark.ax.set_ylim(ymax, ymin)
         mark.fig.canvas.draw()
 

@@ -15,7 +15,16 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
         self.reader.column_starts = self.column_starts
         self.reader.digitize()
         self.straditizer_widgets.refresh()
+        self.assertTrue(self.digitizer.btn_find_measurements.isEnabled())
         self.assertTrue(self.digitizer.btn_edit_measurements.isEnabled())
+        # first try with empty measurements
+        QTest.mouseClick(self.digitizer.btn_edit_measurements, Qt.LeftButton)
+        self.assertFalse(self.straditizer.marks)
+        self.assertTrue(hasattr(self.digitizer, '_measurements_editor'))
+        QTest.mouseClick(self.digitizer.apply_button, Qt.LeftButton)
+        self.assertFalse(hasattr(self.digitizer, '_measurements_editor'))
+        # Now try with the found measurements
+        QTest.mouseClick(self.digitizer.btn_find_measurements, Qt.LeftButton)
         QTest.mouseClick(self.digitizer.btn_edit_measurements, Qt.LeftButton)
         self.assertTrue(self.straditizer.marks)
         self.assertTrue(hasattr(self.digitizer, '_measurements_editor'))

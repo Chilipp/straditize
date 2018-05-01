@@ -70,9 +70,37 @@ class DataReader(LabelSelection):
     #: magnifier
     magni = None
 
-    measurement_locs = None
+    _measurement_locs = None
 
-    rough_locs = None
+    @property
+    def measurement_locs(self):
+        """
+        The :class:`pandas.DataFrame` with locations and values of the
+        measurements"""
+        if self.parent._measurement_locs is not None:
+            return self.parent._measurement_locs
+        elif self.parent._full_df is not None:
+            self.parent._measurement_locs = self.parent._full_df.iloc[:0].copy(
+                True)
+            return self.parent._measurement_locs
+
+    @measurement_locs.setter
+    def measurement_locs(self, value):
+        self.parent._measurement_locs = value
+
+    _rough_locs = None
+
+    @property
+    def rough_locs(self):
+        if self.parent._rough_locs is not None:
+            return self.parent._rough_locs
+        elif self.measurement_locs is not None:
+            self.parent._update_rough_locs()
+            return self.parent._rough_locs
+
+    @rough_locs.setter
+    def rough_locs(self, value):
+        self._rough_locs = value
 
     #: the starts for each column
     _column_starts = None
@@ -356,13 +384,14 @@ class DataReader(LabelSelection):
             pass
 
     def reset_column_starts(self):
-        for child in chain([self.parent], self.parent.children):
+        for child in self.iter_all_readers:
             child._column_starts = child.shifted = child._column_ends = None
-            child._full_df = None
+            child._full_df = child._measurement_locs = child._rough_locs = None
         self._columns = []
 
     def reset_measurements(self):
-        self.parent.measurement_locs = self.parent.rough_locs = None
+        for child in self.iter_all_readers:
+            child._measurement_locs = child._rough_locs = None
 
     def plot_image(self, ax=None, **kwargs):
         ax = ax or self.ax
@@ -429,8 +458,9 @@ class DataReader(LabelSelection):
             {
              'labels': self.labels,
              'image': self.image,
-             'measurement_locs': self.measurement_locs if is_parent else None,
-             'rough_locs': self.rough_locs if is_parent else None,
+             '_measurement_locs': (self._measurement_locs if is_parent else
+                                   None),
+             '_rough_locs': self._rough_locs if is_parent else None,
              'hline_locs': self.hline_locs, 'vline_locs': self.vline_locs,
              '_column_starts': self.parent._column_starts,
              '_full_df': self._full_df if is_parent else None,
@@ -581,7 +611,7 @@ class DataReader(LabelSelection):
                     self.create_variable(ds, 'vline', self.vline_locs)
                 if self.shifted is not None:
                     self.create_variable(ds, 'shifted', self.shifted)
-                if self.measurement_locs is not None:
+                if self._measurement_locs is not None:
                     self.create_variable(
                         ds, 'measurement', self.measurement_locs.index)
                     self.create_variable(
@@ -648,7 +678,7 @@ class DataReader(LabelSelection):
             return
         self._column_ends = old._column_ends
         self._column_starts = old._column_starts
-        self.measurement_locs = old.measurement_locs
+        self._measurement_locs = old._measurement_locs
         self._full_df = old._full_df
         self.rough_locs = old.rough_locs
         self.children = [old] + [c for c in old.children if c is not self]
@@ -1148,8 +1178,11 @@ class DataReader(LabelSelection):
     def found_extrema_per_row(self):
         ret = pd.Series(np.zeros(len(self.full_df)), index=self.full_df.index,
                         name='Extrema')
+        rough = self.rough_locs
+        if rough is None:
+            return ret
         for col in self.measurement_locs.columns:
-            for key, (imin, imax) in self.rough_locs.loc[:, col].iterrows():
+            for key, (imin, imax) in rough.loc[:, col].iterrows():
                 ret.loc[int(imin):int(imax)] += 1
         return ret
 
@@ -1467,8 +1500,8 @@ class DataReader(LabelSelection):
 
         Returns
         -------
-        list of list of int
-            The list of extremum locations. Each sublist in this list
+        list of list of int of shape (N, 2)
+            The list of N extremum locations. Each tuple in this list
             represents an interval `a` where one extremum might be located
         list of list of int
             The excluded extremum locations that are ignored because we could
@@ -1481,6 +1514,8 @@ class DataReader(LabelSelection):
         def find_potential_measurements():
 
             def do_append(indices):
+                """Filter by `min_len`, `max_len` and the given `filter_func`
+                """
                 if min_len is not None and np.diff(indices) <= min_len:
                     return False
                 elif max_len is not None and np.diff(indices) > max_len:
@@ -1492,29 +1527,37 @@ class DataReader(LabelSelection):
             def notnan(idx):
                 return not np.isnan(a[idx])
 
+            #: Slope of the previous value. increasing: 1, decreasing: -1
             last_state = 0
+            #: Index of the last change
             last_change = 0
-            was_zero = False
+            #: The list of indices for the potential extrema locations
             indices = []
-            left_val = a[0]
-            # check for the potential extreme locations by looking at slope
-            # changes in this cell
+            #: The previous value
+            prev = a[0]
+            #: Boolean that is True, if the previous value `prev` was zero
+            was_zero = False
+            # recursive iteration through the rows in the column to look for
+            # slope changes and zeros.
             for i, val in enumerate(a[1:], 1):
                 if np.isnan(val):
                     continue
-                state = np.sign(val - left_val)
+                state = np.sign(val - prev)  # increasing or decreasing
+                # -- 1: If the current value equals the previous, continue
                 if not state:
                     pass
-                # when we encounter a 0, there is a measurement here
-                elif left_val > min_val and val <= min_val:
+                # -- 2: when we encounter a 0 and the previous value was not 0,
+                #       there is a measurement right here
+                elif prev > min_val and val <= min_val:
                     if do_append([i, i+1]):
                         indices.append([i, i+1])
                     was_zero = True
-                # otherwise, if we increase again, there was a measurement
-                # before
-                elif left_val <= min_val and val > min_val:
-                    # if we are closer then 6 pixels and we were 0 before, we
-                    # assume that this is only one measurement
+                # -- 3: otherwise, if we increase again, there was a
+                #       measurement before
+                elif prev <= min_val and val > min_val:
+                    # if we are closer then 6 pixels to the previous
+                    # measurement and we were 0 before, we assume that this is
+                    # only one measurement and merge them
                     if was_zero:
                         last0 = indices[-1][0]
                         # look for the last index, where the value was greater
@@ -1532,6 +1575,8 @@ class DataReader(LabelSelection):
 
                     else:
                         intercept = i - 5  # disable the next check
+                    # if we are closer than 4 pixels to the extrapolated
+                    # previous extremum, we assume they do belong to the same
                     if i - intercept <= 4:
                         if do_append([indices[-1][0], i + 1]):
                             indices[-1] = [indices[-1][0], i + 1]
@@ -1552,7 +1597,7 @@ class DataReader(LabelSelection):
                         last_state = state
                     last_change = i
                     was_zero = False
-                left_val = val
+                prev = val
             # now we verify those locations by looking at their surrounding to
             # see if the slope changes. If not, we smooth the value out
             mask = np.array(list(starmap(self.is_obstacle,
@@ -1783,13 +1828,13 @@ class DataReader(LabelSelection):
         See Also
         --------
         measurements, rough_locs, find_measurements, add_measurements"""
-        if self.measurement_locs is None:
+        if self._measurement_locs is None:
             self.measurement_locs, self.rough_locs = self.find_measurements(
                 *args, **kwargs)
         return self.measurement_locs
 
     @only_parent
-    def add_measurements(self, measurements, val_type='image', update=True):
+    def add_measurements(self, measurements, rough_locs=None):
         """Add measurements to the found ones
 
         Parameters
@@ -1805,17 +1850,9 @@ class DataReader(LabelSelection):
 
             Note that the y-values must be in image coordinates (see
             :attr:`extent` attribute).
-        val_type: { 'image' | 'columns' }
-            The type of the values. They do only have an effect if
-            `measurements` is a series. Possible values are
-
-            ``'image'``
-                The x-values are in image coordinates (with respect to the
-                :attr:`extent` attribute)
-            ``'columns'``
-                The x-values represent the column as integer
-        update: bool
-            If True, the measurements are updated, otherwise replaced
+        rough_locs: DataFrame
+            The rough locations of the new measurements (see the
+            :attr:`rough_locs` attribute)
 
         See Also
         --------
@@ -1824,13 +1861,47 @@ class DataReader(LabelSelection):
         if self.measurement_locs is None:
             self.measurement_locs = pd.DataFrame([], index='measurement',
                                                  columns=self._full_df.columns)
-        if not hasattr(measurements, 'index'):
-            measurements = pd.Series(np.zeros(len(measurements)),
-                                     index=measurements)
         if measurements.ndim == 2:
-            self._add_measurements_from_df(measurements, update)
+            self._add_measurements_from_df(measurements)
         else:
-            self._add_measurements_from_series(measurements, val_type)
+            self._add_measurements_from_array(measurements)
+        if rough_locs is not None:
+            if self._rough_locs is None:
+                self._rough_locs = rough_locs
+            else:
+                self.rough_locs = rough_locs.combine_first(self.rough_locs)
+        self._update_rough_locs()
+
+    def _add_measurements_from_df(self, measurements):
+        df = self.measurement_locs
+        if not len(df):
+            self.measurement_locs = measurements
+        else:
+            self.measurement_locs = df = measurements.combine_first(df)
+
+    def _update_rough_locs(self):
+        """Reset the rough locations by the measurements"""
+        df = self.measurement_locs
+        if self._rough_locs is None:
+            missing = df.index
+        else:
+            missing = df.index[~df.index.isin(self.rough_locs.index)]
+        if len(missing):
+            rough = np.tile(missing[:, np.newaxis], (1, len(df.columns) * 2))
+            rough[:, 1::2] += 1
+            new = pd.DataFrame(
+                rough, index=missing,
+                columns=pd.MultiIndex.from_product(
+                    [df.columns, ['vmin', 'vmax']]))
+            if self._rough_locs is None:
+                self.rough_locs = new
+            else:
+                self.rough_locs = new.combine_first(self.rough_locs)
+
+    def _add_measurements_from_array(self, measurements):
+        df = self.measurement_locs
+        new = self._full_df.loc[measurements]
+        self.measurement_locs = new.combine_first(df)
 
     def get_disconnected_parts(self, fromlast=5, from0=10,
                                cross_column=False):
@@ -2002,47 +2073,6 @@ class DataReader(LabelSelection):
     def show_parts_at_column_ends(self, npixels=2, remove=False, **kwargs):
         arr = self.get_parts_at_column_ends(npixels)
         self._show_parts2remove(arr, remove, **kwargs)
-
-    def _add_measurements_from_df(self, measurements, update=True):
-        df = self._get_measurement_locs()
-        measurements = measurements.copy()
-        measurements['rcheck'] = True
-        copy = df.copy()
-        copy['lcheck'] = True
-        joined = df.join(measurements, how='right', lsuffix='_old')
-        overlap = joined[joined.rcheck.notnull().values &
-                         joined.lcheck.notnull().values]
-        overlap.drop(['lcheck', 'rcheck'], axis=1, inplace=True)
-        if not update:
-            yvals = overlap.index.values
-            df.loc[yvals, measurements.columns] = measurements.loc[
-                yvals, :]
-        else:
-            for m, row in overlap.iterrows():
-                cols = row[row.notnull() & row > 0.0].index.values
-                df.loc[m, cols] = row.loc[cols]
-        # add the new measurements
-        new = joined[joined.rcheck.notnull().values &
-                     joined.lcheck.isnull().values]
-        if len(new):
-            yvals = new.index.values
-            df.loc[yvals, measurements.columns] = measurements.loc[
-                yvals, :]
-
-    def _add_measurements_from_series(self, measurements, val_type='image'):
-        if val_type == 'image':
-            def get_col(val):
-                return next(ncols - i - 1 for i, v in enumerate(starts[::-1])
-                            if v <= val)
-        else:
-            def get_col(val):
-                return val
-        df = self._get_measurement_locs()
-        starts = self._get_column_starts()
-        ncols = len(df.columns)
-        for m, val in measurements.iteritems():
-            col = get_col(val)
-            df.loc[m, col] = self._full_df.loc[m, col]
 
     def draw_figure(self):
         self.fig.canvas.draw()

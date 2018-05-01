@@ -60,7 +60,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
         plt.close('all')
         del self.sample, self.reader
 
-    nsamples = 20
+    nsamples = 2
 
     def test_column_bounds(self):
         """Test whether the column bounds are identified correctly
