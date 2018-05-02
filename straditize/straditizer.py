@@ -935,28 +935,7 @@ class Straditizer(LabelSelection):
             (len(index), ncols + 1))
         df = pd.DataFrame(data[:, :-1], index=index).sort_index()
         self.data_reader.measurement_locs = df
-        # set the rough locations equal to the measurements if they have not
-        # already been set, otherwise update
-        if self.data_reader.rough_locs is None:
-            self.data_reader.rough_locs = pd.DataFrame(
-                data.reshape(data.shape + (1, )),
-                index=index)
-        else:
-            old = self.data_reader.rough_locs
-            old['in_old'] = True
-            new = df[[]].copy(True)
-            new['in_new'] = True
-            joined = old.join(new, how='right')
-            missing_idx = joined[
-                joined['in_old', ''].isnull().values &
-                joined['in_new'].notnull().values].index.values
-            missing = df.loc[missing_idx, :].values.astype(int)
-            del joined['in_old', '']
-            del joined['in_new']
-            joined.loc[missing_idx, ::2] = missing
-            joined.loc[missing_idx, 1::2] = missing + 1
-            joined.sort_index(inplace=True)
-            self.data_reader.rough_locs = joined
+        self.data_reader._update_rough_locs()
         if remove:
             self.remove_marks()
             try:
