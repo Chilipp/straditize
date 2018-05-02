@@ -429,7 +429,7 @@ class MultiCrossMarksView(QTableView):
         mark.ax.set_ylim(ymax, ymin)
         for col, x in xvals.items():
             mark = marks[col]
-            xmax = float(self.full_df.loc[col].max())
+            xmax = float(self.full_df.iloc[:, col].max())
             mark.ax.set_xlim(0, xmax)
             mark.ax.set_ylim(ymax, ymin)
         mark.fig.canvas.draw()

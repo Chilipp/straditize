@@ -251,8 +251,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
             val = df.iloc[-1, col]
             xmin, xmax = ax.get_xlim()
             ymax, ymin = ax.get_ylim()
-            self.assertGreater(val, xmin)
-            self.assertLess(val, xmax)
+            self.assertGreaterEqual(val, xmin)
+            self.assertLessEqual(val, xmax)
             self.assertGreater(y, ymin)
             self.assertLess(y, ymax)
         editor.cb_zoom_to_selection.setChecked(False)
