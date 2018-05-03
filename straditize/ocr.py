@@ -113,4 +113,5 @@ class TextRecognizer(object):
         with PyTessBaseAPI() as api:
             api.SetImage(self.image)
             boxes = api.GetComponentImages(RIL.TEXTLINE, True)
-            return [t[0] for t in boxes], list(map(Bbox, (t[1] for t in boxes))
+            return [t[0] for t in boxes], list(map(Bbox,
+                                                   (t[1] for t in boxes)))
