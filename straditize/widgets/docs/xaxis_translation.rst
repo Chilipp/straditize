@@ -2,4 +2,6 @@
 
 Translating the horizontal axes
 ===============================
-to be filled...
+.. todo::
+
+    Translating the horizontal axes

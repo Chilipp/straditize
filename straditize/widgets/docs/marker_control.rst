@@ -2,4 +2,6 @@
 
 Configuring the appearance of markers
 =====================================
-to be filled...
+.. todo::
+
+    Configuring the appearance of markers

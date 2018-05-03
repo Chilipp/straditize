@@ -2,4 +2,6 @@
 
 Translating the shared vertical axis
 ====================================
-to be filled...
+.. todo::
+
+    Translating the shared vertical axis
