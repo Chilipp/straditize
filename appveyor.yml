@@ -1,7 +1,10 @@
 environment:
-  PYTHON: "C:\\Miniconda36-x64"
+  PYTHON_ARCH: "64"
+  PYTHON: "C:\\Python36-conda64"
 
 install:
+  # Install miniconda Python
+  - "powershell ./ci/install_python.ps1"
    # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
   # the parent CMD process).
