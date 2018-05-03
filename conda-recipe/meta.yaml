@@ -12,6 +12,8 @@ build:
   noarch: python
   number: 0
   script: python setup.py install --single-version-externally-managed --record record.txt
+  entry_points:
+    - straditize=straditize.__main__:main
 
 requirements:
   build:
@@ -36,7 +38,7 @@ test:
   commands:
     - straditize --help
     - pytest -v --cov=straditize --cov-config .coveragerc --cov-report term-missing -v
-#    - codecov
+    - codecov
 
 
 about:
