@@ -1,0 +1,57 @@
+{% set name = "straditize" %}
+{% set version = "0.0.1.dev0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  number: 0
+  script: python setup.py install --single-version-externally-managed --record record.txt
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python
+    - psyplot-gui
+    - scipy
+    - scikit-image
+
+test:
+  requires:
+    - pytest
+    - codecov
+    - pytest-cov
+  source_files:
+    - tests
+  imports:
+    - straditize
+    - straditize.widgets
+  commands:
+    - straditize --help
+    - pytest -v --cov=straditize --cov-config .coveragerc --cov-report term-missing -v
+#    - codecov
+
+
+about:
+  home: https://github.com/Chilipp/straditize
+  license: GPLv2
+  license_family: GPL2
+  license_file: LICENSE
+  summary: 'Python package for digitizing pollen diagrams'
+
+  description: |
+    This program tackles this problem by providing a python package to digitize
+    especially pollen diagrams, but also any other type of stratigraphic diagram.
+  doc_url: http://straditize.readthedocs.io/
+  dev_url: https://github.com/Chilipp/straditize
+
+extra:
+  recipe-maintainers:
+    - Chilipp

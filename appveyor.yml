@@ -1,0 +1,18 @@
+environment:
+  PYTHON: "C:\\Miniconda36-x64"
+
+install:
+   # Prepend newly installed Python to the PATH of this build (this cannot be
+  # done from inside the powershell script as it would require to restart
+  # the parent CMD process).
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - conda config --set always_yes yes --set changeps1 no
+  - conda config --add channels conda-forge
+  - conda update -q conda
+  - conda install conda-build
+  - conda info -a
+
+build: false
+
+test_script:
+  - conda build conda-recipe
