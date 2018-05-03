@@ -107,7 +107,10 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         plt.close('all')
         for f in self.created_files:
             if osp.exists(f):
-                os.remove(f)
+                try:
+                    os.remove(f)
+                except Exception:
+                    pass
 
     # ------ New test methods -------------------------------------------------
 
