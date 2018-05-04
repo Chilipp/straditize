@@ -41,12 +41,12 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
                               old_reader._full_df_orig)
 
     def _test_save_and_load(self, ending, fname='basic_diagram.png'):
-        # create a reader with measurements
+        # create a reader with samples
         self.init_reader(fname)
         self.reader.vline_locs = np.array([10])
         self.reader.hline_locs = np.array([10])
         self.reader.digitize()
-        self.reader._get_measurement_locs()
+        self.reader._get_sample_locs()
         self.straditizer_widgets.refresh()
         stradi = self.straditizer
         reader = stradi.data_reader
@@ -61,8 +61,8 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
         # check the loaded straditizer
         self.assertIsNot(self.straditizer, stradi)
         self.assertIsNot(self.reader, reader)
-        self.assertFrameEqual(self.reader.measurement_locs,
-                              reader.measurement_locs)
+        self.assertFrameEqual(self.reader.sample_locs,
+                              reader.sample_locs)
         self.assertEqual(self.reader.column_bounds.tolist(),
                          reader.column_bounds.tolist())
         self.assertFrameEqual(self.reader.full_df,
@@ -90,10 +90,10 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
 
     def test_export_final(self):
         """Test the exporting of the final DataFrame"""
-        # create a reader with measurements
+        # create a reader with samples
         self.init_reader()
         self.reader.digitize()
-        self.reader._get_measurement_locs()
+        self.reader._get_sample_locs()
         fname = self.get_random_filename(suffix='.csv')
         self.straditizer_widgets.menu_actions.export_final(fname)
         self.assertTrue(osp.exists(fname), msg=fname + ' is missing!')
@@ -103,7 +103,7 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
 
     def test_export_full_df(self):
         """Test the exporting of the final DataFrame"""
-        # create a reader with measurements
+        # create a reader with samples
         self.init_reader()
         self.reader.digitize()
         fname = self.get_random_filename(suffix='.csv')

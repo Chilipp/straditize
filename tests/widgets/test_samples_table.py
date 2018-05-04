@@ -1,4 +1,4 @@
-"""Test the straditize.widgets.measurements_table module"""
+"""Test the straditize.widgets.samples_table module"""
 import numpy as np
 import _base_testing as bt
 import unittest
@@ -6,8 +6,8 @@ from psyplot_gui.compat.qtcompat import QTest, Qt
 from psyplot.utils import unique_everseen
 
 
-class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
-    """Test the editing of measurements"""
+class EditsamplesTest(bt.StraditizeWidgetsTestCase):
+    """Test the editing of samples"""
 
     def test_creation(self):
         """Test whether the marks and table is set up correctly"""
@@ -15,21 +15,21 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
         self.reader.column_starts = self.column_starts
         self.reader.digitize()
         self.straditizer_widgets.refresh()
-        self.assertTrue(self.digitizer.btn_find_measurements.isEnabled())
-        self.assertTrue(self.digitizer.btn_edit_measurements.isEnabled())
-        # first try with empty measurements
-        QTest.mouseClick(self.digitizer.btn_edit_measurements, Qt.LeftButton)
+        self.assertTrue(self.digitizer.btn_find_samples.isEnabled())
+        self.assertTrue(self.digitizer.btn_edit_samples.isEnabled())
+        # first try with empty samples
+        QTest.mouseClick(self.digitizer.btn_edit_samples, Qt.LeftButton)
         self.assertFalse(self.straditizer.marks)
-        self.assertTrue(hasattr(self.digitizer, '_measurements_editor'))
+        self.assertTrue(hasattr(self.digitizer, '_samples_editor'))
         QTest.mouseClick(self.digitizer.apply_button, Qt.LeftButton)
-        self.assertFalse(hasattr(self.digitizer, '_measurements_editor'))
-        # Now try with the found measurements
-        QTest.mouseClick(self.digitizer.btn_find_measurements, Qt.LeftButton)
-        QTest.mouseClick(self.digitizer.btn_edit_measurements, Qt.LeftButton)
+        self.assertFalse(hasattr(self.digitizer, '_samples_editor'))
+        # Now try with the found samples
+        QTest.mouseClick(self.digitizer.btn_find_samples, Qt.LeftButton)
+        QTest.mouseClick(self.digitizer.btn_edit_samples, Qt.LeftButton)
         self.assertTrue(self.straditizer.marks)
-        self.assertTrue(hasattr(self.digitizer, '_measurements_editor'))
-        model = self.digitizer._measurements_editor.table.model()
-        df = self.reader.measurement_locs
+        self.assertTrue(hasattr(self.digitizer, '_samples_editor'))
+        model = self.digitizer._samples_editor.table.model()
+        df = self.reader.sample_locs
         marks = iter(self.straditizer.marks)
         # check index
         for i, val in enumerate(df.index.values):
@@ -54,8 +54,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_move_mark(self):
         """Test whether the table updates correctly when a mark is moved"""
         self.test_creation()
-        model = self.digitizer._measurements_editor.table.model()
-        df = self.reader.measurement_locs
+        model = self.digitizer._samples_editor.table.model()
+        df = self.reader.sample_locs
         marks = self.straditizer.marks
         mark = marks[0]
         # move mark in x-direction
@@ -72,8 +72,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_edit_table(self):
         """Test whether the table updates correctly when a mark is moved"""
         self.test_creation()
-        model = self.digitizer._measurements_editor.table.model()
-        df = self.reader.measurement_locs
+        model = self.digitizer._samples_editor.table.model()
+        df = self.reader.sample_locs
         marks = self.straditizer.marks
         mark = marks[0]
         # edit the x-value
@@ -90,8 +90,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_add_mark(self):
         """Test the adding of a new measurment"""
         self.test_creation()
-        model = self.digitizer._measurements_editor.table.model()
-        df = self.reader.measurement_locs
+        model = self.digitizer._samples_editor.table.model()
+        df = self.reader.sample_locs
         new_y = np.mean(df.index[:2])
         # add new marks
         self.add_mark((2, new_y))
@@ -105,8 +105,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_remove_mark(self):
         """Test the adding of a new measurment"""
         self.test_creation()
-        model = self.digitizer._measurements_editor.table.model()
-        df = self.reader.measurement_locs
+        model = self.digitizer._samples_editor.table.model()
+        df = self.reader.sample_locs
         mark = self.straditizer.marks[0]
         # add new marks
         self.remove_mark(mark)
@@ -120,8 +120,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_insert_row_above(self):
         """Insert a new row"""
         self.test_creation()
-        table = self.digitizer._measurements_editor.table
-        df = self.reader.measurement_locs
+        table = self.digitizer._samples_editor.table
+        df = self.reader.sample_locs
         model = table.model()
         table.selectRow(1)
         n = len(self.straditizer.marks)
@@ -134,8 +134,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_del_row_above(self):
         """Insert a new row"""
         self.test_creation()
-        table = self.digitizer._measurements_editor.table
-        df = self.reader.measurement_locs
+        table = self.digitizer._samples_editor.table
+        df = self.reader.sample_locs
         table.selectRow(1)
         table.delete_selected_rows()
         self.assertNotIn(df.index[1], (m.y for m in self.straditizer.marks))
@@ -143,8 +143,8 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_fit2data(self):
         """Test fitting a cell to a data"""
         self.test_creation()
-        table = self.digitizer._measurements_editor.table
-        df = self.reader.measurement_locs
+        table = self.digitizer._samples_editor.table
+        df = self.reader.sample_locs
         model = table.model()
         orig_val = df.iloc[1, 1]
         model._set_cell_data(1, 2, orig_val + 1)
@@ -158,9 +158,9 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_fit2selection(self):
         """Test fitting the selected cells to the selected values"""
         self.test_creation()
-        editor = self.digitizer._measurements_editor
+        editor = self.digitizer._samples_editor
         table = editor.table
-        df = self.reader.measurement_locs
+        df = self.reader.sample_locs
         full_df = self.reader.full_df
         model = table.model()
         editor.cb_fit2selection.setChecked(True)
@@ -186,7 +186,7 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_show_selected_marks(self):
         """Test showing only the selected marks"""
         self.test_creation()
-        editor = self.digitizer._measurements_editor
+        editor = self.digitizer._samples_editor
         table = editor.table
         model = table.model()
         # hide all marks
@@ -209,10 +209,10 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_format(self):
         """Test the changing of the number format"""
         self.test_creation()
-        editor = self.digitizer._measurements_editor
+        editor = self.digitizer._samples_editor
         table = editor.table
         model = table.model()
-        df = self.reader.measurement_locs
+        df = self.reader.sample_locs
         # change the format
         editor.format_editor.setText('%1.5f')
         editor.toggle_fmt_button(editor.format_editor.text())
@@ -234,9 +234,9 @@ class EditMeasurementsTest(bt.StraditizeWidgetsTestCase):
     def test_zoom_to_selection(self):
         """Test the automatic zoom to the selection"""
         self.test_creation()
-        editor = self.digitizer._measurements_editor
+        editor = self.digitizer._samples_editor
         table = editor.table
-        df = self.reader.measurement_locs
+        df = self.reader.sample_locs
         for ax in unique_everseen(mark.ax for mark in self.straditizer.marks):
             ax.set_ylim(-1, 0)
             ax.set_xlim(-1, 0)

@@ -209,15 +209,15 @@ class DigitizerTest(bt.StraditizeWidgetsTestCase):
         ref.columns = full_df.columns
         self.assertFrameEqual(full_df, ref, check_index_type=False)
 
-    def test_load_measurements(self):
-        """Test loading measurements from a file"""
+    def test_load_samples(self):
+        """Test loading samples from a file"""
         self.test_digitize()
         fname = self.get_fig_path(osp.join('data', 'data.csv'))
         ref = pd.read_csv(fname, index_col=0, dtype=float)
         ref.index = ref.index.astype(int)
         ref.columns = ref.columns.astype(int)
-        self.digitizer.load_measurements(fname)
-        self.assertFrameEqual(ref, self.reader.measurement_locs,
+        self.digitizer.load_samples(fname)
+        self.assertFrameEqual(ref, self.reader.sample_locs,
                               check_names=False)
 
 
@@ -273,13 +273,13 @@ class ChildReaderFrameworkTest(bt.StraditizeWidgetsTestCase):
             l.remove()
         self.reader.lines.clear()
 
-        # plot the potential measurements
-        self.reader.plot_potential_measurements(plot_kws=dict(c='r'))
+        # plot the potential samples
+        self.reader.plot_potential_samples(plot_kws=dict(c='r'))
         fname_meas_ref = self.get_random_filename(suffix='.png')
         self.reader.ax.figure.savefig(fname_meas_ref)
-        for l in self.reader.measurement_ranges:
+        for l in self.reader.sample_ranges:
             l.remove()
-        self.reader.measurement_ranges.clear()
+        self.reader.sample_ranges.clear()
 
         self.reader._full_df = None
 
@@ -302,17 +302,17 @@ class ChildReaderFrameworkTest(bt.StraditizeWidgetsTestCase):
             l.remove()
         for reader in self.reader.iter_all_readers:
             reader.lines.clear()
-            reader.plot_potential_measurements(plot_kws=dict(c='r'))
+            reader.plot_potential_samples(plot_kws=dict(c='r'))
         fname = self.get_random_filename(suffix='.png')
         self.reader.ax.figure.savefig(fname)
         self.assertImageEquals(fname, fname_meas_ref)
 
-    def test_child_reader_measurements(self):
-        """Test editing measurements"""
+    def test_child_reader_samples(self):
+        """Test editing samples"""
         self.init_reader()
         self.reader.column_starts = self.column_starts
         self.reader.digitize()
-        ref = self.reader._get_measurement_locs()
+        ref = self.reader._get_sample_locs()
         # reset the reader
         self.digitizer.init_reader()
         self.test_init_child_reader(init=False)
@@ -320,11 +320,11 @@ class ChildReaderFrameworkTest(bt.StraditizeWidgetsTestCase):
         self.test_change_child_reader(init=False)
         self.reader.digitize()
 
-        # compare the measurements
-        QTest.mouseClick(self.digitizer.btn_find_measurements, Qt.LeftButton)
+        # compare the samples
+        QTest.mouseClick(self.digitizer.btn_find_samples, Qt.LeftButton)
         QTest.mouseClick(self.straditizer_widgets.apply_button, Qt.LeftButton)
         self.assertFrameEqual(
-            self.reader._get_measurement_locs(), ref)
+            self.reader._get_sample_locs(), ref)
 
 
 class ExaggeratedTest(bt.StraditizeWidgetsTestCase):

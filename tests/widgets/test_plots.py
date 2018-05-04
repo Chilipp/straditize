@@ -91,20 +91,20 @@ class PlotControlTableTest(bt.StraditizeWidgetsTestCase):
         self.straditizer_widgets.refresh()
         self._test_plot('Full digitized data')
 
-    def test_plot_potential_measurements(self):
+    def test_plot_potential_samples(self):
         self.init_reader()
         self.reader.column_starts = self.column_starts
         self.reader.digitize()
         self.straditizer_widgets.refresh()
-        self._test_plot('Potential measurements')
+        self._test_plot('Potential samples')
 
-    def test_plot_measurements(self):
+    def test_plot_samples(self):
         self.init_reader()
         self.reader.column_starts = self.column_starts
         self.reader.digitize()
-        self.reader._get_measurement_locs()
+        self.reader._get_sample_locs()
         self.straditizer_widgets.refresh()
-        self._test_plot('Measurement lines')
+        self._test_plot('Sample lines')
 
 
 if __name__ == '__main__':

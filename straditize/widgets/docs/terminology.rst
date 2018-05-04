@@ -36,17 +36,19 @@ binary image
     digitized.
 digitize
     Digitization means transforming each pixel into a value (see the blue line
-    in the image above). Therefore, in contrast to the measurements, you get
+    in the image above). Therefore, in contrast to the samples, you get
     one data value for each pixel row in the binary image. We also refer to this
     as the `full data`.
 
-    .. image:: digitize-vs-measurement.png
+    .. image:: digitize-vs-sample.png
         :width: 50%
         :align: center
-measurement
-    The measurements (red lines in the image above) are a subset of the
-    digitization result. In a very basic sense, the measurements represent the
-    original data that was used to create the diagram.
+sample
+    The samples (red lines in the image above) are a subset of the
+    digitization result. In a very basic sense, the samples represent the
+    original data that was used to create the diagram. In a sediment core for a
+    pollen diagram, it would be one slice of the core that was analyzed under
+    the microscope.
 straditizer
     Everything that refers to the straditizer refers to the full image of your
     stratigraphic diagram. Speaking in a programmatically sense, it is the

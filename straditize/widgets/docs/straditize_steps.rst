@@ -19,6 +19,6 @@ to a certain degree as well.
     child_readers
     exaggerations
     digitize
-    measurements
+    samples
     axes_translations
     export

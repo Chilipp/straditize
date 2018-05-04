@@ -1,12 +1,12 @@
-.. _edit-measurements:
+.. _edit-samples:
 
-Automatic measurements identification
-=====================================
-straditize has reader specific measurement identification algorithms
+Automatic samples identification
+================================
+straditize has reader specific sample identification algorithms
 implemented. The overall algorithm is based on two steps:
 
 1. For each column: Identify the intervals that contain exactly one
-   measurements (the rough locations)
+   samples (the rough locations)
 2. Align the overlapping intervals between the columns to estimate the exact
    location
 

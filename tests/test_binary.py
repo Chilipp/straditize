@@ -79,7 +79,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
                     reader.column_starts, col_starts,
                     reader.column_starts <= col_starts))
 
-    def test_find_potential_measurements(self):
+    def test_find_potential_samples(self):
         """Test whether the extrema are found correctly"""
         reader = self.reader
         df = self.sample.df
@@ -91,7 +91,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
         extrema = sorted(col.index.values[minima_mask | maxima_mask])
         reader.digitize()
         reader_extrema = list(starmap(
-            np.arange, reader.find_potential_measurements(1)[0]))
+            np.arange, reader.find_potential_samples(1)[0]))
         flattened = sorted(chain.from_iterable(reader_extrema))
         self.assertEqual(len(reader_extrema), len(extrema),
                          msg='\nEstimated: %s\nReference: %s' % (
@@ -124,7 +124,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
             ])
         self.reader.columns = [0]
         self.reader._full_df = pd.DataFrame(a[:, np.newaxis])
-        extrema, excluded = self.reader.find_potential_measurements(0)
+        extrema, excluded = self.reader.find_potential_samples(0)
         # this should now give the following extrema
         reference = [
             [5, 6],       # maximum at 5
@@ -157,7 +157,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
             ])
         self.reader.columns = [0]
         self.reader._full_df = pd.DataFrame(a[:, np.newaxis])
-        extrema, excluded = self.reader.find_potential_measurements(0)
+        extrema, excluded = self.reader.find_potential_samples(0)
         reference = [
             [4, 5],      # minimum at 1
             [7, 16],     # maximum at 4
@@ -191,7 +191,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
             ])
         self.reader.columns = [0]
         self.reader._full_df = pd.DataFrame(a[:, np.newaxis])
-        extrema, excluded = self.reader.find_potential_measurements(0)
+        extrema, excluded = self.reader.find_potential_samples(0)
         reference = [
             [1, 4],
             [13, 14],   # maximum at 7
@@ -223,7 +223,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
             ])
         self.reader.columns = [0]
         self.reader._full_df = pd.DataFrame(a[:, np.newaxis])
-        extrema, excluded = self.reader.find_potential_measurements(0)
+        extrema, excluded = self.reader.find_potential_samples(0)
         reference = [
             [2, 4],    # maximum at 7
             [10, 12],  # minimum at 1
@@ -235,16 +235,16 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
         ref_excluded = [[6, 7], [7, 8]]
         self.assertEqual(excluded, ref_excluded)
 
-    def test_find_measurements(self, fail_fast=False):
-        """Test the finding and alignment of measurements
+    def test_find_samples(self, fail_fast=False):
+        """Test the finding and alignment of samples
 
         This computationally rather intense test method tests, whether we are
-        able to find measurements. We do not expect our software to exactly
-        reproduce the measurements because there are several challenges to it:
+        able to find samples. We do not expect our software to exactly
+        reproduce the samples because there are several challenges to it:
 
-        1. potential measurements (i.e. extrema) might be spread out over quite
+        1. potential samples (i.e. extrema) might be spread out over quite
            a long distance
-        2. the exact location of the measurement might vary by some pixels
+        2. the exact location of the sample might vary by some pixels
         3. when encountering a 0, it is sometimes difficult to merge it exactly
            with the other columns.
 
@@ -252,22 +252,22 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
         ----------
         fail_fast: bool
             If True, fail immediately after the first, otherwise fail after
-            more than two wrong measurement reconstructions
+            more than two wrong sample reconstructions
         """
         def test():
             self.reader.digitize()
             ref = self.sample.df.index
-            measurements = self.reader.find_measurements(max_len=6)[0].index
+            samples = self.reader.find_samples(max_len=6)[0].index
             self.assertAlmostArrayEqual(
-                ref.shape, measurements.shape, atol=2,
+                ref.shape, samples.shape, atol=2,
                 msg='Failed at iteration %i' % i)
             missing = []
             for m in ref:
-                if np.abs(measurements-m).min() > 4:
+                if np.abs(samples-m).min() > 4:
                     missing.append(m)
             if len(missing) > 1:
                 msg = 'Failed at iteration %i. %s not found in %s' % (
-                    i, missing, measurements)
+                    i, missing, samples)
                 if fail_fast:
                     self.fail(msg)
                 else:

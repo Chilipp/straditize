@@ -74,30 +74,30 @@ class TestSample(object):
         return Image.fromarray(arr, 'RGBA')
 
     @classmethod
-    def from_random(cls, height, width, ncols, nmeasurements, mindiff=3):
+    def from_random(cls, height, width, ncols, nsamples, mindiff=3):
         """Create a new :class:`TestSample` instance by randomly generating
         values"""
-        vals = np.zeros((nmeasurements, ncols), dtype=int)
+        vals = np.zeros((nsamples, ncols), dtype=int)
         maxvals = np.zeros(ncols, dtype=int)
         summed_cols = width - ncols * 2  # the widths of all columns summed up
         summed_row = np.int(width * 2 / 3.) - ncols * 2  # the sum for each row
         minval = 0.01 * summed_row  # at minimum we need 1 for each column
         while (maxvals < minval).any():
             maxvals[:] = get_numbers(ncols, summed_cols)
-        for i in range(nmeasurements):
+        for i in range(nsamples):
             # generate a series of random numbers that sum up to
             # width - ncols * 2 such that we can have two lines between each
             # column
             vals[i, :] = get_numbers(ncols, summed_row)
             while (vals[i, :] > maxvals).any():
                 vals[i, :] = get_numbers(ncols, summed_row)
-        measurements = np.zeros(nmeasurements, dtype=int)
-        while np.any(measurements[1:] - measurements[:-1] < mindiff):
-            measurements = np.sort(np.r_[
+        samples = np.zeros(nsamples, dtype=int)
+        while np.any(samples[1:] - samples[:-1] < mindiff):
+            samples = np.sort(np.r_[
                 [0],
-                np.random.permutation(height)[:nmeasurements - 2],
+                np.random.permutation(height)[:nsamples - 2],
                 [height - 1]])
-        df = pd.DataFrame(vals, index=pd.Index(measurements, name='height'),
+        df = pd.DataFrame(vals, index=pd.Index(samples, name='height'),
                           columns=np.arange(ncols))
         interpolated = np.zeros((height, ncols), dtype=int)
         for i in np.arange(ncols):

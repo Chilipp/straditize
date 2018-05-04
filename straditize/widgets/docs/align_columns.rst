@@ -3,8 +3,8 @@
 Align the columns vertically
 ============================
 Sometimes the columns are not aligned properly which makes it hard to identify
-where the exact measurement is located and might lead to misinterpretations
-of measurements. To correct this, we implemented a methodology to align the
+where the exact sample is located and might lead to misinterpretations
+of samples. To correct this, we implemented a methodology to align the
 columns.
 
 After having clicked the :guilabel:`Align columns` button, multiple marks are

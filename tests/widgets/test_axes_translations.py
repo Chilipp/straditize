@@ -13,19 +13,19 @@ class AxesTranslation(bt.StraditizeWidgetsTestCase):
 
     def test_xaxes_conversion(self):
         """Test the exporting of the final DataFrame"""
-        # create a reader with measurements
+        # create a reader with samples
         btn = self.straditizer_widgets.axes_translations.btn_marks_for_x
         self.assertFalse(btn.isEnabled())
         self.init_reader()
         self.reader.digitize()
-        self.reader._get_measurement_locs()
+        self.reader._get_sample_locs()
         self.straditizer_widgets.refresh()
         self.assertTrue(btn.isEnabled())
 
         # create the marks
         QTest.mouseClick(btn, Qt.LeftButton)
         x0 = self.data_xlim[0] + self.reader.column_starts[1]
-        x1 = x0 + self.reader.measurement_locs.iloc[-1, 1]
+        x1 = x0 + self.reader.sample_locs.iloc[-1, 1]
         self.straditizer._new_mark(x0, self.data_ylim[1], value=0)
         self.straditizer._new_mark(x1, self.data_ylim[1], value=50)
         QTest.mouseClick(self.straditizer_widgets.apply_button, Qt.LeftButton)
@@ -56,7 +56,7 @@ class AxesTranslation(bt.StraditizeWidgetsTestCase):
         self.assertEqual(full_df.iloc[-1, 0], ref0)
 
         # check the translation in final_df
-        orig_final_df = self.reader.measurement_locs
+        orig_final_df = self.reader.sample_locs
         final_df = self.straditizer.final_df
         self.assertEqual(final_df.iloc[-1, 1], 50)
         ref0 = 50. * orig_final_df.iloc[-1, 0] / orig_final_df.iloc[-1, 1]
@@ -64,17 +64,17 @@ class AxesTranslation(bt.StraditizeWidgetsTestCase):
 
     def test_yaxes_conversion(self):
         """Test the exporting of the final DataFrame"""
-        # create a reader with measurements
+        # create a reader with samples
         btn = self.straditizer_widgets.axes_translations.btn_marks_for_y
         self.init_reader()
         self.reader.digitize()
-        self.reader._get_measurement_locs()
+        self.reader._get_sample_locs()
         self.straditizer_widgets.refresh()
 
         # create the marks
         QTest.mouseClick(btn, Qt.LeftButton)
         y0 = self.data_ylim[0]
-        y1 = self.reader.measurement_locs.index[-1] + self.data_ylim[0]
+        y1 = self.reader.sample_locs.index[-1] + self.data_ylim[0]
         self.straditizer._new_mark(self.data_xlim[0], y0, value=0)
         self.straditizer._new_mark(self.data_xlim[0], y1, value=50)
         QTest.mouseClick(self.straditizer_widgets.apply_button, Qt.LeftButton)

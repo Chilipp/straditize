@@ -292,26 +292,26 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_digitize = QPushButton('Digitize')
         self.btn_digitize.setToolTip('Digitize the binary file')
 
-        self.btn_find_measurements = QPushButton('Find measurements')
-        self.btn_find_measurements.setToolTip(
-            'Estimate positions of the measurements in the diagram')
+        self.btn_find_samples = QPushButton('Find samples')
+        self.btn_find_samples.setToolTip(
+            'Estimate positions of the samples in the diagram')
 
-        self.btn_load_measurements = QPushButton('Load measurements')
-        self.btn_load_measurements.setToolTip(
-            'Load the measurements from a CSV file')
+        self.btn_load_samples = QPushButton('Load samples')
+        self.btn_load_samples.setToolTip(
+            'Load the sample locations from a CSV file')
 
-        self.btn_edit_measurements = QPushButton('Edit measurements')
-        self.btn_edit_measurements.setToolTip(
-            'Modify and edit the measurements')
-        self.btn_reset_measurements = QPushButton('Reset')
-        self.btn_reset_measurements.setToolTip('Reset the measurements')
+        self.btn_edit_samples = QPushButton('Edit samples')
+        self.btn_edit_samples.setToolTip(
+            'Modify and edit the samples')
+        self.btn_reset_samples = QPushButton('Reset')
+        self.btn_reset_samples.setToolTip('Reset the samples')
 
         self.txt_min_len = QLineEdit()
         self.txt_min_len.setToolTip(
-            'Minimum length of a potential measurement to include')
+            'Minimum length of a potential sample to include')
         self.txt_max_len = QLineEdit()
         self.txt_min_len.setToolTip(
-            'Maximum length of a potential measurement to include')
+            'Maximum length of a potential sample to include')
 
         self.tree_bar_split = BarSplitter(straditizer_widgets)
 
@@ -323,7 +323,7 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_digitize_exag,
             self.btn_new_exaggeration, self.btn_select_exaggerations,
             self.btn_select_data, self.btn_remove_hlines,
-            self.btn_reset_columns, self.btn_reset_measurements,
+            self.btn_reset_columns, self.btn_reset_samples,
             self.btn_remove_vlines, self.txt_line_fraction,
             self.txt_max_lw, self.txt_min_lw,
             self.btn_show_disconnected_parts, self.txt_fromlast,
@@ -331,8 +331,8 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_show_parts_at_column_ends,
             self.btn_show_small_parts, self.txt_min_size,
             self.btn_align_vertical,
-            self.btn_edit_measurements, self.btn_find_measurements,
-            self.btn_load_measurements]
+            self.btn_edit_samples, self.btn_find_samples,
+            self.btn_load_samples]
 
         self.init_reader_kws = {}
 
@@ -357,10 +357,10 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_show_parts_at_column_ends.clicked.connect(
             self.show_parts_at_column_ends)
         self.btn_align_vertical.clicked.connect(self.align_vertical)
-        self.btn_find_measurements.clicked.connect(self.find_measurements)
-        self.btn_load_measurements.clicked.connect(self.load_measurements)
-        self.btn_edit_measurements.clicked.connect(self.edit_measurements)
-        self.btn_reset_measurements.clicked.connect(self.reset_measurements)
+        self.btn_find_samples.clicked.connect(self.find_samples)
+        self.btn_load_samples.clicked.connect(self.load_samples)
+        self.btn_edit_samples.clicked.connect(self.edit_samples)
+        self.btn_reset_samples.clicked.connect(self.reset_samples)
         self.btn_show_small_parts.clicked.connect(self.show_small_parts)
         self.txt_min_size.textChanged.connect(
             self._update_btn_show_small_parts)
@@ -392,7 +392,7 @@ class DigitizingControl(StraditizerControlBase):
                 sum(map(len, self.straditizer.data_reader._splitted.values())))
                 )
         self.maybe_show_btn_reset_columns()
-        self.maybe_show_btn_reset_measurements()
+        self.maybe_show_btn_reset_samples()
         for w in [self.btn_init_reader, self.btn_digitize]:
             w.setEnabled(self.should_be_enabled(w))
         self.enable_or_disable_btn_highlight_small_selection()
@@ -419,7 +419,7 @@ class DigitizingControl(StraditizerControlBase):
         if not self.tree_bar_split.isHidden():
             self.tree_bar_split.enable_or_disable_widgets(*args, **kwargs)
         self.maybe_show_btn_reset_columns()
-        self.maybe_show_btn_reset_measurements()
+        self.maybe_show_btn_reset_samples()
         self.toggle_txt_tolerance(self.cb_reader_type.currentText())
         self.enable_or_disable_btn_highlight_small_selection()
 
@@ -434,9 +434,9 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_reset_columns.setVisible(show)
         self.btn_column_ends.setVisible(show)
 
-    def maybe_show_btn_reset_measurements(self):
-        self.btn_reset_measurements.setVisible(
-            self.should_be_enabled(self.btn_reset_measurements))
+    def maybe_show_btn_reset_samples(self):
+        self.btn_reset_samples.setVisible(
+            self.should_be_enabled(self.btn_reset_samples))
 
     def update_tolerance(self, s):
         if (self.straditizer is not None and
@@ -537,11 +537,11 @@ class DigitizingControl(StraditizerControlBase):
               w in [self.cb_exag_reader_type, self.btn_new_exaggeration,
                     self.txt_exag_factor]):
             return False
-        elif (w is self.btn_reset_measurements and
-              self.straditizer.data_reader._measurement_locs is None):
+        elif (w is self.btn_reset_samples and
+              self.straditizer.data_reader._sample_locs is None):
             return False
-        elif (w in [self.btn_find_measurements, self.btn_edit_measurements,
-                    self.btn_load_measurements, self.btn_digitize_exag] and
+        elif (w in [self.btn_find_samples, self.btn_edit_samples,
+                    self.btn_load_samples, self.btn_digitize_exag] and
               self.straditizer.data_reader.full_df is None):
             return False
         elif (w is self.btn_show_small_parts and
@@ -554,9 +554,9 @@ class DigitizingControl(StraditizerControlBase):
         self.maybe_show_btn_reset_columns()
         self.refresh()
 
-    def reset_measurements(self):
-        self.straditizer.data_reader.reset_measurements()
-        self.maybe_show_btn_reset_measurements()
+    def reset_samples(self):
+        self.straditizer.data_reader.reset_samples()
+        self.maybe_show_btn_reset_samples()
         self.refresh()
 
     def setup_children(self, item):
@@ -791,43 +791,43 @@ class DigitizingControl(StraditizerControlBase):
         item.addChild(self.bar_split_child)
         self.bar_split_child.setHidden(not self.tree_bar_split.filled)
 
-        # 6: edit measurements button
+        # 6: edit samples button
         child = QTreeWidgetItem(0)
-        child.setText(0, 'Edit measurements')
+        child.setText(0, 'Edit samples')
         item.addChild(child)
-        self.add_info_button(child, 'measurements.rst')
+        self.add_info_button(child, 'samples.rst')
 
         find_child = QTreeWidgetItem(0)
         child.addChild(find_child)
-        self.tree.setItemWidget(find_child, 0, self.btn_find_measurements)
-        self.add_info_button(find_child, 'find_measurements.rst',
-                             connections=[self.btn_find_measurements])
+        self.tree.setItemWidget(find_child, 0, self.btn_find_samples)
+        self.add_info_button(find_child, 'find_samples.rst',
+                             connections=[self.btn_find_samples])
 
         find_child2 = QTreeWidgetItem(0)
-        measurements_box = QGridLayout()
-        measurements_box.addWidget(QLabel('Minimum length'), 0, 0)
-        measurements_box.addWidget(QLabel('Maximum length'), 0, 1)
-        measurements_box.addWidget(self.txt_min_len, 1, 0)
-        measurements_box.addWidget(self.txt_max_len, 1, 1)
+        samples_box = QGridLayout()
+        samples_box.addWidget(QLabel('Minimum length'), 0, 0)
+        samples_box.addWidget(QLabel('Maximum length'), 0, 1)
+        samples_box.addWidget(self.txt_min_len, 1, 0)
+        samples_box.addWidget(self.txt_max_len, 1, 1)
         w = QWidget()
-        w.setLayout(measurements_box)
+        w.setLayout(samples_box)
         find_child.addChild(find_child2)
         self.tree.setItemWidget(find_child2, 0, w)
 
         load_child = QTreeWidgetItem(0)
         child.addChild(load_child)
-        self.tree.setItemWidget(load_child, 0, self.btn_load_measurements)
-        self.add_info_button(load_child, 'load_measurements.rst',
-                             connections=[self.btn_load_measurements])
+        self.tree.setItemWidget(load_child, 0, self.btn_load_samples)
+        self.add_info_button(load_child, 'load_samples.rst',
+                             connections=[self.btn_load_samples])
 
         edit_child = QTreeWidgetItem(0)
         child.addChild(edit_child)
-        self.add_info_button(edit_child, 'edit_measurements.rst',
-                             connections=[self.btn_edit_measurements])
+        self.add_info_button(edit_child, 'edit_samples.rst',
+                             connections=[self.btn_edit_samples])
 
         hbox_cols = QHBoxLayout()
-        hbox_cols.addWidget(self.btn_edit_measurements)
-        hbox_cols.addWidget(self.btn_reset_measurements)
+        hbox_cols.addWidget(self.btn_edit_samples)
+        hbox_cols.addWidget(self.btn_reset_samples)
         w = QWidget()
         w.setLayout(hbox_cols)
 
@@ -947,20 +947,20 @@ class DigitizingControl(StraditizerControlBase):
             reader.end_column_selection,
             reader.draw_figure)
 
-    def find_measurements(self):
+    def find_samples(self):
         kws = {}
         if self.txt_min_len.text().strip():
             kws['min_len'] = int(self.txt_min_len.text())
         if self.txt_max_len.text().strip():
             kws['max_len'] = int(self.txt_max_len.text())
-        self.straditizer.data_reader.add_measurements(
-            *self.straditizer.data_reader.find_measurements(**kws))
+        self.straditizer.data_reader.add_samples(
+            *self.straditizer.data_reader.find_samples(**kws))
         self.straditizer_widgets.refresh()
 
-    def load_measurements(self, fname=None):
+    def load_samples(self, fname=None):
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getOpenFileName(
-                self.straditizer_widgets, 'Measurements', os.getcwd(),
+                self.straditizer_widgets, 'samples', os.getcwd(),
                 'CSV files (*.csv);;'
                 'All files (*)'
                 )
@@ -969,58 +969,58 @@ class DigitizingControl(StraditizerControlBase):
         if not fname:
             return
         df = pd.read_csv(fname)
-        measurements = df.iloc[:, 0].values
+        samples = df.iloc[:, 0].values
         try:
-            measurements = self.straditizer.data2px_y(measurements)
+            samples = self.straditizer.data2px_y(samples)
         except ValueError:
             pass
-        self.straditizer.data_reader.add_measurements(measurements.astype(int))
+        self.straditizer.data_reader.add_samples(samples.astype(int))
         self.straditizer_widgets.refresh()
 
-    def edit_measurements(self):
+    def edit_samples(self):
         from psyplot_gui.main import mainwindow
-        from straditize.widgets.measurements_table import MultiCrossMarksEditor
-        fig, axes = self.straditizer.marks_for_measurements_sep()
-        self._measurements_fig = fig
+        from straditize.widgets.samples_table import MultiCrossMarksEditor
+        fig, axes = self.straditizer.marks_for_samples_sep()
+        self._samples_fig = fig
         if mainwindow.figures:  # using psyplot backend
-            fig_dock = self._measurements_fig.canvas.manager.window
+            fig_dock = self._samples_fig.canvas.manager.window
             stradi_dock = self.straditizer.ax.figure.canvas.manager.window
             mainwindow.tabifyDockWidget(stradi_dock, fig_dock)
             a = fig_dock.toggleViewAction()
             if not a.isChecked():
                 a.trigger()
             fig_dock.raise_()
-        self._measurements_editor = editor = MultiCrossMarksEditor(
+        self._samples_editor = editor = MultiCrossMarksEditor(
             self.straditizer, axes=axes)
         dock = editor.to_dock(
-            mainwindow, title='Measurements editor')
+            mainwindow, title='samples editor')
         editor.show_plugin()
         editor.maybe_tabify()
         editor.raise_()
-        # zoom to the first 3 measurements
+        # zoom to the first 3 samples
         ncols = editor.table.model().columnCount() - 1
         nrows = min(3, editor.table.model().rowCount())
         editor.table.zoom_to_cells(
             chain.from_iterable([i] * ncols for i in range(nrows)),
             list(range(ncols)) * nrows)
-        self.connect2apply(lambda: self.straditizer.update_measurements_sep(),
-                           self._close_measurements_fig,
+        self.connect2apply(lambda: self.straditizer.update_samples_sep(),
+                           self._close_samples_fig,
                            dock.close,
                            self.straditizer_widgets.refresh)
         self.connect2cancel(self.straditizer.remove_marks,
-                            self._close_measurements_fig,
+                            self._close_samples_fig,
                             dock.close)
-        self.maybe_show_btn_reset_measurements()
+        self.maybe_show_btn_reset_samples()
 
-    def _close_measurements_fig(self):
+    def _close_samples_fig(self):
         import matplotlib.pyplot as plt
-        plt.close(self._measurements_fig)
-        del self._measurements_editor
+        plt.close(self._samples_fig)
+        del self._samples_editor
         try:
             del self.straditizer._plotted_full_df
         except AttributeError:
             pass
-        del self._measurements_fig
+        del self._samples_fig
 
     def digitize(self):
         reader = self.reader

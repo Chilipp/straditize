@@ -1,4 +1,4 @@
-"""A table for manipulating measurements"""
+"""A table for manipulating samples"""
 from __future__ import division
 import six
 import numpy as np
@@ -103,7 +103,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
 
     @property
     def df(self):
-        """Get the measurements_locs"""
+        """Get the samples_locs"""
         vals = np.array([[m.x for m in marks[:-1]] for y, marks in self.marks])
         df = pd.DataFrame(vals, index=[y for y, marks in self.marks],
                           columns=np.arange(self.columnCount() - 2))
@@ -494,7 +494,7 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
         self.btn_change_format.setEnabled(False)
 
         self.btn_save = QPushButton('Save')
-        self.btn_save.setToolTip('Save the measurements and continue editing')
+        self.btn_save.setToolTip('Save the samples and continue editing')
 
         # ---------------------------------------------------------------------
         # ------------------------ layout --------------------------------
@@ -521,7 +521,7 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
         # ---------------------------------------------------------------------
         self.format_editor.textChanged.connect(self.toggle_fmt_button)
         self.btn_change_format.clicked.connect(self.update_format)
-        self.btn_save.clicked.connect(self.save_measurements)
+        self.btn_save.clicked.connect(self.save_samples)
         self.straditizer.mark_added.connect(self.table.model().load_new_marks)
         self.straditizer.mark_removed.connect(self.table.model().remove_mark)
         self.table.selectionModel().selectionChanged.connect(
@@ -549,8 +549,8 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
                                    stradi._new_mark, stradi._remove_mark,
                                    axes=axes)
 
-    def save_measurements(self):
-        self.straditizer.update_measurements_sep(remove=False)
+    def save_samples(self):
+        self.straditizer.update_samples_sep(remove=False)
 
     def maybe_zoom_to_selection(self):
         if self.cb_zoom_to_selection.isChecked():

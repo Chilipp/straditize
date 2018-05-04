@@ -70,23 +70,23 @@ class DataReader(LabelSelection):
     #: magnifier
     magni = None
 
-    _measurement_locs = None
+    _sample_locs = None
 
     @property
-    def measurement_locs(self):
+    def sample_locs(self):
         """
         The :class:`pandas.DataFrame` with locations and values of the
-        measurements"""
-        if self.parent._measurement_locs is not None:
-            return self.parent._measurement_locs
+        samples"""
+        if self.parent._sample_locs is not None:
+            return self.parent._sample_locs
         elif self.parent._full_df is not None:
-            self.parent._measurement_locs = self.parent._full_df.iloc[:0].copy(
+            self.parent._sample_locs = self.parent._full_df.iloc[:0].copy(
                 True)
-            return self.parent._measurement_locs
+            return self.parent._sample_locs
 
-    @measurement_locs.setter
-    def measurement_locs(self, value):
-        self.parent._measurement_locs = value
+    @sample_locs.setter
+    def sample_locs(self, value):
+        self.parent._sample_locs = value
 
     _rough_locs = None
 
@@ -94,7 +94,7 @@ class DataReader(LabelSelection):
     def rough_locs(self):
         if self.parent._rough_locs is not None:
             return self.parent._rough_locs
-        elif self.measurement_locs is not None:
+        elif self.sample_locs is not None:
             self.parent._update_rough_locs()
             return self.parent._rough_locs
 
@@ -188,12 +188,12 @@ class DataReader(LabelSelection):
     shifted = None
 
     #: The minimum fraction of overlap for two bars to be considered as the
-    #: same measurement (see :meth:`unique_bars`)
+    #: same sample (see :meth:`unique_bars`)
     min_fract = 0.9
 
     #: a boolean flag that shall indicate if we assume that the first and last
-    #: rows shall be a measurement if they contain non-zero values
-    measurements_at_boundaries = True
+    #: rows shall be a sample if they contain non-zero values
+    samples_at_boundaries = True
 
     #: Child readers for specific columns. Is not empty if and only if the
     #: :attr:`parent` attribute is this instance
@@ -307,7 +307,7 @@ class DataReader(LabelSelection):
         self.image = image
         self.reset_labels()
         self.lines = []
-        self.measurement_ranges = []
+        self.sample_ranges = []
         self.ax = ax
         self._extent = extent
         self.hline_locs = np.empty(0, int)
@@ -386,12 +386,12 @@ class DataReader(LabelSelection):
     def reset_column_starts(self):
         for child in self.iter_all_readers:
             child._column_starts = child.shifted = child._column_ends = None
-            child._full_df = child._measurement_locs = child._rough_locs = None
+            child._full_df = child._sample_locs = child._rough_locs = None
         self._columns = []
 
-    def reset_measurements(self):
+    def reset_samples(self):
         for child in self.iter_all_readers:
-            child._measurement_locs = child._rough_locs = None
+            child._sample_locs = child._rough_locs = None
 
     def plot_image(self, ax=None, **kwargs):
         ax = ax or self.ax
@@ -458,8 +458,7 @@ class DataReader(LabelSelection):
             {
              'labels': self.labels,
              'image': self.image,
-             '_measurement_locs': (self._measurement_locs if is_parent else
-                                   None),
+             '_sample_locs': (self._sample_locs if is_parent else None),
              '_rough_locs': self._rough_locs if is_parent else None,
              'hline_locs': self.hline_locs, 'vline_locs': self.vline_locs,
              '_column_starts': self.parent._column_starts,
@@ -518,13 +517,13 @@ class DataReader(LabelSelection):
         'shifted': {
             'dims': 'column',
             'long_name': 'Vertical shift per column', 'units': 'px'},
-        'measurement': {'long_name': 'Measurement location', 'units': 'px'},
-        'measurements': {
-            'dims': ('measurement', 'column'),
-            'long_name': 'Measurement data', 'units': 'px'},
+        'sample': {'long_name': 'Sample location', 'units': 'px'},
+        'samples': {
+            'dims': ('sample', 'column'),
+            'long_name': 'Sample data', 'units': 'px'},
         'rough_locs': {
-            'dims': ('measurement', 'column', 'limit'),
-            'long_name': 'Rough locations for measurements'},
+            'dims': ('sample', 'column', 'limit'),
+            'long_name': 'Rough locations for samples'},
         }
 
     def create_variable(self, ds, vname, data, **kwargs):
@@ -611,14 +610,14 @@ class DataReader(LabelSelection):
                     self.create_variable(ds, 'vline', self.vline_locs)
                 if self.shifted is not None:
                     self.create_variable(ds, 'shifted', self.shifted)
-                if self._measurement_locs is not None:
+                if self._sample_locs is not None:
                     self.create_variable(
-                        ds, 'measurement', self.measurement_locs.index)
+                        ds, 'sample', self.sample_locs.index)
                     self.create_variable(
-                        ds, 'measurements', self.measurement_locs.values)
+                        ds, 'samples', self.sample_locs.values)
                     self.create_variable(
                         ds, 'rough_locs', self.rough_locs.values.reshape(
-                            self.measurement_locs.shape + (2, )))
+                            self.sample_locs.shape + (2, )))
 
             for child in self.children:
                 ds = child.to_dataset(ds)
@@ -661,14 +660,14 @@ class DataReader(LabelSelection):
                 reader.vline_locs = ds['vline'].values
             if 'shifted' in ds:
                 reader.shifted = ds['shifted'].values
-            if 'measurements' in ds:
-                index = ds['measurement'].values
-                reader.measurement_locs = pd.DataFrame(
-                    ds['measurements'].values, index=index)
+            if 'samples' in ds:
+                index = ds['sample'].values
+                reader.sample_locs = pd.DataFrame(
+                    ds['samples'].values, index=index)
                 reader.rough_locs = pd.DataFrame(
                     ds['rough_locs'].values.reshape((len(index), -1)),
                     index=index, columns=pd.MultiIndex.from_product(
-                        [reader.measurement_locs.columns, ['vmin', 'vmax']]))
+                        [reader.sample_locs.columns, ['vmin', 'vmax']]))
         return reader
 
     def set_as_parent(self):
@@ -678,7 +677,7 @@ class DataReader(LabelSelection):
             return
         self._column_ends = old._column_ends
         self._column_starts = old._column_starts
-        self._measurement_locs = old._measurement_locs
+        self._sample_locs = old._sample_locs
         self._full_df = old._full_df
         self.rough_locs = old.rough_locs
         self.children = [old] + [c for c in old.children if c is not self]
@@ -1181,7 +1180,7 @@ class DataReader(LabelSelection):
         rough = self.rough_locs
         if rough is None:
             return ret
-        for col in self.measurement_locs.columns:
+        for col in self.sample_locs.columns:
             for key, (imin, imax) in rough.loc[:, col].iterrows():
                 ret.loc[int(imin):int(imax)] += 1
         return ret
@@ -1362,9 +1361,9 @@ class DataReader(LabelSelection):
         """Plot the lines for the digitized diagram"""
         self.lines = self._plot_df(self.full_df, ax, *args, **kwargs)
 
-    def plot_measurements(self, ax=None, *args, **kwargs):
-        self.measurement_lines = self._plot_df(
-            self.measurement_locs.loc[:, self.columns], ax, *args, **kwargs)
+    def plot_samples(self, ax=None, *args, **kwargs):
+        self.sample_lines = self._plot_df(
+            self.sample_locs.loc[:, self.columns], ax, *args, **kwargs)
 
     def _plot_df(self, df, ax=None, *args, **kwargs):
         vals = df.values
@@ -1383,12 +1382,12 @@ class DataReader(LabelSelection):
             lines.extend(ax.plot(x, y[mask], *args, **kwargs))
         return lines
 
-    def plot_potential_measurements(
+    def plot_potential_samples(
             self, excluded=False, ax=None, plot_kws={}, *args, **kwargs):
-        """Plot the ranges for potential measurements"""
+        """Plot the ranges for potential samples"""
         vals = self.full_df.values.copy()
         starts = self.column_starts.copy()
-        self.measurement_ranges = lines = []
+        self.sample_ranges = lines = []
         y = np.arange(np.shape(self.image)[0]) + 0.5
         ax = ax or self.ax
         if self.extent is not None:
@@ -1397,7 +1396,7 @@ class DataReader(LabelSelection):
         plot_kws = dict(plot_kws)
         plot_kws.setdefault('marker', '+')
         for i, (col, arr) in enumerate(zip(self.columns, vals.T)):
-            all_indices, excluded_indices = self.find_potential_measurements(
+            all_indices, excluded_indices = self.find_potential_samples(
                 col, *args, **kwargs)
             if excluded:
                 all_indices = excluded_indices
@@ -1411,16 +1410,16 @@ class DataReader(LabelSelection):
                 lines.extend(ax.plot(starts[i] + arr[imin:imax], y[imin:imax],
                                      **plot_kws))
 
-    def plot_other_potential_measurements(self, tol=1, already_found=None,
-                                          *args, **kwargs):
+    def plot_other_potential_samples(self, tol=1, already_found=None,
+                                     *args, **kwargs):
         if already_found is None:
-            already_found = self.measurements.index.values
+            already_found = self.samples.index.values
 
         def filter_func(indices):
             return not any((np.abs(already_found - v) < tol).any()
                            for v in indices)
 
-        self.plot_potential_measurements(
+        self.plot_potential_samples(
             filter_func=filter_func, *args, **kwargs)
 
     def get_surrounding_slopes(self, indices, arr):
@@ -1466,13 +1465,13 @@ class DataReader(LabelSelection):
         intercept = y[0] - slope * x[0]
         return intercept, slope
 
-    @docstrings.get_sectionsf('DataReader.find_potential_measurements',
+    @docstrings.get_sectionsf('DataReader.find_potential_samples',
                               sections=['Parameters', 'Returns'])
     @docstrings.dedent
-    def find_potential_measurements(self, col, min_len=None,
-                                    max_len=None, filter_func=None):
+    def find_potential_samples(self, col, min_len=None,
+                               max_len=None, filter_func=None):
         """
-        Find potential measurements in an array
+        Find potential samples in an array
 
         This method finds extrema in an array and returns the indices where
         the extremum might be. The algorithm thereby filters out obstacles by
@@ -1509,9 +1508,9 @@ class DataReader(LabelSelection):
 
         See Also
         --------
-        find_measurements
+        find_samples
         """
-        def find_potential_measurements():
+        def find_potential_samples():
 
             def do_append(indices):
                 """Filter by `min_len`, `max_len` and the given `filter_func`
@@ -1547,17 +1546,17 @@ class DataReader(LabelSelection):
                 if not state:
                     pass
                 # -- 2: when we encounter a 0 and the previous value was not 0,
-                #       there is a measurement right here
+                #       there is a sample right here
                 elif prev > min_val and val <= min_val:
                     if do_append([i, i+1]):
                         indices.append([i, i+1])
                     was_zero = True
                 # -- 3: otherwise, if we increase again, there was a
-                #       measurement before
+                #       sample before
                 elif prev <= min_val and val > min_val:
                     # if we are closer then 6 pixels to the previous
-                    # measurement and we were 0 before, we assume that this is
-                    # only one measurement and merge them
+                    # sample and we were 0 before, we assume that this is
+                    # only one sample and merge them
                     if was_zero:
                         last0 = indices[-1][0]
                         # look for the last index, where the value was greater
@@ -1625,9 +1624,9 @@ class DataReader(LabelSelection):
         a = self.full_df[col].values.copy()
         min_val = 0  #: The minimum data value
         # first try to smooth out bad values
-        included0, excluded0 = find_potential_measurements()
+        included0, excluded0 = find_potential_samples()
 
-        included1, excluded1 = find_potential_measurements()
+        included1, excluded1 = find_potential_samples()
         excluded1.extend(excluded0)
         return included1, sorted(excluded1)
 
@@ -1644,7 +1643,7 @@ class DataReader(LabelSelection):
         min_fract: float
             The minimum fraction between 0 and 1 that two bars have to overlap
             such that they are considered as representing the same
-            measurement. If None, the :attr:`min_fract` attribute is used
+            sample. If None, the :attr:`min_fract` attribute is used
         asdict: bool
             If True, dictionaries are returned
 
@@ -1663,7 +1662,7 @@ class DataReader(LabelSelection):
         df = self.full_df.copy(True)
         bars = list(chain.from_iterable(
             (_Bar(col, indices)
-             for indices in get_child(col).find_potential_measurements(
+             for indices in get_child(col).find_potential_samples(
                 col, *args, **kwargs)[0])
             for col in df.columns))
         for bar in bars:
@@ -1678,35 +1677,35 @@ class DataReader(LabelSelection):
 
     docstrings.keep_params('DataReader.unique_bars.parameters', 'min_fract')
     docstrings.delete_params(
-        'DataReader.find_potential_measurements.parameters', 'col')
+        'DataReader.find_potential_samples.parameters', 'col')
 
-    @docstrings.get_sectionsf('DataReader.find_measurements',
+    @docstrings.get_sectionsf('DataReader.find_samples',
                               sections=['Parameters', 'Returns'])
     @docstrings.dedent
     @only_parent
-    def find_measurements(self, min_fract=None, pixel_tol=2, *args, **kwargs):
+    def find_samples(self, min_fract=None, pixel_tol=2, *args, **kwargs):
         """
-        Find the measurements in the diagram
+        Find the samples in the diagram
 
-        This function finds the measurements using the
-        :func:`find_potential_measurements`
+        This function finds the samples using the
+        :func:`find_potential_samples`
         function. It combines the found extrema from all columns and estimates
         the exact location using an interpolation of the slope
 
         Parameters
         ----------
         %(DataReader.unique_bars.parameters.min_fract)s
-        %(DataReader.find_potential_measurements.parameters.no_col)s
+        %(DataReader.find_potential_samples.parameters.no_col)s
 
         Returns
         -------
         pandas.DataFrame
-            The x- and y-locations of the measurements. The index is the
+            The x- and y-locations of the samples. The index is the
             y-location, the columns are the columns in the :attr:`full_df`.
         pandas.DataFrame
-            The rough locations of the measurements. The index is the
+            The rough locations of the samples. The index is the
             y-location of the columns, the values are lists of the potential
-            measurement locations."""
+            sample locations."""
         # TODO: add iteration from min_len to max_len and uncertainty
         # estimation!
         bars = self.unique_bars(min_fract, asdict=True, *args, **kwargs)
@@ -1733,7 +1732,7 @@ class DataReader(LabelSelection):
 
         # check the boundaries if desired by the class
         sl_rough = slice(1, -1)
-        if self.measurements_at_boundaries:
+        if self.samples_at_boundaries:
             notnull = (full_df.notnull() & (full_df > 0)).any(axis=1).values
             first = full_df.index[notnull][0]
             last = full_df.index[notnull][-1]
@@ -1762,16 +1761,16 @@ class DataReader(LabelSelection):
         ret_locs = ret_locs[not_duplicated].sort_index()
         ret_rough = ret_rough[not_duplicated].sort_index()
         if pixel_tol is not None:
-            return self.merge_close_measurements(
+            return self.merge_close_samples(
                 ret_locs, ret_rough, pixel_tol)
         else:
             return ret_locs, ret_rough
 
-    def merge_close_measurements(self, locs, rough_locs=None, pixel_tol=2):
-        measurements = locs.index.values.copy()
-        # now we check, that at least 2 pixels lie between the measurements.
+    def merge_close_samples(self, locs, rough_locs=None, pixel_tol=2):
+        samples = locs.index.values.copy()
+        # now we check, that at least 2 pixels lie between the samples.
         # otherwise we merge them together
-        mask = np.r_[True, measurements[1:] - measurements[:-1] > pixel_tol]
+        mask = np.r_[True, samples[1:] - samples[:-1] > pixel_tol]
         keys, indices = groupby_arr(mask)
 
         istart = 0 if not keys[0] else 1
@@ -1784,8 +1783,8 @@ class DataReader(LabelSelection):
                       rough_locs.iloc[j-1:k, ::2].values)
             minwidth = np.nanmin(widths[widths > 0].values)
             mask = (widths.values == minwidth).any(axis=1)
-            new_loc = measurements[j-1:k][mask].mean()
-            measurements[j-1:k] = new_loc
+            new_loc = samples[j-1:k][mask].mean()
+            samples[j-1:k] = new_loc
             for i, ((col, vals), (_, col_widths)) in enumerate(
                     zip(locs.items(), widths.items())):
                 locs.iloc[j-1:k, i] = vals.iloc[
@@ -1793,7 +1792,7 @@ class DataReader(LabelSelection):
 
                 col_mask = (col_widths > 0).values
                 if col_mask.sum() > 1:
-                    warn("Distinct measurements merged from %s in "
+                    warn("Distinct samples merged from %s in "
                          "column %s!" % (
                             rough_locs.iloc[j-1:k, i:i+2][
                                 col_mask[
@@ -1806,65 +1805,65 @@ class DataReader(LabelSelection):
                         col_mask[:, np.newaxis]].values))
                 rough_locs.iloc[j-1, 2*i:2*i+2] = [new_indices[0],
                                                    new_indices[-1]]
-        locs.index = measurements
-        rough_locs.index = measurements
+        locs.index = samples
+        rough_locs.index = samples
         not_duplicated = ~locs.index.duplicated()
         return locs.iloc[not_duplicated], rough_locs.iloc[not_duplicated]
 
     @only_parent
-    def _get_measurement_locs(self, *args, **kwargs):
+    def _get_sample_locs(self, *args, **kwargs):
         """
-        :class:`pandas.DataFrame` of the x- and y-values of the measurements
+        :class:`pandas.DataFrame` of the x- and y-values of the samples
 
         The index represents the y-location, the columns the locations of the
-        measurements
+        samples
 
         Parameters
         ----------
         ``*args, **kwargs``
-            See the :meth:`find_measurements` method. Note that parameters
-            are ignored if the :attr:`measurement_locs` attribute is not None
+            See the :meth:`find_samples` method. Note that parameters
+            are ignored if the :attr:`sample_locs` attribute is not None
 
         See Also
         --------
-        measurements, rough_locs, find_measurements, add_measurements"""
-        if self._measurement_locs is None:
-            self.measurement_locs, self.rough_locs = self.find_measurements(
+        samples, rough_locs, find_samples, add_samples"""
+        if self._sample_locs is None:
+            self.sample_locs, self.rough_locs = self.find_samples(
                 *args, **kwargs)
-        return self.measurement_locs
+        return self.sample_locs
 
     @only_parent
-    def add_measurements(self, measurements, rough_locs=None):
-        """Add measurements to the found ones
+    def add_samples(self, samples, rough_locs=None):
+        """Add samples to the found ones
 
         Parameters
         ----------
-        measurements: series, 1d-array or DataFrame
-            The measurements. If it is series, we assume that the index
-            represents the y-value of the measurement and the value the
+        samples: series, 1d-array or DataFrame
+            The samples. If it is series, we assume that the index
+            represents the y-value of the sample and the value the
             x-position (see `xcolumns`). In case of a 1d-array, we assume
-            that the data represents the y-values of the measurements.
+            that the data represents the y-values of the samples.
             In case of a DataFrame, we assume that the columns correspond to
             columns in the `full_df` attribute and are True where we have a
-            measurement.
+            sample.
 
             Note that the y-values must be in image coordinates (see
             :attr:`extent` attribute).
         rough_locs: DataFrame
-            The rough locations of the new measurements (see the
+            The rough locations of the new samples (see the
             :attr:`rough_locs` attribute)
 
         See Also
         --------
-        measurements, rough_locs, find_measurements, measurement_locs
+        samples, rough_locs, find_samples, sample_locs
         """
-        if self.measurement_locs is None:
-            self.measurement_locs = pd.DataFrame([], index='measurement',
-                                                 columns=self._full_df.columns)
-        if measurements.ndim == 2:
-            self._add_measurements_from_df(measurements)
+        if self.sample_locs is None:
+            self.sample_locs = pd.DataFrame([], index='sample',
+                                            columns=self._full_df.columns)
+        if samples.ndim == 2:
+            self._add_samples_from_df(samples)
         else:
-            self._add_measurements_from_array(measurements)
+            self._add_samples_from_array(samples)
         if rough_locs is not None:
             if self._rough_locs is None:
                 self._rough_locs = rough_locs
@@ -1872,16 +1871,16 @@ class DataReader(LabelSelection):
                 self.rough_locs = rough_locs.combine_first(self.rough_locs)
         self._update_rough_locs()
 
-    def _add_measurements_from_df(self, measurements):
-        df = self.measurement_locs
+    def _add_samples_from_df(self, samples):
+        df = self.sample_locs
         if not len(df):
-            self.measurement_locs = measurements
+            self.sample_locs = samples
         else:
-            self.measurement_locs = df = measurements.combine_first(df)
+            self.sample_locs = df = samples.combine_first(df)
 
     def _update_rough_locs(self):
-        """Reset the rough locations by the measurements"""
-        df = self.measurement_locs
+        """Reset the rough locations by the samples"""
+        df = self.sample_locs
         if self._rough_locs is None:
             missing = df.index
         else:
@@ -1898,10 +1897,10 @@ class DataReader(LabelSelection):
             else:
                 self.rough_locs = new.combine_first(self.rough_locs)
 
-    def _add_measurements_from_array(self, measurements):
-        df = self.measurement_locs
-        new = self._full_df.loc[measurements]
-        self.measurement_locs = new.combine_first(df)
+    def _add_samples_from_array(self, samples):
+        df = self.sample_locs
+        new = self._full_df.loc[samples]
+        self.sample_locs = new.combine_first(df)
 
     def get_disconnected_parts(self, fromlast=5, from0=10,
                                cross_column=False):
@@ -2117,12 +2116,12 @@ class BarDataReader(DataReader):
 
     _rounded = False
 
-    #: There should not be measurements at the boundaries because the first
-    #: measurement is in the middle of the first bar
-    measurements_at_boundaries = False
+    #: There should not be samples at the boundaries because the first
+    #: sample is in the middle of the first bar
+    samples_at_boundaries = False
 
     #: The minimum fraction of overlap for two bars to be considered as the
-    #: same measurement (see :meth:`unique_bars`)
+    #: same sample (see :meth:`unique_bars`)
     min_fract = 0.9
 
     def __init__(self, *args, **kwargs):
@@ -2390,8 +2389,8 @@ class BarDataReader(DataReader):
                         l[j] = max(0, l[j] - pixel)
 
     @docstrings.dedent
-    def find_potential_measurements(self, col, min_len=None,
-                                    max_len=None, filter_func=None):
+    def find_potential_samples(self, col, min_len=None,
+                               max_len=None, filter_func=None):
         """
         Find the bars in the column
 
@@ -2400,15 +2399,15 @@ class BarDataReader(DataReader):
 
         Parameters
         ----------
-        %(DataReader.find_potential_measurements.parameters)s
+        %(DataReader.find_potential_samples.parameters)s
 
         Returns
         -------
-        %(DataReader.find_potential_measurements.returns)s
+        %(DataReader.find_potential_samples.returns)s
 
         See Also
         --------
-        find_measurements
+        find_samples
         """
 
         def do_append(indices):

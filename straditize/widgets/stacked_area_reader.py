@@ -189,10 +189,10 @@ class StackedReader(DataReader, StraditizerControlBase):
         # increase column numbers in full_df
         full_df = self.parent._full_df
         increase_col_nums(full_df)
-        # increase column numbers in measurements
-        measurements = self.parent.measurement_locs
-        if measurements is not None:
-            increase_col_nums(measurements)
+        # increase column numbers in samples
+        samples = self.parent.sample_locs
+        if samples is not None:
+            increase_col_nums(samples)
         # increase column numbers in rough locations
         rough_locs = self.parent.rough_locs
         if rough_locs is not None:
@@ -203,11 +203,11 @@ class StackedReader(DataReader, StraditizerControlBase):
         full_df.loc[:, current + 1] -= end
         full_df[current] = end
         full_df.sort_index(axis=1, inplace=True)
-        # update the current column in measurements and add the new one
-        if measurements is not None:
-            new_measurements = full_df.loc[measurements.index, current]
-            measurements.loc[:, current + 1] -= new_measurements
-            measurements[:, current] = new_measurements
+        # update the current column in samples and add the new one
+        if samples is not None:
+            new_samples = full_df.loc[samples.index, current]
+            samples.loc[:, current + 1] -= new_samples
+            samples[:, current] = new_samples
         if rough_locs is not None:
             rough_locs[current] = 0
         self.reset_lbl_col()
@@ -228,12 +228,12 @@ class StackedReader(DataReader, StraditizerControlBase):
             x += vals[:, i]
             lines.extend(ax.plot(x, y, lw=2.0))
 
-    def plot_potential_measurements(self, excluded=False, ax=None,
+    def plot_potential_samples(self, excluded=False, ax=None,
                                     *args, **kwargs):
-        """Plot the ranges for potential measurements"""
+        """Plot the ranges for potential samples"""
         vals = self.full_df.values.copy()
         starts = self.column_starts.copy()
-        self.measurement_ranges = lines = []
+        self.sample_ranges = lines = []
         y = np.arange(np.shape(self.image)[0])
         ax = ax or self.ax
         if self.extent is not None:
@@ -241,7 +241,7 @@ class StackedReader(DataReader, StraditizerControlBase):
             starts = starts + self.extent[0]
         x = np.zeros(vals.shape[0]) + starts[0]
         for i, arr in enumerate(vals.T):
-            all_indices, excluded_indices = self.find_potential_measurements(
+            all_indices, excluded_indices = self.find_potential_samples(
                 i, *args, **kwargs)
             if excluded:
                 all_indices = excluded_indices

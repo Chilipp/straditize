@@ -55,14 +55,14 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         self.add_item('Full digitized data', self.get_full_df_lines,
                       self.plot_full_df, self.remove_full_df_plot,
                       self.can_plot_full_df)
-        self.add_item('Potential measurements',
-                      self.get_potential_measurements_lines,
-                      self.plot_potential_measurements,
-                      self.remove_potential_measurements_plot,
-                      self.can_plot_potential_measurements)
-        self.add_item('Measurement lines', self.get_measurements_lines,
-                      self.plot_measurements, self.remove_measurements_plot,
-                      self.can_plot_measurements)
+        self.add_item('Potential samples',
+                      self.get_potential_samples_lines,
+                      self.plot_potential_samples,
+                      self.remove_potential_samples_plot,
+                      self.can_plot_potential_samples)
+        self.add_item('Sample lines', self.get_samples_lines,
+                      self.plot_samples, self.remove_samples_plot,
+                      self.can_plot_samples)
         self.resizeColumnsToContents()
         self.adjust_height()
 
@@ -253,65 +253,65 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
                 self.straditizer.data_reader is not None and
                 self.straditizer.data_reader.full_df is not None)
 
-    # --------- plot measurements ------------
+    # --------- plot samples ------------
 
-    def plot_measurements(self):
+    def plot_samples(self):
         """Plot the :attr:`~straditize.binary.DataReader.full_df` of the reader
         """
         stradi = self.straditizer
-        stradi.data_reader.plot_measurements()
+        stradi.data_reader.plot_samples()
         if stradi.magni is not None:
-            lines = stradi.data_reader.measurement_lines[:]
-            stradi.data_reader.plot_measurements(ax=stradi.magni.ax)
-            stradi.data_reader.measurement_lines += lines
+            lines = stradi.data_reader.sample_lines[:]
+            stradi.data_reader.plot_samples(ax=stradi.magni.ax)
+            stradi.data_reader.sample_lines += lines
 
-    def remove_measurements_plot(self):
+    def remove_samples_plot(self):
         stradi = self.straditizer
-        for l in stradi.data_reader.measurement_lines[:]:
+        for l in stradi.data_reader.sample_lines[:]:
             try:
                 l.remove()
             except ValueError:
                 pass
-        stradi.data_reader.measurement_lines.clear()
+        stradi.data_reader.sample_lines.clear()
 
-    def get_measurements_lines(self):
+    def get_samples_lines(self):
         try:
-            return self.straditizer.data_reader.measurement_lines
+            return self.straditizer.data_reader.sample_lines
         except AttributeError:
             return []
 
-    def can_plot_measurements(self):
+    def can_plot_samples(self):
         return (self.straditizer is not None and
                 self.straditizer.data_reader is not None and
                 self.straditizer.data_reader.full_df is not None and
-                self.straditizer.data_reader.measurement_locs is not None)
+                self.straditizer.data_reader.sample_locs is not None)
 
-    # --------- plot potential measurements ------------
+    # --------- plot potential samples ------------
 
-    def plot_potential_measurements(self):
+    def plot_potential_samples(self):
         stradi = self.straditizer
-        stradi.data_reader.plot_potential_measurements()
+        stradi.data_reader.plot_potential_samples()
         if stradi.magni is not None:
-            lines = stradi.data_reader.measurement_ranges[:]
-            stradi.data_reader.plot_potential_measurements(ax=stradi.magni.ax)
-            stradi.data_reader.measurement_ranges += lines
+            lines = stradi.data_reader.sample_ranges[:]
+            stradi.data_reader.plot_potential_samples(ax=stradi.magni.ax)
+            stradi.data_reader.sample_ranges += lines
 
-    def remove_potential_measurements_plot(self):
+    def remove_potential_samples_plot(self):
         stradi = self.straditizer
-        for l in stradi.data_reader.measurement_ranges[:]:
+        for l in stradi.data_reader.sample_ranges[:]:
             try:
                 l.remove()
             except ValueError:
                 pass
-        stradi.data_reader.measurement_ranges.clear()
+        stradi.data_reader.sample_ranges.clear()
 
-    def get_potential_measurements_lines(self):
+    def get_potential_samples_lines(self):
         try:
-            return self.straditizer.data_reader.measurement_ranges
+            return self.straditizer.data_reader.sample_ranges
         except AttributeError:
             return []
 
-    def can_plot_potential_measurements(self):
+    def can_plot_potential_samples(self):
         return self.can_plot_full_df()
 
     def can_plot_data_box(self):

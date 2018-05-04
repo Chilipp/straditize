@@ -38,7 +38,7 @@ at the bottom of the straditizer control panel.
 
 .. |col-ends| image:: basic_diagram_features_at_col_ends.png
 
-.. |disco| image:: basic_diagram_disconnected_02.png
+.. |disco| image:: basic_diagram_disconnected.png
 
 .. |cross-col| image:: basic_diagram_cross_col.png
 

@@ -61,7 +61,7 @@ class StraditizerMenuActions(StraditizerControlBase):
 
         self.export_final_action = self._add_action(
             menu, 'Final data', self.export_final,
-            tooltip='Export the data at the measurement locations')
+            tooltip='Export the data at the sample locations')
 
         # image buttons
         self.export_images_menu = menu = QMenu('Straditizer image(s)')

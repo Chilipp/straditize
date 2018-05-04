@@ -2,7 +2,7 @@
 """Core module of the Straditizer class"""
 import six
 from copy import copy
-from itertools import chain, product, cycle
+from itertools import chain
 import numpy as np
 import pandas as pd
 import pickle
@@ -93,9 +93,9 @@ class Straditizer(LabelSelection):
     @property
     def final_df(self):
         if (self.data_reader is None or self.data_reader.full_df is None or
-                self.data_reader.measurement_locs is None):
+                self.data_reader.sample_locs is None):
             return None
-        ret = self._finalize_df(self.data_reader.measurement_locs.copy(True))
+        ret = self._finalize_df(self.data_reader.sample_locs.copy(True))
         ret.fillna(0.0, inplace=True)
         return ret
 
@@ -682,7 +682,7 @@ class Straditizer(LabelSelection):
                            self.marks), None)
 
     def _remove_mark_event(self, event):
-        """Remove a measurement by right-click"""
+        """Remove a mark by right-click"""
         if event.button != 3:  # right mouse button
             return
         mark = self._get_mark_from_event(event)
@@ -748,7 +748,7 @@ class Straditizer(LabelSelection):
         self._new_mark = _new_mark
         return ret
 
-    def marks_for_measurements(self):
+    def marks_for_samples(self):
         def _new_mark(pos, artists=[]):
             return cm.CrossMarks(
                 pos, zorder=2, idx_v=idx_v, idx_h=idx_h,
@@ -780,7 +780,7 @@ class Straditizer(LabelSelection):
         reader = self.data_reader
         if reader.full_df is None:
             reader.digitize()
-        df = reader.measurement_locs()
+        df = reader.sample_locs()
         full_df = reader.full_df
         self.remove_marks()
         ax = self.ax
@@ -801,12 +801,12 @@ class Straditizer(LabelSelection):
         self.mark_cids.add(self.fig.canvas.mpl_connect(
             'button_press_event', self._remove_mark_event))
 
-    def update_measurements(self):
+    def update_samples(self):
         index = np.array(np.ceil([mark.y for mark in self.marks]))
         data = np.array(np.ceil([mark.x for mark in self.marks]))
         df = pd.DataFrame(data, index=index)
-        self.data_reader.measurement_locs = df
-        # set the rough locations equal to the measurements if they have not
+        self.data_reader.sample_locs = df
+        # set the rough locations equal to the samples if they have not
         # already been set, otherwise update
         if self.data_reader.rough_locs is None:
             self.data_reader.rough_locs = pd.DataFrame(
@@ -829,7 +829,7 @@ class Straditizer(LabelSelection):
             self.data_reader.rough_locs = joined
         self.remove_marks()
 
-    def marks_for_measurements_sep(self, nrows=3):
+    def marks_for_samples_sep(self, nrows=3):
         def _new_mark(pos, ax, artists=[]):
             idx_h = all_idx_h[ax]
             ret = cm.CrossMarks(
@@ -883,7 +883,7 @@ class Straditizer(LabelSelection):
         reader = self.data_reader
         if reader.full_df is None:
             reader.digitize()
-        df = reader.measurement_locs
+        df = reader.sample_locs
         full_df = reader._full_df.copy(True)
         full_df['nextrema'] = reader.found_extrema_per_row()
         self.remove_marks()
@@ -927,14 +927,14 @@ class Straditizer(LabelSelection):
         self._plotted_full_df = full_df
         return fig, axes
 
-    def update_measurements_sep(self, remove=True):
+    def update_samples_sep(self, remove=True):
         ncols = len(self.data_reader.all_column_starts)
         index = np.array(np.ceil([mark.y for mark in self.marks]))[::ncols + 1]
         index = np.round(index).astype(int)
         data = np.array(np.ceil([mark.x for mark in self.marks])).reshape(
             (len(index), ncols + 1))
         df = pd.DataFrame(data[:, :-1], index=index).sort_index()
-        self.data_reader.measurement_locs = df
+        self.data_reader.sample_locs = df
         self.data_reader._update_rough_locs()
         if remove:
             self.remove_marks()
