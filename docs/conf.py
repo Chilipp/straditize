@@ -29,7 +29,7 @@ if six.PY2:
 else:
     from urllib.request import urlopen
 
-# make sure, psyplot from parent directory is dused
+# make sure, straditize from parent directory is dused
 sys.path.insert(0, os.path.abspath('..'))
 import straditize
 
@@ -62,11 +62,15 @@ templates_path = ['_templates']
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # create the api documentation
-if not osp.exists(osp.join(osp.dirname(__file__), 'api')):
+if not osp.exists(osp.join(osp.dirname(__file__), 'api')) or on_rtd:
+    if osp.exists(osp.join(osp.dirname(__file__), 'api')):
+        shutil.rmtree(osp.join(osp.dirname(__file__), 'api'))
     spr.check_call(['bash', 'apigen.bash'])
 
-if not osp.exists(osp.join(osp.dirname(__file__), 'gui')):
-    gui_dir = osp.join(osp.dirname(__file__), 'gui')
+gui_dir = osp.join(osp.dirname(__file__), 'gui')
+if not osp.exists(gui_dir) or on_rtd:
+    if osp.exists(gui_dir):
+        shutil.rmtree(gui_dir)
     os.mkdir(gui_dir)
     files = chain(
         glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
