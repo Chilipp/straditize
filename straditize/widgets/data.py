@@ -306,6 +306,17 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_reset_samples = QPushButton('Reset')
         self.btn_reset_samples.setToolTip('Reset the samples')
 
+        self.cb_edit_separate = QCheckBox('In separate figure')
+        self.cb_edit_separate.setToolTip(
+            'Edit the samples in a separate figure where you have one '
+            'plot for each column')
+        self.txt_edit_rows = QLineEdit()
+        self.txt_edit_rows.setValidator(QIntValidator(1, 1000))
+        self.txt_edit_rows.setToolTip(
+            'The number of plot rows in the editing figure?')
+        self.txt_edit_rows.setText('3')
+        self.txt_edit_rows.setEnabled(False)
+
         self.txt_min_len = QLineEdit()
         self.txt_min_len.setToolTip(
             'Minimum length of a potential sample to include')
@@ -378,6 +389,7 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_new_exaggeration.clicked.connect(self.init_exaggerated_reader)
         self.btn_select_exaggerations.clicked.connect(
             self.select_exaggerated_features)
+        self.cb_edit_separate.stateChanged.connect(self.toggle_txt_edit_rows)
 
         # disable warning if bars cannot be separated
         warnings.filterwarnings('ignore', 'Could not separate bars',
@@ -409,6 +421,9 @@ class DigitizingControl(StraditizerControlBase):
 
     def toggle_txt_fromlast(self, state):
         self.txt_fromlast.setEnabled(state == Qt.Checked)
+
+    def toggle_txt_edit_rows(self, state):
+        self.txt_edit_rows.setEnabled(state == Qt.Checked)
 
     def toggle_txt_from0(self, state):
         self.txt_from0.setEnabled(state == Qt.Checked)
@@ -473,7 +488,7 @@ class DigitizingControl(StraditizerControlBase):
                         self.straditizer.data_reader is not None):
                     self.txt_tolerance.setText(str(getattr(
                         self.straditizer.data_reader, 'tolerance', '')))
-                # otherwise use a default value of 10 for rounded bars
+                # otherwise use a default value of 10 for roundedtt bars
                 elif enable and int(self.txt_tolerance.text() or 2) == 2:
                     self.txt_tolerance.setText('10')
                 # and 2 for rectangular bars
@@ -833,6 +848,16 @@ class DigitizingControl(StraditizerControlBase):
 
         self.tree.setItemWidget(edit_child, 0, w)
 
+        edit_child2 = QTreeWidgetItem(0)
+        samples_box = QGridLayout()
+        samples_box.addWidget(self.cb_edit_separate, 0, 0, 1, 2)
+        samples_box.addWidget(QLabel('Number of rows:'), 1, 0)
+        samples_box.addWidget(self.txt_edit_rows, 1, 1)
+        w = QWidget()
+        w.setLayout(samples_box)
+        edit_child.addChild(edit_child2)
+        self.tree.setItemWidget(edit_child2, 0, w)
+
     def init_reader(self):
         """Initialize the reader"""
         # make sure, the StackedReader is registered
@@ -979,21 +1004,28 @@ class DigitizingControl(StraditizerControlBase):
 
     def edit_samples(self):
         from psyplot_gui.main import mainwindow
-        from straditize.widgets.samples_table import MultiCrossMarksEditor
-        fig, axes = self.straditizer.marks_for_samples_sep()
-        self._samples_fig = fig
-        if mainwindow.figures:  # using psyplot backend
-            fig_dock = self._samples_fig.canvas.manager.window
-            stradi_dock = self.straditizer.ax.figure.canvas.manager.window
-            mainwindow.tabifyDockWidget(stradi_dock, fig_dock)
-            a = fig_dock.toggleViewAction()
-            if not a.isChecked():
-                a.trigger()
-            fig_dock.raise_()
-        self._samples_editor = editor = MultiCrossMarksEditor(
-            self.straditizer, axes=axes)
+        from straditize.widgets.samples_table import (
+            MultiCrossMarksEditor, SingleCrossMarksEditor)
+        draw_sep = self.cb_edit_separate.isChecked()
+        if draw_sep:
+            fig, axes = self.straditizer.marks_for_samples_sep()
+            self._samples_fig = fig
+            if mainwindow.figures:  # using psyplot backend
+                fig_dock = self._samples_fig.canvas.manager.window
+                stradi_dock = self.straditizer.ax.figure.canvas.manager.window
+                mainwindow.tabifyDockWidget(stradi_dock, fig_dock)
+                a = fig_dock.toggleViewAction()
+                if not a.isChecked():
+                    a.trigger()
+                fig_dock.raise_()
+            self._samples_editor = editor = MultiCrossMarksEditor(
+                self.straditizer, axes=axes)
+        else:
+            self.straditizer.marks_for_samples()
+            self._samples_editor = editor = SingleCrossMarksEditor(
+                self.straditizer)
         dock = editor.to_dock(
-            mainwindow, title='samples editor')
+            mainwindow, title='Samples editor')
         editor.show_plugin()
         editor.maybe_tabify()
         editor.raise_()
@@ -1003,24 +1035,34 @@ class DigitizingControl(StraditizerControlBase):
         editor.table.zoom_to_cells(
             chain.from_iterable([i] * ncols for i in range(nrows)),
             list(range(ncols)) * nrows)
+        args = (self.straditizer.draw_figure, ) if not draw_sep else ()
         self.connect2apply(lambda: self.straditizer.update_samples_sep(),
                            self._close_samples_fig,
                            dock.close,
-                           self.straditizer_widgets.refresh)
+                           self.straditizer_widgets.refresh, *args)
         self.connect2cancel(self.straditizer.remove_marks,
                             self._close_samples_fig,
-                            dock.close)
+                            dock.close, *args)
         self.maybe_show_btn_reset_samples()
 
     def _close_samples_fig(self):
         import matplotlib.pyplot as plt
-        plt.close(self._samples_fig)
+        for l in self._samples_editor.table.model().lines:
+            try:
+                l.remove()
+            except ValueError:
+                pass
+        try:
+            plt.close(self._samples_fig)
+        except AttributeError:
+            pass
+        else:
+            del self._samples_fig
         del self._samples_editor
         try:
             del self.straditizer._plotted_full_df
         except AttributeError:
             pass
-        del self._samples_fig
 
     def digitize(self):
         reader = self.reader

@@ -1889,13 +1889,14 @@ class DataReader(LabelSelection):
             rough = np.tile(missing[:, np.newaxis], (1, len(df.columns) * 2))
             rough[:, 1::2] += 1
             new = pd.DataFrame(
-                rough, index=missing,
+                rough.astype(int), index=missing,
                 columns=pd.MultiIndex.from_product(
                     [df.columns, ['vmin', 'vmax']]))
             if self._rough_locs is None:
                 self.rough_locs = new
             else:
-                self.rough_locs = new.combine_first(self.rough_locs)
+                self.rough_locs = new.combine_first(
+                    self.rough_locs).astype(int)
 
     def _add_samples_from_array(self, samples):
         df = self.sample_locs

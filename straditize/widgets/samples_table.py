@@ -22,10 +22,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
 
     def __init__(self, marks, columns, mark_factory, mark_removal, axes=None):
         super(MultiCrossMarksModel, self).__init__()
-        ncols = len(columns)
-        self._column_names = columns
-        arr = np.array(marks).reshape((len(marks) // ncols, ncols)).tolist()
-        self.marks = list(zip((l[0].y for l in arr), arr))
+        self.set_marks(marks, columns)
         if axes is None:
             self.axes = [m.ax for m in self.marks[0][1]]
         else:
@@ -37,6 +34,12 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         self.lines = []
         for mark in marks:
             mark.moved.connect(self.update_after_move)
+
+    def set_marks(self, marks, columns):
+        ncols = len(columns)
+        self._column_names = columns
+        arr = np.array(marks).reshape((len(marks) // ncols, ncols)).tolist()
+        self.marks = list(zip((l[0].y for l in arr), arr))
 
     def get_cell_mark(self, row, column):
         return self.marks[row][1][column - 1]
@@ -250,6 +253,166 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         self.update_lines()
 
 
+class SingleCrossMarksModel(MultiCrossMarksModel):
+
+    def __init__(self, *args, **kwargs):
+        self._bounds = kwargs.pop('column_bounds')
+        self._y0 = kwargs.pop('y0')
+        super(SingleCrossMarksModel, self).__init__(*args, **kwargs)
+
+    def set_marks(self, marks, columns):
+        self._column_names = columns
+        self.marks = list(zip((m.y for m in marks), marks))
+
+    def get_cell_mark(self, row, column):
+        ret = self.marks[row][1]
+        if column > 0:
+            ret._i_vline = column - 1
+        return ret
+
+    @property
+    def iter_marks(self):
+        return (m for y, m in self.marks)
+
+    def update_after_move(self, old_pos, mark):
+        for i, (y, m) in enumerate(self.marks):
+            if m is mark:
+                self.marks[i] = (mark.y, mark)
+                self.update_lines()
+                break
+        self.sort_marks()
+        self.reset()
+        self.fig.canvas.draw_idle()
+
+    def _set_cell_data(self, row, column, value):
+        value = float(value)
+        if column == 0:
+            old_y, mark = self.marks[row]
+            mark.ya[:] = value + self._y0
+            mark.set_pos((mark.xa, mark.ya))
+            self.marks[row] = (value + self._y0, mark)
+            self.sort_marks()
+        else:
+            mark = self.get_cell_mark(row, column)
+            xa = mark.xa[:]
+            xa[column - 1] = float(value) + self._bounds[column - 1, 0]
+            mark.set_pos((xa, mark.ya))
+        self.fig.canvas.draw()
+        return True
+
+    @property
+    def df(self):
+        """Get the samples_locs"""
+        if self.marks:
+            vals = np.array([t[1].xa for t in self.marks]) - \
+                self._bounds[:, :1].T
+        else:
+            vals = []
+        df = pd.DataFrame(
+            vals,
+            index=np.array([y for y, mark in self.marks]) - self._y0,
+            columns=np.arange(self.columnCount() - 1))
+        return df.sort_index()
+
+    def plot_lines(self):
+        if not self.rowCount():
+            return
+        ax = self.axes[0]
+        starts = self._bounds[:, 0]
+        y0 = self._y0
+        self.lines.extend(chain.from_iterable(
+            ax.plot(starts[col] + s.values, y0 + s.index.values, c='r')
+            for col, s in self.df.items()))
+        self.fig.canvas.draw_idle()
+
+    def update_lines(self):
+        if not self.lines:
+            self.plot_lines()
+        elif not self.rowCount():
+            for l in self.lines:
+                l.remove()
+            self.lines.clear()
+        else:
+            starts = self._bounds[:, 0]
+            y0 = self._y0
+            for l, (col, s) in zip(self.lines, self.df.items()):
+                l.set_xdata(starts[col] + s.values)
+                l.set_ydata(y0 + s.index.values)
+            self.fig.canvas.draw_idle()
+
+    def _get_cell_data(self, row, column):
+            y, mark = self.marks[row]
+            if column == 0:
+                return self.get_format() % (y - self._y0)
+            else:
+                return self.get_format() % (mark.xa[column - 1] -
+                                            self._bounds[column - 1][0])
+
+    def columnCount(self, index=QtCore.QModelIndex()):
+        return len(self._column_names) + 1
+
+    def _sorter(self, t):
+        return (t[0], list(t[1].xa - self._bounds[:, 0]))
+
+    def load_new_marks(self, mark):
+        new = [mark.y, mark]
+        self.marks.append(new)
+        self.sort_marks()
+        idx = self.marks.index(new)
+        self.beginInsertRows(QtCore.QModelIndex(), idx, idx)
+        self.endInsertRows()
+        self.update_lines()
+
+    def remove_mark(self, mark):
+        found = False
+        for i, (y, m) in enumerate(self.marks):
+            if m is mark:
+                found = True
+                break
+        if found:
+            mark.moved.disconnect(self.update_after_move)
+            del self.marks[i]
+            self.beginRemoveRows(QtCore.QModelIndex(), i, i)
+            self.endRemoveRows()
+            self.update_lines()
+
+    def insertRow(self, irow, xa=None, ya=None):
+        """Insert a row into the table
+
+        Parameters
+        ----------
+        irow: int
+            The row index. If `irow` is equal to the length of the
+            :attr:`marks`, the rows will be appended"""
+        if xa is None or ya is None:
+            mark = self.marks[min(irow, len(self.marks) - 1)][1]
+            new = self._new_mark(mark.xa[0], mark.ya[0])[0]
+        else:
+            new = self._new_mark(xa + self._bounds[:, 0], ya + self._y0)[0]
+            new.set_pos((xa + self._bounds[:, 0], ya + self._y0))
+        y = new.y
+        new.moved.connect(self.update_after_move)
+        if irow == len(self.marks):
+            self.marks.append((y, new))
+        else:
+            self.marks.insert(irow, (y, new))
+        self.beginInsertRows(QtCore.QModelIndex(), irow, irow)
+        self.endInsertRows()
+        self.update_lines()
+
+    def delRow(self, irow):
+        mark = self.marks[irow][1]
+        mark.moved.disconnect(self.update_after_move)
+        try:
+            self._remove_mark(mark)
+        except ValueError:
+            pass
+        del self.marks[irow]
+        self.beginRemoveRows(QtCore.QModelIndex(), irow, irow)
+        self.endRemoveRows()
+        self.update_lines()
+
+
 class MultiCrossMarksView(QTableView):
     """Data Frame view class"""
 
@@ -436,9 +599,9 @@ class MultiCrossMarksView(QTableView):
 
     def show_all_marks(self):
         model = self.model()
-        for m in chain.from_iterable(t[1] for t in model.marks):
+        for m in model.iter_marks:
             m.set_visible(True)
-        model.marks[0][1][0].fig.canvas.draw()
+        model.fig.canvas.draw()
 
     def show_selected_marks_only(self):
         model = self.model()
@@ -450,6 +613,52 @@ class MultiCrossMarksView(QTableView):
         for row in rows:
             for col in range(model.columnCount()):
                 model.get_cell_mark(row, col).set_visible(True)
+        model.fig.canvas.draw()
+
+
+class SingleCrossMarksView(MultiCrossMarksView):
+    """A table for visualizing marks from a single axes"""
+
+    def init_model(self, marks, *args, **kwargs):
+        return SingleCrossMarksModel(marks, *args, **kwargs)
+
+    def fit2data(self):
+        model = self.model()
+        df = self.full_df
+        mark = None
+        y0 = model._y0
+        starts = model._bounds[:, 0]
+        for index in self.selectedIndexes():
+            row = index.row()
+            col = index.column()
+            if col == 0:  # index column
+                continue
+            mark = model.get_cell_mark(row, col)
+            xa = mark.xa
+            old_pos = mark.pos
+            x = df.loc[
+                df.index.get_loc(mark.y - y0, method='nearest')].iloc[col-1]
+            if np.isnan(x):
+                x = 0
+            xa[col - 1] = x + starts[col - 1]
+            mark.set_pos((xa, mark.ya))
+            mark.moved.emit(old_pos, mark)
+        if mark is not None:
+            mark.fig.canvas.draw()
+
+    def zoom_to_cells(self, rows, cols):
+        model = self.model()
+        rows = list(rows)
+        cols = list(cols)
+        if not model.rowCount() or not len(cols) or not len(rows):
+            return
+        y = model.df.iloc[rows].index + model._y0
+        cols = np.unique(cols) - 1
+        xmin = model._bounds[:, 0][cols].min()
+        xmax = model._bounds[:, 1][cols].max()
+        ax = model.axes[0]
+        ax.set_ylim(y.max() + 10, y.min() - 10)
+        ax.set_xlim(xmin, xmax)
         model.fig.canvas.draw()
 
 
@@ -641,3 +850,47 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
         if self.is_shown and main.dockWidgetArea(
                 main.help_explorer.dock) == main.dockWidgetArea(self.dock):
             main.tabifyDockWidget(main.help_explorer.dock, self.dock)
+
+
+class SingleCrossMarksEditor(MultiCrossMarksEditor):
+    """The editor for cross marks on a single axes"""
+
+    def create_view(self, axes=None):
+        stradi = self.straditizer
+        axes = [stradi.data_reader.ax]
+        df = getattr(stradi, '_plotted_full_df', stradi.data_reader.full_df)
+        x0 = min(stradi.data_xlim)
+        return SingleCrossMarksView(
+            stradi.marks, df, df.columns, stradi._new_mark,
+            stradi._remove_mark, axes=axes,
+            column_bounds=x0 + stradi.data_reader.all_column_bounds,
+            y0=min(stradi.data_ylim))
+
+    def save_samples(self):
+        self.straditizer.update_samples(remove=False)
+
+    def _fit2selection(self, event):
+        model = self.table.model()
+        if (not event.inaxes or event.button != 1 or
+                model.fig.canvas.manager.toolbar.mode != ''):
+            return
+        y = int(np.round(event.ydata)) - model._y0
+        data = self.table.full_df.loc[y]
+        indexes = list(self.table.selectedIndexes())
+        mark = None
+        for index in indexes:
+            row = index.row()
+            col = index.column()
+            if col == 0:  # index column
+                continue
+            mark = model.get_cell_mark(row, col)
+            old_pos = mark.pos
+            x = data[col - 1]
+            if np.isnan(x):
+                x = 0
+            xa = mark.xa
+            xa[col - 1] = model._bounds[col - 1, 0] + x
+            mark.set_pos((xa, mark.ya))
+            mark.moved.emit(old_pos, mark)
+        if mark is not None:
+            mark.fig.canvas.draw()

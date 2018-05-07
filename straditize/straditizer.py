@@ -49,9 +49,9 @@ class Straditizer(LabelSelection):
     @property
     def column_indexes(self):
         """The horizontal indexes for each column"""
-        bounds = self.data_reader.column_bounds + self.data_xlim[0]
+        bounds = self.data_reader.all_column_bounds + self.data_xlim[0]
         return [
-            pd.Index(np.arange(se)) for se in bounds]
+            pd.Index(np.arange(*se)) for se in bounds]
 
     #: The :class:`straditize.binary.DataReader` instance to digitize the
     #: data
@@ -752,47 +752,51 @@ class Straditizer(LabelSelection):
         def _new_mark(pos, artists=[]):
             return cm.CrossMarks(
                 pos, zorder=2, idx_v=idx_v, idx_h=idx_h,
-                xlim=xlim, ylim=ylim, c='g', alpha=0.5,
-                linewidth=0.5, selectable=['h'], auto_hide=True,
-                marker='o', connected_artists=artists,
-                ax=ax)
+                xlim=xlim, ylim=ylim, alpha=0.5,
+                linewidth=1.5, selectable=['h'], marker='x',
+                select_props={'c': 'r', 'lw': 2.0},
+                connected_artists=artists, ax=ax)
 
         def new_mark(pos):
-            return _new_mark(
+            return [_new_mark(
                 [starts + full_df.loc[np.round(pos[-1] - ylim[0])],
-                 np.round(pos[-1])])
+                 np.round(pos[-1])])]
 
-        def new_mark_and_range(key, row):
+        def new_mark_and_range(key, row, row_indices):
             artists = []
-            try:
-                indices = reader.rough_locs.loc[key]
-            except KeyError:
-                pass
-            else:
-                for i, l in enumerate(indices):
-                    if l:
+            for (col, val), s in zip(row.items(), starts):
+                try:
+                    imin, imax = row_indices[2*col:2*col+2]
+                except KeyError:
+                    pass
+                else:
+                    if imin >= 0:
                         artists.extend(ax.plot(
-                            starts[i] + full_df.loc[l, i],
-                            np.array(l) + ylim[0], c='0.5', lw=0, marker='+'))
-            return _new_mark([starts + row.tolist(), key + ylim[0]],
-                             artists=artists)
+                            s + full_df.iloc[imin:imax, col],
+                            ylim[0] + np.arange(imin, imax), c='0.5', lw=0,
+                            marker='+'))
+            return [_new_mark([starts + np.array(row), min(ylim) + key],
+                              artists)]
 
         reader = self.data_reader
         if reader.full_df is None:
             reader.digitize()
-        df = reader.sample_locs()
-        full_df = reader.full_df
+        df = reader.sample_locs
+        full_df = reader._full_df
         self.remove_marks()
         ax = self.ax
         idx_v = self.indexes['y']
         idx_h = self.column_indexes
         xlim = self.data_xlim
         ylim = self.data_ylim
-        starts = reader._get_column_starts() + xlim[0]
-        self.marks = marks = [
-            new_mark_and_range(key, row)
-            for key, row in df.iterrows()]
-
+        starts = reader.all_column_starts + xlim[0]
+        if not len(df):
+            self.marks = marks = []
+        else:
+            self.marks = marks = list(chain.from_iterable(
+                new_mark_and_range(key, row, indices)
+                for (key, row), (key2, indices) in zip(
+                    df.iterrows(), reader.rough_locs.iterrows())))
         if marks:
             marks[0].connect_marks(marks)
             self.create_magni_marks(marks)
@@ -801,33 +805,21 @@ class Straditizer(LabelSelection):
         self.mark_cids.add(self.fig.canvas.mpl_connect(
             'button_press_event', self._remove_mark_event))
 
-    def update_samples(self):
-        index = np.array(np.ceil([mark.y for mark in self.marks]))
-        data = np.array(np.ceil([mark.x for mark in self.marks]))
-        df = pd.DataFrame(data, index=index)
+    def update_samples(self, remove=True):
+        y0 = min(self.data_ylim)
+        x0 = min(self.data_xlim)
+        starts = self.data_reader.all_column_starts[np.newaxis] + x0
+        index = np.array(np.ceil([mark.y for mark in self.marks])) - y0
+        data = np.array(np.ceil([mark.xa for mark in self.marks])) - starts
+        df = pd.DataFrame(data, index=index.astype(int)).sort_index()
         self.data_reader.sample_locs = df
-        # set the rough locations equal to the samples if they have not
-        # already been set, otherwise update
-        if self.data_reader.rough_locs is None:
-            self.data_reader.rough_locs = pd.DataFrame(
-                data.reshape(data.shape + (1, )),
-                index=index)
-        else:
-            old = self.data_reader.rough_locs
-            old['in_old'] = True
-            new = df[[]]
-            new['in_new'] = True
-            joined = old.join(new, how='right')
-            missing_idx = joined[
-                joined['in_old'].isnull().values &
-                joined['in_new'].notnull().values].index.values
-            missing = df.loc[missing_idx, :].values
-            joined[missing_idx, :] = missing.reshape(
-                missing.shape + (1, ))
-            joined.drop(['in_old', 'in_new'], axis=1, inplace=True)
-            joined.sort_index(inplace=True)
-            self.data_reader.rough_locs = joined
-        self.remove_marks()
+        self.data_reader._update_rough_locs()
+        if remove:
+            self.remove_marks()
+            try:
+                del self._plotted_full_df
+            except AttributeError:
+                pass
 
     def marks_for_samples_sep(self, nrows=3):
         def _new_mark(pos, ax, artists=[]):
