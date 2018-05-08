@@ -19,9 +19,9 @@ from psyplot_gui.compat.qtcompat import (
 from itertools import chain
 
 if with_qt5:
-    from PyQt5.QtWidgets import QGroupBox
+    from PyQt5.QtWidgets import QGroupBox, QSpinBox
 else:
-    from PyQt4.QtGui import QGroupBox
+    from PyQt4.QtGui import QGroupBox, QSpinBox
 
 if six.PY2:
     from itertools import (
@@ -264,22 +264,23 @@ class DigitizingControl(StraditizerControlBase):
 
         self.txt_line_fraction = QLineEdit()
         self.txt_line_fraction.setValidator(QDoubleValidator(0.0, 100.0, 5))
-        self.txt_line_fraction.setText('99.0')
+        self.txt_line_fraction.setText('75.0')
         self.txt_line_fraction.setToolTip(
             'The percentage that shall be used to identify a straight line')
 
-        self.txt_min_lw = QLineEdit()
-        self.txt_min_lw.setText('2')
-        self.txt_min_lw.setValidator(QIntValidator(1, 10000))
-        self.txt_min_lw.setPlaceholderText('Axis width in pixels')
-        self.txt_min_lw.setToolTip(
+        self.sp_min_lw = QSpinBox()
+        self.sp_min_lw.setValue(2)
+        self.sp_min_lw.setMaximum(10000)
+        self.sp_min_lw.setToolTip(
             'Set the minimal width for selected vertical or horizontal lines')
 
-        self.txt_max_lw = QLineEdit()
-        self.txt_max_lw.setValidator(QIntValidator(0, 10000))
-        self.txt_max_lw.setPlaceholderText('Axis width in pixels')
-        self.txt_max_lw.setToolTip(
+        self.cb_max_lw = QCheckBox('Maximum axis width')
+        self.sp_max_lw = QSpinBox()
+        self.sp_max_lw.setMaximum(10000)
+        self.sp_max_lw.setValue(20)
+        self.sp_max_lw.setToolTip(
             'Set the maximal width for selected vertical or horizontal lines')
+        self.sp_max_lw.setEnabled(False)
 
         self.btn_remove_vlines = QPushButton('vertical lines')
         self.btn_remove_vlines.setToolTip(
@@ -323,6 +324,11 @@ class DigitizingControl(StraditizerControlBase):
         self.txt_max_len = QLineEdit()
         self.txt_min_len.setToolTip(
             'Maximum length of a potential sample to include')
+        self.sp_pixel_tol = QSpinBox()
+        self.sp_pixel_tol.setMaximum(10000)
+        self.sp_pixel_tol.setValue(2)
+        self.sp_pixel_tol.setToolTip(
+            'Minimum distance between two measurements in pixels')
 
         self.tree_bar_split = BarSplitter(straditizer_widgets)
 
@@ -336,7 +342,7 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_select_data, self.btn_remove_hlines,
             self.btn_reset_columns, self.btn_reset_samples,
             self.btn_remove_vlines, self.txt_line_fraction,
-            self.txt_max_lw, self.txt_min_lw,
+            self.sp_max_lw, self.sp_min_lw,
             self.btn_show_disconnected_parts, self.txt_fromlast,
             self.btn_show_cross_column, self.txt_cross_column_px,
             self.btn_show_parts_at_column_ends,
@@ -390,6 +396,7 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_select_exaggerations.clicked.connect(
             self.select_exaggerated_features)
         self.cb_edit_separate.stateChanged.connect(self.toggle_txt_edit_rows)
+        self.cb_max_lw.stateChanged.connect(self.toggle_sp_max_lw)
 
         # disable warning if bars cannot be separated
         warnings.filterwarnings('ignore', 'Could not separate bars',
@@ -418,6 +425,9 @@ class DigitizingControl(StraditizerControlBase):
             if reader is not None:
                 self.txt_exag_factor.setText(str(reader.is_exaggerated))
         self.fill_cb_readers()
+
+    def toggle_sp_max_lw(self, state):
+        self.sp_max_lw.setEnabled(state == Qt.Checked)
 
     def toggle_txt_fromlast(self, state):
         self.txt_fromlast.setEnabled(state == Qt.Checked)
@@ -561,6 +571,8 @@ class DigitizingControl(StraditizerControlBase):
             return False
         elif (w is self.btn_show_small_parts and
               not self.txt_min_size.text()):
+            return False
+        elif w is self.sp_max_lw and not self.cb_max_lw.isChecked():
             return False
         return True
 
@@ -765,10 +777,10 @@ class DigitizingControl(StraditizerControlBase):
         layout.addWidget(self.txt_line_fraction, 0, 1)
         layout.addWidget(QLabel('%'), 0, 2)
         layout.addWidget(QLabel('Minimum axis width'), 1, 0)
-        layout.addWidget(self.txt_min_lw, 1, 1)
+        layout.addWidget(self.sp_min_lw, 1, 1)
         layout.addWidget(QLabel('px'), 1, 2)
-        layout.addWidget(QLabel('Maximum axis width'), 2, 0)
-        layout.addWidget(self.txt_max_lw, 2, 1)
+        layout.addWidget(self.cb_max_lw, 2, 0)
+        layout.addWidget(self.sp_max_lw, 2, 1)
         layout.addWidget(QLabel('px'), 2, 2)
         w.setLayout(layout)
         line_child.addChild(line_child2)
@@ -824,6 +836,10 @@ class DigitizingControl(StraditizerControlBase):
         samples_box.addWidget(QLabel('Maximum length'), 0, 1)
         samples_box.addWidget(self.txt_min_len, 1, 0)
         samples_box.addWidget(self.txt_max_len, 1, 1)
+        samples_box.addWidget(QLabel('Minimum distance'),
+                              2, 0)
+        samples_box.addWidget(self.sp_pixel_tol, 2, 1)
+        samples_box.addWidget(QLabel('px'), 2, 2)
         w = QWidget()
         w.setLayout(samples_box)
         find_child.addChild(find_child2)
@@ -973,7 +989,7 @@ class DigitizingControl(StraditizerControlBase):
             reader.draw_figure)
 
     def find_samples(self):
-        kws = {}
+        kws = dict(pixel_tol=self.sp_pixel_tol.value())
         if self.txt_min_len.text().strip():
             kws['min_len'] = int(self.txt_min_len.text())
         if self.txt_max_len.text().strip():
@@ -1032,9 +1048,10 @@ class DigitizingControl(StraditizerControlBase):
         # zoom to the first 3 samples
         ncols = editor.table.model().columnCount() - 1
         nrows = min(3, editor.table.model().rowCount())
-        editor.table.zoom_to_cells(
-            chain.from_iterable([i] * ncols for i in range(nrows)),
-            list(range(ncols)) * nrows)
+        if draw_sep:
+            editor.table.zoom_to_cells(
+                chain.from_iterable([i] * ncols for i in range(nrows)),
+                list(range(ncols)) * nrows)
         args = (self.straditizer.draw_figure, ) if not draw_sep else ()
         self.connect2apply(lambda: self.straditizer.update_samples_sep(),
                            self._close_samples_fig,
@@ -1081,8 +1098,8 @@ class DigitizingControl(StraditizerControlBase):
     def remove_hlines(self):
         """Remove horizontal lines"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
-        max_lw = int(self.txt_max_lw.text().strip() or 0) or None
-        min_lw = int(self.txt_min_lw.text().strip() or 1)
+        max_lw = int(self.sp_max_lw.text().strip() or 0) or None
+        min_lw = int(self.sp_min_lw.text().strip() or 1)
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
         self.reader.recognize_hlines(fraction=fraction, min_lw=min_lw,
@@ -1101,8 +1118,8 @@ class DigitizingControl(StraditizerControlBase):
     def remove_vlines(self):
         """Remove horizontal lines"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
-        max_lw = int(self.txt_max_lw.text().strip() or 0) or None
-        min_lw = int(self.txt_min_lw.text().strip() or 1)
+        max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
+        min_lw = self.sp_min_lw.value()
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
         self.reader.recognize_vlines(fraction=fraction, min_lw=min_lw,
