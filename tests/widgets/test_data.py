@@ -19,8 +19,9 @@ class RemoverTest(bt.StraditizeWidgetsTestCase):
         ``'basic_diagram_vlines.png'`` and compares it with
         ``'basic_diagram_binary.png'``"""
         self.init_reader('basic_diagram_vlines.png')
-        self.digitizer.txt_max_lw.setText('2')
-        self.digitizer.txt_min_lw.setText('2')
+        self.digitizer.cb_max_lw.setChecked(True)
+        self.digitizer.sp_max_lw.setValue(2)
+        self.digitizer.sp_min_lw.setValue(2)
         QTest.mouseClick(self.digitizer.btn_remove_vlines,
                          Qt.LeftButton)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
@@ -36,8 +37,9 @@ class RemoverTest(bt.StraditizeWidgetsTestCase):
         ``'basic_diagram_hlines.png'`` and compares it with
         ``'basic_diagram_hlines_removed.png'``"""
         self.init_reader('basic_diagram_hlines.png')
-        self.digitizer.txt_max_lw.setText('2')
-        self.digitizer.txt_min_lw.setText('2')
+        self.digitizer.cb_max_lw.setChecked(True)
+        self.digitizer.sp_max_lw.setValue(2)
+        self.digitizer.sp_min_lw.setValue(2)
         self.digitizer.txt_line_fraction.setText('90')
         QTest.mouseClick(self.digitizer.btn_remove_hlines,
                          Qt.LeftButton)
