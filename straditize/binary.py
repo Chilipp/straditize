@@ -80,8 +80,8 @@ class DataReader(LabelSelection):
         if self.parent._sample_locs is not None:
             return self.parent._sample_locs
         elif self.parent._full_df is not None:
-            self.parent._sample_locs = self.parent._full_df.iloc[:0].copy(
-                True)
+            self.parent._sample_locs = pd.DataFrame(
+                [], columns=list(self.parent._full_df.columns))
             return self.parent._sample_locs
 
     @sample_locs.setter

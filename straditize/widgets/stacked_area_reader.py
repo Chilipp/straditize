@@ -35,6 +35,7 @@ class StackedReader(DataReader, StraditizerControlBase):
             digitizer.cb_readers.setEnabled(False)
             digitizer.tree.expandItem(digitizer.digitize_item)
             self.enable_or_disable_navigation_buttons()
+            self.reset_lbl_col()
         elif not digitizing:
             # stop digitization
             digitizer.btn_digitize.setChecked(False)
@@ -81,10 +82,12 @@ class StackedReader(DataReader, StraditizerControlBase):
     def increase_current_col(self):
         self._current_col = min(self.columns[-1], self._current_col + 1)
         self.reset_lbl_col()
+        self.enable_or_disable_navigation_buttons()
 
     def decrease_current_col(self):
         self._current_col = max(self.columns[0], self._current_col - 1)
         self.reset_lbl_col()
+        self.enable_or_disable_navigation_buttons()
 
     def _remove_digitze_child(self, digitizer):
         digitizer.digitize_item.takeChild(
@@ -98,15 +101,16 @@ class StackedReader(DataReader, StraditizerControlBase):
     def enable_or_disable_navigation_buttons(self):
         disable_all = self.columns is None or len(self.columns) == 1
         self.btn_prev.setEnabled(not disable_all and
-                                 self._current_col != self.columns[1])
+                                 self._current_col != self.columns[0])
         self.btn_next.setEnabled(not disable_all and
                                  self._current_col != self.columns[-1])
 
     def select_current_column(self, add_on_apply=False):
-        image = np.array(self.image.convert('L')).astype(int) + 1
+        image = self.to_grey_pil(self.image.convert('L')).astype(int) + 1
         start = self.start_of_current_col
         end = start + self.full_df[self._current_col].values
-        all_end = start + self.full_df[self.columns[-1]].values
+        all_end = start + self.full_df.loc[:, self._current_col:].values.sum(
+            axis=1)
         x = np.meshgrid(*map(np.arange, image.shape[::-1]))[0]
         image[(x < start[:, np.newaxis]) | (x > all_end[:, np.newaxis])] = 0
         labels = skim.label(image, 8)
@@ -118,7 +122,7 @@ class StackedReader(DataReader, StraditizerControlBase):
         self.select_all_labels()
         # set values outside the current column to 0
         self._selection_arr[(x < start[:, np.newaxis]) |
-                            (x > end[:, np.newaxis])] = -1
+                            (x >= end[:, np.newaxis])] = -1
         self._select_img.set_array(self._selection_arr)
         self.draw_figure()
 
@@ -133,11 +137,14 @@ class StackedReader(DataReader, StraditizerControlBase):
         return start
 
     def update_col(self):
-        """Update the current column based on the selection"""
+        """Update the current column based on the selection.
+
+        This method updates the end of the current column and adds or removes
+        the changes from the columns to the right."""
         current = self._current_col
         start = self.start_of_current_col
         selected = self.selected_part
-        end = (self.binary.shape[1] - selected[:, ::-1].argmax(axis=1) - 1 -
+        end = (self.binary.shape[1] - selected[:, ::-1].argmax(axis=1) -
                start)
         not_selected = ~selected.any()
         end[not_selected] = 0
@@ -167,7 +174,7 @@ class StackedReader(DataReader, StraditizerControlBase):
         current = self._current_col
         start = self.start_of_current_col
         selected = self.selected_part
-        end = (self.binary.shape[1] - selected[:, ::-1].argmax(axis=1) - 1 -
+        end = (self.binary.shape[1] - selected[:, ::-1].argmax(axis=1) -
                start)
         not_selected = ~selected.any()
         end[not_selected] = 0
@@ -190,13 +197,9 @@ class StackedReader(DataReader, StraditizerControlBase):
         full_df = self.parent._full_df
         increase_col_nums(full_df)
         # increase column numbers in samples
-        samples = self.parent.sample_locs
+        samples = self.parent._sample_locs
         if samples is not None:
             increase_col_nums(samples)
-        # increase column numbers in rough locations
-        rough_locs = self.parent.rough_locs
-        if rough_locs is not None:
-            increase_col_nums(rough_locs)
 
         # ----- Update of DataFrames -----
         # update the current column in full_df and add the new one
@@ -207,9 +210,14 @@ class StackedReader(DataReader, StraditizerControlBase):
         if samples is not None:
             new_samples = full_df.loc[samples.index, current]
             samples.loc[:, current + 1] -= new_samples
-            samples[:, current] = new_samples
+            samples[current] = new_samples
+            samples.sort_index(axis=1, inplace=True)
+        rough_locs = self.parent.rough_locs
         if rough_locs is not None:
-            rough_locs[current] = 0
+            rough_locs[(current + 1, 'vmin')] = rough_locs[(current, 'vmin')]
+            rough_locs[(current + 1, 'vmax')] = rough_locs[(current, 'vmax')]
+            rough_locs.loc[:, current] = -1
+            rough_locs.sort_index(inplace=True, level=0)
         self.reset_lbl_col()
         self.enable_or_disable_navigation_buttons()
 
@@ -226,33 +234,37 @@ class StackedReader(DataReader, StraditizerControlBase):
         x = np.zeros_like(vals[:, 0]) + starts[0]
         for i in range(vals.shape[1]):
             x += vals[:, i]
-            lines.extend(ax.plot(x, y, lw=2.0))
+            lines.extend(ax.plot(x.copy(), y, lw=2.0))
 
-    def plot_potential_samples(self, excluded=False, ax=None,
-                                    *args, **kwargs):
+    def plot_potential_samples(self, excluded=False, ax=None, plot_kws={},
+                               *args, **kwargs):
         """Plot the ranges for potential samples"""
         vals = self.full_df.values.copy()
         starts = self.column_starts.copy()
         self.sample_ranges = lines = []
         y = np.arange(np.shape(self.image)[0])
         ax = ax or self.ax
+        plot_kws = dict(plot_kws)
+        plot_kws.setdefault('marker', '+')
         if self.extent is not None:
             y += self.extent[-1]
             starts = starts + self.extent[0]
         x = np.zeros(vals.shape[0]) + starts[0]
-        for i, arr in enumerate(vals.T):
+        for i, (col, arr) in enumerate(zip(self.columns, vals.T)):
             all_indices, excluded_indices = self.find_potential_samples(
                 i, *args, **kwargs)
             if excluded:
                 all_indices = excluded_indices
             if not all_indices:
+                x += arr
                 continue
-            indices = list(chain.from_iterable(all_indices))
             mask = np.ones(arr.size, dtype=bool)
-            mask[indices] = False
-            for l in all_indices:
-                lines.extend(ax.plot(np.where(mask, np.nan, arr)[l] + x[l],
-                                     y[l], marker='+'))
+            for imin, imax in all_indices:
+                mask[imin:imax] = False
+            for imin, imax in all_indices:
+                lines.extend(ax.plot(
+                    np.where(mask, np.nan, arr)[imin:imax] + x[imin:imax],
+                    y[imin:imax], **plot_kws))
             x += arr
 
 

@@ -230,9 +230,11 @@ class LabelSelection(object):
 
     def select_all_labels(self):
         colors = [self.cunselect, self.cselect]
+        self._selection_arr = self._orig_selection_arr.copy()
         self._select_img.set_cmap(self.copy_cmap(self._select_img.get_cmap(),
                                                  colors))
         self._select_img.set_norm(self._select_norm)
+        self._select_img.set_array(self._selection_arr)
         self._update_magni_img()
 
     def _update_magni_img(self):

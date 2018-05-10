@@ -84,9 +84,13 @@ def start_app(fname=None, output=None, xlim=None, ylim=None,
         stradi.data_ylim = ylim
     if xlim or ylim or full:
         set_x_and_ylim(stradi)
+        if reader_type == 'stacked area':
+            import straditize.widgets.stacked_area_reader
         stradi.init_reader(reader_type)
-        stradi.data_reader.digitize()
     if output:
+        stradi.data_reader.digitize()
+        stradi.data_reader.sample_locs, stradi.data_reader.rough_locs = \
+            stradi.data_reader.find_samples()
         stradi.final_df.to_csv(output)
     elif exec_:
         stradi_widget.refresh()
