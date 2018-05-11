@@ -35,7 +35,7 @@ Digitizing stratigraphic diagrams
         :alt: Travis
         :target: https://travis-ci.org/Chilipp/straditize
 
-    .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/3jk6ea1n4a4dl6vk/branch/master?svg=true
+    .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/c1c8pqvh8h8rolxw?svg=true
         :alt: AppVeyor
         :target: https://ci.appveyor.com/project/Chilipp/straditize/branch/master
 
