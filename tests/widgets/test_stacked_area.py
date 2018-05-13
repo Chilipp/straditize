@@ -40,7 +40,7 @@ class StackedAreaReaderTest(bt.StraditizeWidgetsTestCase):
         tb = self.toolbar
 
         # select the first column
-        QTest.mouseClick(self.reader.btn_add, Qt.LeftButton)
+        self.reader.select_current_column(True)
         tb.set_color_wand_mode()
         tb.wand_action.setChecked(True)
         tb.toggle_selection()
@@ -49,8 +49,8 @@ class StackedAreaReaderTest(bt.StraditizeWidgetsTestCase):
         self.assertEqual(list(self.reader._full_df.columns), [0, 1])
 
         # now select the second column
-        QTest.mouseClick(self.reader.btn_next, Qt.LeftButton)
-        QTest.mouseClick(self.reader.btn_add, Qt.LeftButton)
+        self.reader.increase_current_col()
+        self.reader.select_current_column(True)
         tb.set_color_wand_mode()
         tb.wand_action.setChecked(True)
         tb.toggle_selection()
@@ -79,7 +79,8 @@ class StackedAreaReaderTest(bt.StraditizeWidgetsTestCase):
         tb = self.toolbar
         # restart the digitization
         QTest.mouseClick(self.digitizer.btn_digitize, Qt.LeftButton)
-        QTest.mouseClick(self.reader.btn_edit, Qt.LeftButton)
+        self.reader.decrease_current_col()
+        self.reader.select_current_column()
 
         # deselect one pixel
         tb.set_rect_select_mode()
