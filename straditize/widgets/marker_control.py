@@ -24,6 +24,9 @@ class ColorLabel(QTableWidget):
     #: a signal that is emitted with an rgba color if the chosen color changes
     color_changed = QtCore.pyqtSignal(QtGui.QColor)
 
+    #: QtCore.QColor. The current color that is displayed
+    color = None
+
     def __init__(self, color='w', *args, **kwargs):
         """The color to display
 
@@ -67,6 +70,7 @@ class ColorLabel(QTableWidget):
             Either a QtGui.QColor object or a color that can be converted
             to RGBA using the :func:`matplotlib.colors.to_rgba` function"""
         color = self._set_color(color)
+        self.color = color
         self.color_changed.emit(color)
 
     def _set_color(self, color):
@@ -510,6 +514,86 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.cb_selectable_hline.setChecked('h' in mark.selectable)
         self.cb_selectable_vline.setChecked('v' in mark.selectable)
 
+    @property
+    def line_props(self):
+        return {
+            'ls': self.combo_line_style.currentText(),
+            'marker': self.marker_styles[
+                self.combo_marker_style.currentIndex()][1][0],
+            'lw': float(self.txt_line_width.text().strip() or 0),
+            'markersize': float(self.txt_marker_size.text().strip() or 0),
+            'c': self.lbl_color_unselect.color.getRgbF(),
+            }
+
+    @property
+    def select_props(self):
+        return {
+            'c': self.lbl_color_select.color.getRgbF(),
+            'lw': float(self.txt_line_width_select.text().strip() or 0)}
+
+    def update_mark(self, mark):
+        """Update the properties of a mark to match the settings
+
+        Parameters
+        ----------
+        mark: straditize.cross_mark.CrossMarks
+            The mark to update
+        """
+        # line properties
+        props = self.line_props
+        mark._unselect_props.update(props)
+        mark._select_props.update(self.select_props)
+
+        # auto_hide
+        auto_hide = self.cb_auto_hide.isChecked()
+        mark.auto_hide = auto_hide
+        if auto_hide:
+            props['lw'] = 0
+
+        # show_connected
+        show_connected = self.cb_show_connected.isChecked()
+        mark.set_connected_artists_visible(show_connected)
+
+        # drag hline
+        drag_hline = self.cb_drag_hline.isChecked()
+        if drag_hline and 'h' not in mark.draggable:
+            mark.draggable.append('h')
+        elif not drag_hline and 'h' in mark.draggable:
+            mark.draggable.remove('h')
+
+        # drag vline
+        drag_vline = self.cb_drag_vline.isChecked()
+        if drag_vline and 'v' not in mark.draggable:
+            mark.draggable.append('v')
+        elif not drag_vline and 'v' in mark.draggable:
+            mark.draggable.remove('v')
+
+        # select hline
+        select_hline = self.cb_selectable_hline.isChecked()
+        if select_hline and 'h' not in mark.selectable:
+            mark.selectable.append('h')
+        elif not select_hline and 'h' in mark.selectable:
+            mark.selectable.remove('h')
+
+        # select hline
+        select_vline = self.cb_selectable_vline.isChecked()
+        if select_vline and 'v' not in mark.selectable:
+            mark.selectable.append('v')
+        elif not select_vline and 'v' in mark.selectable:
+            mark.selectable.remove('v')
+
+        show_horizontal = self.cb_show_hlines.isChecked()
+        mark.hide_horizontal = ~show_horizontal
+        show_vertical = self.cb_show_vlines.isChecked()
+        mark.hide_vertical = ~show_vertical
+
+        for l in chain(mark.hlines, mark.vlines):
+            l.update(props)
+        for l in mark.hlines:
+            l.set_visible(show_horizontal)
+        for l in mark.vlines:
+            l.set_visible(show_vertical)
+
     def change_hline_draggable(self, state):
         if state == Qt.Checked:
             for mark in self.marks:
@@ -588,47 +672,99 @@ class MarkerControl(StraditizerControlBase, QWidget):
             return self.go_to_smaller_x_mark(min(ax.get_xlim()))
 
     def go_to_greater_x_mark(self, x):
+        def is_visible(mark):
+            return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
+                np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
         ax = next(self.marks).ax
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
+        xlim = np.asarray(ax.get_xlim())
+        ylim = np.asarray(ax.get_ylim())
         marks = self.straditizer.marks
-        distances = (
-            (mark.xa > x).any() and (mark.xa[mark.xa > x] - x).min()
-            for mark in marks)
-        try:
-            dist, mark = min((t for t in zip(distances, marks) if t[0]),
-                             key=lambda t: t[0])
-        except ValueError:  # empty sequence
-            return
-        mask = mark.xa > x
-        i = mark.xa[mask].argmin()
-        x, y = mark.xa[mask][i], mark.ya[mask][i]
-        dx = np.diff(xlim) / 2.
-        ax.set_xlim(x - dx, x + dx)
-        dy = np.diff(ylim) / 2.
-        ax.set_ylim(y - dy, y + dy)
+        if len(marks[0].xa) > 1:
+            # get the mark in the center
+            yc = ylim.mean()
+            try:
+                mark = min(
+                    filter(is_visible, marks),
+                    key=lambda m: np.abs(m.ya - yc).min())
+            except ValueError:  # empty sequence
+                mark = min(
+                    marks, key=lambda m: np.abs(m.ya - yc).min())
+            # if all edges are visible already, we return
+            if (np.searchsorted(xlim, mark.xa) == 1).all():
+                return
+            mask = mark.xa > x
+            if not mask.any():  # already on the right side
+                return
+            i = mark.xa[mask].argmin()
+            x = mark.xa[mask][i]
+            dx = np.diff(xlim) / 2.
+            ax.set_xlim(x - dx, x + dx)
+        else:
+            distances = (
+                (mark.xa > x).any() and (mark.xa[mark.xa > x] - x).min()
+                for mark in marks)
+            try:
+                dist, mark = min((t for t in zip(distances, marks) if t[0]),
+                                 key=lambda t: t[0])
+            except ValueError:  # empty sequence
+                return
+            mask = mark.xa > x
+            i = mark.xa[mask].argmin()
+            x = mark.xa[mask][i]
+            j = np.abs(mark.ya - ylim.mean()).argmin()
+            y = mark.ya[j]
+            dx = np.diff(xlim) / 2.
+            ax.set_xlim(x - dx, x + dx)
+            dy = np.diff(ylim) / 2.
+            ax.set_ylim(y - dy, y + dy)
         self.straditizer.draw_figure()
 
     def go_to_smaller_x_mark(self, x):
+        def is_visible(mark):
+            return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
+                np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
         ax = next(self.marks).ax
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
+        xlim = np.asarray(ax.get_xlim())
+        ylim = np.asarray(ax.get_ylim())
         marks = self.straditizer.marks
-        distances = (
-            (mark.xa < x).any() and (mark.xa[mark.xa < x] - x).min()
-            for mark in marks)
-        try:
-            dist, mark = min((t for t in zip(distances, marks) if t[0]),
-                             key=lambda t: t[0])
-        except ValueError:  # empty sequence
-            return
-        mask = mark.xa < x
-        i = mark.xa[mask].argmin()
-        x, y = mark.xa[mask][i], mark.ya[mask][i]
-        dx = np.diff(xlim) / 2.
-        ax.set_xlim(x - dx, x + dx)
-        dy = np.diff(ylim) / 2.
-        ax.set_ylim(y - dy, y + dy)
+        if len(marks[0].xa) > 1:
+            # get the mark in the center
+            yc = ylim.mean()
+            try:
+                mark = min(
+                    filter(is_visible, marks),
+                    key=lambda m: np.abs(m.ya - yc).min())
+            except ValueError:  # empty sequence
+                mark = min(
+                    marks, key=lambda m: np.abs(m.ya - yc).min())
+            # if all edges are visible already, we return
+            if (np.searchsorted(xlim, mark.xa) == 1).all():
+                return
+            mask = mark.xa < x
+            if not mask.any():  # already on the right side
+                return
+            i = mark.xa[mask].argmin()
+            x = mark.xa[mask][i]
+            dx = np.diff(xlim) / 2.
+            ax.set_xlim(x - dx, x + dx)
+        else:
+            distances = (
+                (mark.xa < x).any() and (mark.xa[mark.xa < x] - x).min()
+                for mark in marks)
+            try:
+                dist, mark = min((t for t in zip(distances, marks) if t[0]),
+                                 key=lambda t: t[0])
+            except ValueError:  # empty sequence
+                return
+            mask = mark.xa < x
+            i = mark.xa[mask].argmin()
+            x = mark.xa[mask][i]
+            j = np.abs(mark.ya - ylim.mean()).argmin()
+            y = mark.ya[j]
+            dx = np.diff(xlim) / 2.
+            ax.set_xlim(x - dx, x + dx)
+            dy = np.diff(ylim) / 2.
+            ax.set_ylim(y - dy, y + dy)
         self.straditizer.draw_figure()
 
     def go_to_upper_mark(self):
@@ -646,47 +782,99 @@ class MarkerControl(StraditizerControlBase, QWidget):
             return self.go_to_greater_y_mark(max(ax.get_ylim()))
 
     def go_to_greater_y_mark(self, y):
+        def is_visible(mark):
+            return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
+                np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
         ax = next(self.marks).ax
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
+        xlim = np.asarray(ax.get_xlim())
+        ylim = np.asarray(ax.get_ylim())
         marks = self.straditizer.marks
-        distances = (
-            (mark.ya > y).any() and (mark.xa[mark.ya > y] - y).min()
-            for mark in marks)
-        try:
-            dist, mark = min((t for t in zip(distances, marks) if t[0]),
-                             key=lambda t: t[0])
-        except ValueError:  # empty sequence
-            return
-        mask = mark.ya > y
-        i = mark.ya[mask].argmin()
-        x, y = mark.xa[mask][i], mark.ya[mask][i]
-        dx = np.diff(xlim) / 2.
-        ax.set_xlim(x - dx, x + dx)
-        dy = np.diff(ylim) / 2.
-        ax.set_ylim(y - dy, y + dy)
+        if len(marks[0].ya) > 1:
+            # get the mark in the center
+            xc = xlim.mean()
+            try:
+                mark = min(
+                    filter(is_visible, marks),
+                    key=lambda m: np.abs(m.xa - xc).min())
+            except ValueError:  # empty sequence
+                mark = min(
+                    marks, key=lambda m: np.abs(m.xa - xc).min())
+            # if all edges are visible already, we return
+            if (np.searchsorted(ylim, mark.ya) == 1).all():
+                return
+            mask = mark.ya > y
+            if not mask.any():  # already on the right side
+                return
+            i = mark.ya[mask].argmin()
+            y = mark.ya[mask][i]
+            dy = np.diff(ylim) / 2.
+            ax.set_ylim(y - dy, y + dy)
+        else:
+            distances = (
+                (mark.ya > y).any() and (mark.xa[mark.ya > y] - y).min()
+                for mark in marks)
+            try:
+                dist, mark = min((t for t in zip(distances, marks) if t[0]),
+                                 key=lambda t: t[0])
+            except ValueError:  # empty sequence
+                return
+            mask = mark.ya > y
+            i = mark.ya[mask].argmin()
+            y = mark.ya[mask][i]
+            j = np.abs(mark.xa - xlim.mean()).argmin()
+            x = mark.xa[j]
+            dx = np.diff(xlim) / 2.
+            ax.set_xlim(x - dx, x + dx)
+            dy = np.diff(ylim) / 2.
+            ax.set_ylim(y - dy, y + dy)
         self.straditizer.draw_figure()
 
     def go_to_smaller_y_mark(self, y):
+        def is_visible(mark):
+            return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
+                np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
         ax = next(self.marks).ax
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
+        xlim = np.asarray(ax.get_xlim())
+        ylim = np.asarray(ax.get_ylim())
         marks = self.straditizer.marks
-        distances = (
-            (mark.ya < y).any() and (mark.ya[mark.ya < y] - y).min()
-            for mark in marks)
-        try:
-            dist, mark = min((t for t in zip(distances, marks) if t[0]),
-                             key=lambda t: t[0])
-        except ValueError:  # empty sequence
-            return
-        mask = mark.ya < y
-        i = mark.ya[mask].argmin()
-        x, y = mark.xa[mask][i], mark.ya[mask][i]
-        dx = np.diff(xlim) / 2.
-        ax.set_xlim(x - dx, x + dx)
-        dy = np.diff(ylim) / 2.
-        ax.set_ylim(y - dy, y + dy)
+        if len(marks[0].ya) > 1:
+            # get the mark in the center
+            xc = xlim.mean()
+            try:
+                mark = min(
+                    filter(is_visible, marks),
+                    key=lambda m: np.abs(m.xa - xc).min())
+            except ValueError:  # empty sequence
+                mark = min(
+                    marks, key=lambda m: np.abs(m.xa - xc).min())
+            # if all edges are visible already, we return
+            if (np.searchsorted(ylim, mark.ya) == 1).all():
+                return
+            mask = mark.ya < y
+            if not mask.any():  # already on the right side
+                return
+            i = mark.ya[mask].argmin()
+            y = mark.ya[mask][i]
+            dy = np.diff(ylim) / 2.
+            ax.set_ylim(y - dy, y + dy)
+        else:
+            distances = (
+                (mark.ya < y).any() and (mark.ya[mark.ya < y] - y).min()
+                for mark in marks)
+            try:
+                dist, mark = min((t for t in zip(distances, marks) if t[0]),
+                                 key=lambda t: t[0])
+            except ValueError:  # empty sequence
+                return
+            mask = mark.ya < y
+            i = mark.ya[mask].argmin()
+            y = mark.ya[mask][i]
+            j = np.abs(mark.xa - xlim.mean()).argmin()
+            x = mark.xa[j]
+            dx = np.diff(xlim) / 2.
+            ax.set_xlim(x - dx, x + dx)
+            dy = np.diff(ylim) / 2.
+            ax.set_ylim(y - dy, y + dy)
         self.straditizer.draw_figure()
 
     def add_toolbar_widgets(self, mark):
@@ -757,3 +945,4 @@ class MarkerControl(StraditizerControlBase, QWidget):
             self._filled = False
         if self.straditizer is not None:
             self.straditizer.mark_added.connect(self.fill_after_adding)
+            self.straditizer.mark_added.connect(self.update_mark)
