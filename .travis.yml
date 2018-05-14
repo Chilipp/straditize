@@ -9,7 +9,11 @@ os:
   - osx
 
 before_install:
-  # select the os name for the conda installer
+  # increase open files limit
+  - ulimit -a
+  - ulimit -Sn 10000
+  - ulimit -a
+    # select the os name for the conda installer
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
         OS_NAME=MacOSX;
     else
