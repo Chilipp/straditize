@@ -87,23 +87,24 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
 
     def tearDown(self):
         import matplotlib.pyplot as plt
-        self.straditizer_widgets.straditizer = None
-        self.straditizer_widgets.refresh()
-        if not running_in_gui:
-            import psyplot_gui.main as main
-            self.window.close()
-            rcParams.update_from_defaultParams()
-            psy_rcParams.update_from_defaultParams()
-            rcParams.disconnect()
-            psy_rcParams.disconnect()
-            main._set_mainwindow(None)
-        if self.straditizer_widgets.cancel_button.isEnabled():
-            try:
-                QTest.mouseClick(self.straditizer_widgets.cancel_button,
-                                 Qt.LeftButton)
-            except Exception:
-                pass
-        del self.window, self.straditizer_widgets
+        if hasattr(self, 'straditizer_widgets'):
+            self.straditizer_widgets.straditizer = None
+            self.straditizer_widgets.refresh()
+            if not running_in_gui:
+                import psyplot_gui.main as main
+                self.window.close()
+                rcParams.update_from_defaultParams()
+                psy_rcParams.update_from_defaultParams()
+                rcParams.disconnect()
+                psy_rcParams.disconnect()
+                main._set_mainwindow(None)
+            if self.straditizer_widgets.cancel_button.isEnabled():
+                try:
+                    QTest.mouseClick(self.straditizer_widgets.cancel_button,
+                                     Qt.LeftButton)
+                except Exception:
+                    pass
+            del self.window, self.straditizer_widgets
         plt.close('all')
         for f in self.created_files:
             if osp.exists(f):
