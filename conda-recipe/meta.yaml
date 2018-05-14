@@ -37,7 +37,12 @@ test:
     - straditize.widgets
   commands:
     - straditize --help
-    - pytest -v --cov=straditize --cov-config .coveragerc --cov-report term-missing -v
+    - pytest -v --cov=straditize -v
+      --ignore=tests/widgets/test_selection_toolbar.py
+      --ignore=tests/widgets/test_samples_table.py
+    - pytest -v --cov=straditize -v --cov-append
+      tests/widgets/test_selection_toolbar.py
+      tests/widgets/test_samples_table.py
     - codecov
 
 
