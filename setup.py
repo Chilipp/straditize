@@ -20,13 +20,19 @@ class PyTest(TestCommand):
 
 
 def readme():
-    with open('README.rst') as f:
-        return f.read()
+    try:
+        with open('README.rst') as f:
+            return f.read()
+    except FileNotFoundError:
+        return 'Python package for digitizing pollen diagrams'
 
 
 # read the version from version.py
-with open(osp.join('straditize', 'version.py')) as f:
-    exec(f.read())
+try:
+    with open(osp.join('straditize', 'version.py')) as f:
+        exec(f.read())
+except FileNotFoundError:
+    from straditize import __version__
 
 
 setup(name='straditize',
