@@ -88,6 +88,10 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
     def tearDown(self):
         import matplotlib.pyplot as plt
         if hasattr(self, 'straditizer_widgets'):
+            if self.straditizer_widgets.straditizer is not None:
+                self.straditizer.image.close()
+                if self.straditizer.data_reader is not None:
+                    self.reader.image.close()
             self.straditizer_widgets.straditizer = None
             self.straditizer_widgets.refresh()
             if not running_in_gui:
@@ -261,7 +265,8 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
 
     def get_random_filename(self, **kwargs):
         kwargs.setdefault('prefix', 'stradi_')
-        fname = tempfile.NamedTemporaryFile(**kwargs).name
+        with tempfile.NamedTemporaryFile(**kwargs) as file:
+            fname = file.name
         self.created_files.add(fname)
         return fname
 
