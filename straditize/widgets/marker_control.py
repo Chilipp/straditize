@@ -70,7 +70,6 @@ class ColorLabel(QTableWidget):
             Either a QtGui.QColor object or a color that can be converted
             to RGBA using the :func:`matplotlib.colors.to_rgba` function"""
         color = self._set_color(color)
-        self.color = color
         self.color_changed.emit(color)
 
     def _set_color(self, color):
@@ -78,6 +77,7 @@ class ColorLabel(QTableWidget):
             color = QtGui.QColor(
                 *map(int, np.round(mcol.to_rgba(color)) * 255))
         self.color_item.setBackground(color)
+        self.color = color
         return color
 
     def adjust_height(self):
@@ -539,6 +539,8 @@ class MarkerControl(StraditizerControlBase, QWidget):
         mark: straditize.cross_mark.CrossMarks
             The mark to update
         """
+        if len(self.straditizer.marks) < 2:
+            return
         # line properties
         props = self.line_props
         mark._unselect_props.update(props)
