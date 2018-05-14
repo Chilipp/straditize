@@ -17,7 +17,8 @@ class CommandLineTest(bt.StraditizeWidgetsTestCase):
 
     def test_open_image(self, *args, **kwargs):
         fname = self.get_fig_path('basic_diagram.png')
-        self.window = start_app(fname, exec_=False, **kwargs)
+        self.window = start_app(fname, exec_=False, new_instance=True,
+                                **kwargs)
         self.assertIsNotNone(self.window)
         self.straditizer_widgets = get_straditizer_widgets(self.window)
         self.assertIsNotNone(self.straditizer)
