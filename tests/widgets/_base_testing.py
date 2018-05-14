@@ -83,8 +83,6 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
                 self.straditizer.image.close()
                 if self.straditizer.data_reader is not None:
                     self.reader.image.close()
-            self.straditizer_widgets.straditizer = None
-            self.straditizer_widgets.refresh()
             if not running_in_gui:
                 import psyplot_gui.main as main
                 self.window.close()
@@ -99,6 +97,8 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
                                      Qt.LeftButton)
                 except Exception:
                     pass
+            self.straditizer_widgets.straditizer = None
+            self.straditizer_widgets.refresh()
             del self.window, self.straditizer_widgets
         plt.close('all')
         for f in self.created_files:
@@ -326,12 +326,15 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         canvas.button_release_event(x1, y1, 1)
         self.assertEqual(list(mark.pos), list(to))
 
-    def add_mark(self, pos):
+    def add_mark(self, pos, ax=None):
         """Add a new mark at the given position"""
         marks = self.straditizer.marks
         n = len(marks)
-        ax = marks[0].ax
-        canvas = marks[0].fig.canvas
+        if ax is None:
+            ax = marks[0].ax
+            canvas = marks[0].fig.canvas
+        else:
+            canvas = ax.figure.canvas
         x0, y0 = ax.transData.transform([pos])[0]
         canvas.key_press_event('shift')
         canvas.button_press_event(x0, y0, 1)

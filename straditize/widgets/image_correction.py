@@ -126,12 +126,18 @@ class ImageRotator(StraditizerControlBase, QWidget):
         if self._rotating:
             self.txt_rotate.setEnabled(self.should_be_enabled(self.txt_rotate))
 
-    def rotate_image(self):
+    @property
+    def angle(self):
         angle = self.txt_rotate.text()
         if not angle.strip():
             return
-        val = float(angle.strip())
-        self.straditizer.image = self.straditizer.image.rotate(val)
+        return float(angle.strip())
+
+    def rotate_image(self):
+        angle = self.angle
+        if angle is None:
+            return
+        self.straditizer.image = self.straditizer.image.rotate(angle)
         self.straditizer.plot_im.set_array(np.asarray(self.straditizer.image))
 
     def remove_marks(self):
