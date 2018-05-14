@@ -307,39 +307,3 @@ class VerticalNavigationSlider(NavigationSliderMixin, VerticalSlider):
     def connect_to_src(self):
         super().connect_to_src()
         self.ax_src.callbacks.connect('ylim_changed', self.set_val_from_limits)
-
-
-#class NavigationSlider(Slider):
-#    """A slider for navigating in an axes"""
-#
-#    @property
-#    def limits(self):
-#        if self.__orientation == 'horizontal':
-#            return self.ax_src.get_xlim()
-#        return self.ax_src.get_ylim()
-#
-#    def __init__(self, ax, orientation='horizontal', sax=None):
-#        if sax is None:
-#            if isinstance(ax, SubplotBase):
-#                sax, kw = mcbar.make_axes_gridspec(ax, orientation=orientation)
-#            else:
-#                sax, kw = mcbar.make_axes(ax, orientation=orientation)
-#            sax.set_aspect('auto')
-#            sax._hold = True
-#
-#        super(NavigationSlider, self).__init__(
-#            sax, label, *lims, valinit=mean, valfmt='%1.2g')
-#
-#
-#    def adjust_limits(self, val):
-#        lims = self.limits
-#        diff = (lims[1] - lims[0]) / 2
-#        if self.__orientation == 'horizontal':
-#            self.ax_src.set_xlim(val - diff, val + diff)
-#        else:
-#            self.ax_src.set_ylim(val - diff, val + diff)
-#
-#    def connect(self):
-#        self.on_changed(self.adjust_limits)
-#        self.cid_motion = self.ax_src.figure.canvas.mpl_connect(
-#            'motion_notify_event', self.onmotion)
