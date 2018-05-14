@@ -220,3 +220,7 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         self.marker_control.go_to_upper_mark()
         self.assertEqual(list(ax.get_xlim()), [minx - 1, minx + 1])
         self.assertEqual(list(ax.get_ylim()), [miny + 1, miny - 1])
+
+
+if __name__ == '__main__':
+    unittest.main()
