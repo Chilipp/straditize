@@ -29,15 +29,16 @@ test:
   requires:
     - pytest
     - codecov
-    - pytest-cov
+    - coverage
   source_files:
     - tests
+    - setup.py
   imports:
     - straditize
     - straditize.widgets
   commands:
     - straditize --help
-    - pytest -v --cov=straditize --cov-config .coveragerc --cov-report term-missing -v
+    - coverage run --source=straditize setup.py test -a "-v"
     - codecov
 
 
