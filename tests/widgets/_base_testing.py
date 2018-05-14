@@ -23,6 +23,16 @@ def is_running_in_gui():
     return mainwindow is not None
 
 
+def setup_rcparams():
+    rcParams.defaultParams['console.start_channels'][0] = False
+    rcParams.defaultParams['main.listen_to_port'][0] = False
+    rcParams.defaultParams['help_explorer.render_docs_parallel'][0] = False
+    rcParams.defaultParams['help_explorer.use_intersphinx'][0] = False
+    rcParams.defaultParams['plugins.include'][0] = ['straditize.widgets']
+    rcParams.defaultParams['plugins.exclude'][0] = 'all'
+    rcParams.update_from_defaultParams()
+
+
 running_in_gui = is_running_in_gui()
 
 
@@ -32,18 +42,9 @@ on_travis = os.environ.get('TRAVIS')
 if running_in_gui:
     app = QApplication.instance()
 else:
+    setup_rcparams()
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
-
-
-def setup_rcparams():
-    rcParams.defaultParams['console.start_channels'][0] = False
-    rcParams.defaultParams['main.listen_to_port'][0] = False
-    rcParams.defaultParams['help_explorer.render_docs_parallel'][0] = False
-    rcParams.defaultParams['help_explorer.use_intersphinx'][0] = False
-    rcParams.defaultParams['plugins.include'][0] = ['straditize.widgets']
-    rcParams.defaultParams['plugins.exclude'][0] = 'all'
-    rcParams.update_from_defaultParams()
 
 
 class StraditizeWidgetsTestCase(unittest.TestCase):
@@ -69,7 +70,6 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         import psyplot_gui.main as main
         from straditize.widgets import get_straditizer_widgets
         if not running_in_gui:
-            setup_rcparams()
             self.window = main.MainWindow.run(show=False)
         else:
             self.window = main.mainwindow
