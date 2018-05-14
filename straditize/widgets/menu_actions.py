@@ -2,10 +2,11 @@
 """
 import os
 from itertools import chain
+import datetime as dt
 import six
 from straditize.widgets import StraditizerControlBase
 from psyplot_gui.compat.qtcompat import (
-    with_qt5, QFileDialog, QMenu, QKeySequence, Qt)
+    with_qt5, QFileDialog, QMenu, QKeySequence)
 import numpy as np
 from PIL import Image
 
@@ -52,6 +53,11 @@ class StraditizerMenuActions(StraditizerControlBase):
             main.save_project_menu, 'Save straditizer', self.save_straditizer,
             tooltip='Save the digitization project')
 
+        self.save_straditizer_as_action = self._add_action(
+            main.save_project_as_menu, 'Save straditizer as',
+            self.save_straditizer_as,
+            tooltip='Save the digitization project to a different file')
+
         self.export_data_menu = menu = QMenu('Straditizer data')
         main.export_project_menu.addMenu(menu)
 
@@ -96,6 +102,8 @@ class StraditizerMenuActions(StraditizerControlBase):
     def setup_shortcuts(self, main):
         """Setup the shortcuts when switched to the straditizer layout"""
         main.register_shortcut(self.save_straditizer_action, QKeySequence.Save)
+        main.register_shortcut(self.save_straditizer_as_action,
+                               QKeySequence.SaveAs)
         main.register_shortcut(
             self.export_final_action, QKeySequence(
                 'Ctrl+E', QKeySequence.NativeText))
@@ -138,13 +146,17 @@ class StraditizerMenuActions(StraditizerControlBase):
         elif fname.endswith('.nc') or fname.endswith('.nc4'):
             import xarray as xr
             ds = xr.open_dataset(fname)
-            stradi = Straditizer.from_dataset(ds)
+            stradi = Straditizer.from_dataset(ds.load())
+            stradi.set_attr('project_file', fname)
+            ds.close()
         elif fname.endswith('.pkl'):
             stradi = Straditizer.load(fname, *args, **kwargs)
+            stradi.set_attr('project_file', fname)
         else:
             from PIL import Image
             image = Image.open(fname)
             stradi = Straditizer(image, *args, **kwargs)
+            stradi.set_attr('image_file', fname)
         self.finish_loading(stradi)
 
     def finish_loading(self, stradi):
@@ -171,7 +183,14 @@ class StraditizerMenuActions(StraditizerControlBase):
         stradi = Straditizer(image)
         return self.finish_loading(stradi)
 
-    def save_straditizer(self, fname=None):
+    def save_straditizer(self):
+        try:
+            fname = self.straditizer.attrs.loc['project_file', 0]
+        except KeyError:
+            fname = None
+        return self.save_straditizer_as(fname)
+
+    def save_straditizer_as(self, fname=None):
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getSaveFileName(
                 self.straditizer_widgets, 'Straditizer file destination',
@@ -184,10 +203,13 @@ class StraditizerMenuActions(StraditizerControlBase):
         if not fname:
             return
         ending = os.path.splitext(fname)[1]
+        self.straditizer.set_attr('saved', str(dt.datetime.now()))
+        self.straditizer.set_attr('project_file', fname)
         if ending == '.pkl':
             self.straditizer.save(fname)
         else:
-            self.straditizer.to_dataset().to_netcdf(fname)
+            ds = self.straditizer.to_dataset()
+            ds.to_netcdf(fname)
 
     def save_text_image(self, fname=None):
         self._save_image(self.straditizer.text_reader.image, fname)

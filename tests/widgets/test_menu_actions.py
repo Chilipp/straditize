@@ -53,7 +53,7 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
 
         # save the straditizer
         fname = self.get_random_filename(suffix=ending)
-        self.straditizer_widgets.menu_actions.save_straditizer(fname)
+        self.straditizer_widgets.menu_actions.save_straditizer_as(fname)
 
         # load the straditizer
         self.straditizer_widgets.menu_actions.open_straditizer(fname)

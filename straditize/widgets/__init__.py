@@ -2,10 +2,12 @@
 
 This module contains widgets to digitize the straditizer diagrams through a GUI
 """
+import six
 import os.path as osp
 from psyplot_gui.compat.qtcompat import (
     QWidget, QtCore, QPushButton, QTreeWidget, QTreeWidgetItem,
-    QVBoxLayout, QHBoxLayout, Qt, QAction, QToolButton, QIcon, with_qt5)
+    QVBoxLayout, QHBoxLayout, Qt, QAction, QToolButton, QIcon, with_qt5,
+    QComboBox, QLabel)
 from psyplot_gui.common import (
     DockMixin, get_icon as get_psy_icon, PyErrorMessage)
 import numpy as np
@@ -16,6 +18,11 @@ if with_qt5:
     from PyQt5.QtWidgets import QHeaderView
 else:
     from PyQt4.QtGui import QHeaderView
+
+
+common_attributes = [
+    'latitude', 'longitude', 'site-name', 'reference', 'author',
+    'date', 'chronology']
 
 
 def get_doc_file(fname):
@@ -74,6 +81,9 @@ class StraditizerWidgets(QWidget, DockMixin):
     #: The cancel button
     cancel_button = None
 
+    #: The button to edit the straditizer attributes
+    attrs_button = None
+
     #: The :class:`straditize.straditizer.Straditizer` instance
     straditizer = None
 
@@ -103,6 +113,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.refresh_button.setToolTip('Refresh from the straditizer')
         self.apply_button = EnableButton('Apply', parent=self)
         self.cancel_button = EnableButton('Cancel', parent=self)
+        self.attrs_button = QPushButton('Attributes', parent=self)
         self.error_msg = PyErrorMessage(self)
 
         # ---------------------------------------------------------------------
@@ -165,6 +176,10 @@ class StraditizerWidgets(QWidget, DockMixin):
         # --------------------------- Layouts ---------------------------------
         # ---------------------------------------------------------------------
 
+        attrs_box = QHBoxLayout()
+        attrs_box.addWidget(self.attrs_button)
+        attrs_box.addStretch(0)
+
         btn_box = QHBoxLayout()
         btn_box.addWidget(self.refresh_button)
         btn_box.addWidget(self.info_button)
@@ -174,6 +189,7 @@ class StraditizerWidgets(QWidget, DockMixin):
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.tree)
+        vbox.addLayout(attrs_box)
         vbox.addLayout(btn_box)
 
         self.setLayout(vbox)
@@ -186,6 +202,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         # --------------------------- Connections -----------------------------
         # ---------------------------------------------------------------------
         self.refresh_button.clicked.connect(self.refresh)
+        self.attrs_button.clicked.connect(self.edit_attrs)
         self.open_external.connect(self._create_straditizer_from_args)
 
         self.refresh()
@@ -259,8 +276,30 @@ class StraditizerWidgets(QWidget, DockMixin):
             if not self.is_shown:
                 self.switch_to_straditizer_layout()
 
+    def edit_attrs(self):
+        def add_attr(key):
+            model = editor.table.model()
+            n = len(attrs)
+            model.insertRow(n)
+            model.setData(model.index(n, 0), key)
+            model.setData(model.index(n, 1), '', change_type=six.text_type)
+        from psyplot_gui.main import mainwindow
+        attrs = self.straditizer.attrs
+        editor = mainwindow.new_data_frame_editor(
+            attrs, 'Straditizer attributes')
+        editor.table.resizeColumnToContents(1)
+        combo = QComboBox()
+        combo.addItems([''] + common_attributes)
+        combo.currentTextChanged.connect(add_attr)
+        hbox = QHBoxLayout()
+        hbox.addWidget(QLabel('Common attributes:'))
+        hbox.addWidget(combo)
+        hbox.addStretch(0)
+        editor.layout().insertLayout(1, hbox)
+
     def refresh(self):
         """Refresh from the straditizer"""
+        self.attrs_button.setEnabled(self.straditizer is not None)
         self.menu_actions.refresh()
         self.digitizer.refresh()
         self.selection_toolbar.refresh()

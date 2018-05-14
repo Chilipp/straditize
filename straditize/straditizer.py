@@ -2,6 +2,7 @@
 """Core module of the Straditizer class"""
 import six
 from copy import copy
+from collections import OrderedDict
 from itertools import chain
 import numpy as np
 import pandas as pd
@@ -35,6 +36,17 @@ class Straditizer(LabelSelection):
 
     block_signals = _temp_bool_prop(
         'block_signals', "Block the emitting of signals of this instance")
+
+    #: :class:`pandas.DataFrame`. The attributes of this straditizer
+    attrs = None
+
+    @property
+    def attrs_dict(self):
+        return OrderedDict(self.attrs.iloc[:, 0].items())
+
+    @attrs_dict.setter
+    def attrs_dict(self, value):
+        self.attrs = pd.DataFrame.from_dict(value, orient='index')
 
     @property
     def fig(self):
@@ -119,7 +131,7 @@ class Straditizer(LabelSelection):
 
     label_arrs = ['image_array']
 
-    def __init__(self, image, ax=None, plot=True):
+    def __init__(self, image, ax=None, plot=True, attrs=None):
         """
         Parameters
         ----------
@@ -130,9 +142,18 @@ class Straditizer(LabelSelection):
             RGBA image (if not already)
         ax: matplotlib.axes.Axes
             The matplotlib axes. If None, a new one will be created
+        attrs: dict or :class:`pandas.DataFrame`
+            The attributes for this straditizer
         """
         from PIL import Image
+        if attrs is None:
+            self.attrs = pd.DataFrame([], columns=[0])
+        elif isinstance(attrs, dict):
+            self.attrs_dict = attrs
+        else:
+            self.attrs = attrs
         if isinstance(image, six.string_types):
+            self.attrs.loc['image_file'] = image
             image = Image.open(image)
         try:
             mode = image.mode
@@ -170,10 +191,14 @@ class Straditizer(LabelSelection):
             self._orig_format_coord = ax.format_coord
             ax.format_coord = self.format_coord
 
+    def set_attr(self, key, value):
+        """Update an attribute in the :attr:`attrs`"""
+        self.attrs.loc[key] = value
+
     def __reduce__(self):
         return (
             self.__class__,
-            (self.image, None, False),
+            (self.image, None, False, self.attrs),
             {'data_reader': self.data_reader,
              'data_xlim': self.data_xlim, 'data_ylim': self.data_ylim,
              '_yaxis_px_orig': self._yaxis_px_orig,
@@ -213,6 +238,8 @@ class Straditizer(LabelSelection):
             Either the given `ds` or a new :class:`xarray.Dataset` instance"""
         if ds is None:
             ds = xr.Dataset()
+        for key, val in self.attrs_dict.items():
+            ds.attrs[key] = val
 
         self.create_variable(ds, 'axis', ['y', 'x'])
         self.create_variable(ds, 'limit', ['vmin', 'vmax'])
@@ -250,7 +277,8 @@ class Straditizer(LabelSelection):
 
         This method uses a dataset that has been exported with the
         :meth:`to_dataset` method to intialize a new reader"""
-        stradi = cls(ds['image'].values, ax=ax, plot=plot)
+        stradi = cls(ds['image'].values, ax=ax, plot=plot,
+                     attrs=ds.attrs)
         if 'data_lims' in ds:
             stradi.data_xlim = ds['data_lims'].sel(axis='x').values
             stradi.data_ylim = ds['data_lims'].sel(axis='y').values
