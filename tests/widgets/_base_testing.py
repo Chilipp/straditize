@@ -29,6 +29,13 @@ running_in_gui = is_running_in_gui()
 on_travis = os.environ.get('TRAVIS')
 
 
+if running_in_gui:
+    app = QApplication.instance()
+else:
+    app = QApplication([])
+    app.setQuitOnLastWindowClosed(False)
+
+
 def setup_rcparams():
     rcParams.defaultParams['console.start_channels'][0] = False
     rcParams.defaultParams['main.listen_to_port'][0] = False
@@ -57,22 +64,6 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
     @property
     def digitizer(self):
         return self.straditizer_widgets.digitizer
-
-    @classmethod
-    def setUpClass(cls):
-        from psyplot_gui.main import mainwindow
-        cls._close_app = mainwindow is None
-        cls._app = QApplication.instance()
-        if not running_in_gui:
-            if cls._app is None:
-                cls._app = QApplication([])
-            cls._app.setQuitOnLastWindowClosed(False)
-
-    @classmethod
-    def tearDownClass(cls):
-        if not running_in_gui:
-            cls._app.quit()
-            del cls._app
 
     def setUp(self):
         import psyplot_gui.main as main
