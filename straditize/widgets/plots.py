@@ -60,7 +60,10 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
                       self.plot_potential_samples,
                       self.remove_potential_samples_plot,
                       self.can_plot_potential_samples)
-        self.add_item('Sample lines', self.get_samples_lines,
+        self.add_item('Samples', self.get_sample_hlines,
+                      self.plot_sample_hlines, self.remove_sample_hlines_plot,
+                      self.can_plot_sample_hlines)
+        self.add_item('Reconstruction', self.get_samples_lines,
                       self.plot_samples, self.remove_samples_plot,
                       self.can_plot_samples)
         self.resizeColumnsToContents()
@@ -284,7 +287,40 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         return (self.straditizer is not None and
                 self.straditizer.data_reader is not None and
                 self.straditizer.data_reader.full_df is not None and
-                self.straditizer.data_reader.sample_locs is not None)
+                self.straditizer.data_reader._sample_locs is not None)
+
+    # --------- plot horizontal sample lines ------------
+
+    def plot_sample_hlines(self):
+        """Plot the :attr:`~straditize.binary.DataReader.full_df` of the reader
+        """
+        stradi = self.straditizer
+        stradi.data_reader.plot_sample_hlines()
+        if stradi.magni is not None:
+            lines = stradi.data_reader.sample_hlines[:]
+            stradi.data_reader.plot_sample_hlines(ax=stradi.magni.ax)
+            stradi.data_reader.sample_hlines += lines
+
+    def remove_sample_hlines_plot(self):
+        stradi = self.straditizer
+        for l in stradi.data_reader.sample_hlines[:]:
+            try:
+                l.remove()
+            except ValueError:
+                pass
+        stradi.data_reader.sample_hlines.clear()
+
+    def get_sample_hlines(self):
+        try:
+            return self.straditizer.data_reader.sample_hlines
+        except AttributeError:
+            return []
+
+    def can_plot_sample_hlines(self):
+        return (self.straditizer is not None and
+                self.straditizer.data_reader is not None and
+                self.straditizer.data_reader.full_df is not None and
+                self.straditizer.data_reader._sample_locs is not None)
 
     # --------- plot potential samples ------------
 

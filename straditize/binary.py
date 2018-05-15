@@ -1365,6 +1365,15 @@ class DataReader(LabelSelection):
         self.sample_lines = self._plot_df(
             self.sample_locs.loc[:, self.columns], ax, *args, **kwargs)
 
+    def plot_sample_hlines(self, ax=None, **kwargs):
+        ax = ax or self.ax
+        xmin, xmax = sorted(self.extent[:2])
+        y = self.sample_locs.index + min(self.extent[2:])
+        kwargs.setdefault('color', 'r')
+        if not len(y):
+            return
+        self.sample_hlines = [ax.hlines(y, xmin, xmax, **kwargs)]
+
     def _plot_df(self, df, ax=None, *args, **kwargs):
         vals = df.values
         starts = self.column_starts

@@ -104,7 +104,15 @@ class PlotControlTableTest(bt.StraditizeWidgetsTestCase):
         self.reader.digitize()
         self.reader._get_sample_locs()
         self.straditizer_widgets.refresh()
-        self._test_plot('Sample lines')
+        self._test_plot('Samples')
+
+    def test_plot_reconstruction(self):
+        self.init_reader()
+        self.reader.column_starts = self.column_starts
+        self.reader.digitize()
+        self.reader._get_sample_locs()
+        self.straditizer_widgets.refresh()
+        self._test_plot('Reconstruction')
 
 
 if __name__ == '__main__':
