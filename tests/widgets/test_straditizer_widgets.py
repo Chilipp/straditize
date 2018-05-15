@@ -13,6 +13,7 @@ class StraditizerWidgetsTest(bt.StraditizeWidgetsTestCase):
         n = len(self.window.dataframeeditors)
         editor, combo = self.straditizer_widgets.edit_attrs()
         self.assertEqual(len(self.window.dataframeeditors), n+1)
+        combo.addItem('latitude')
         combo.setCurrentText('latitude')
         self.assertIn('latitude', self.straditizer.attrs.index)
 
