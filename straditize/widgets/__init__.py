@@ -268,7 +268,7 @@ class StraditizerWidgets(QWidget, DockMixin):
                 if xlim is not None or ylim is not None or full:
                     if stradi.data_xlim is None:
                         stradi.data_xlim = [0, np.shape(stradi.image)[1]]
-                    elif stradi.data_ylim is None:
+                    if stradi.data_ylim is None:
                         stradi.data_ylim = [0, np.shape(stradi.image)[0]]
                     stradi.init_reader(reader_type)
                     stradi.data_reader.digitize()
@@ -296,6 +296,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         hbox.addWidget(combo)
         hbox.addStretch(0)
         editor.layout().insertLayout(1, hbox)
+        return editor, combo
 
     def refresh(self):
         """Refresh from the straditizer"""
