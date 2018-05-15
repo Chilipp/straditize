@@ -20,6 +20,17 @@ import skimage.morphology as skim
 import xarray as xr
 
 
+common_attributes = [
+    'Digitized by', 'sitename', 'sigle', 'Lon', 'Lat', 'Archive', 'Country',
+    'Elevation', 'Restricted', 'Reference', 'DOI']
+
+default_attrs = pd.DataFrame(
+    np.zeros((len(common_attributes), 1), dtype=object),
+    columns=[0], index=common_attributes)
+
+default_attrs.loc[:, :] = ''
+
+
 class Straditizer(LabelSelection):
     """An object to digitize a stratographic pollen diagram
     """
@@ -41,8 +52,14 @@ class Straditizer(LabelSelection):
     attrs = None
 
     @property
+    def valid_attrs(self):
+        attrs = self.attrs
+        return attrs[attrs.index.notnull() &
+                     np.asarray(attrs.index.astype(bool))]
+
+    @property
     def attrs_dict(self):
-        return OrderedDict(self.attrs.iloc[:, 0].items())
+        return OrderedDict(self.valid_attrs.iloc[:, 0].items())
 
     @attrs_dict.setter
     def attrs_dict(self, value):
@@ -147,7 +164,7 @@ class Straditizer(LabelSelection):
         """
         from PIL import Image
         if attrs is None:
-            self.attrs = pd.DataFrame([], columns=[0])
+            self.attrs = default_attrs
         elif isinstance(attrs, dict):
             self.attrs_dict = attrs
         else:
@@ -194,6 +211,9 @@ class Straditizer(LabelSelection):
     def set_attr(self, key, value):
         """Update an attribute in the :attr:`attrs`"""
         self.attrs.loc[key] = value
+
+    def get_attr(self, key):
+        return self.attrs.loc[key].iloc[0]
 
     def __reduce__(self):
         return (
@@ -1002,7 +1022,14 @@ class Straditizer(LabelSelection):
         if self.magni is not None:
             plt.close(self.magni.ax.figure)
             del self.magni
-        del self.ax, self.image, self.plot_im, self.data_reader
+        self.image.close()
+        if getattr(self, 'data_reader', None) is not None:
+            self.data_reader.image.close()
+        for attr in ['ax', 'image', 'plot_im', 'data_reader']:
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
 
     def save(self, fname):
         """Dump the :class:`Straditizer` instance to a file
