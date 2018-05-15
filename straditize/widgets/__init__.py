@@ -6,7 +6,7 @@ import six
 import os.path as osp
 from psyplot_gui.compat.qtcompat import (
     QWidget, QtCore, QPushButton, QTreeWidget, QTreeWidgetItem,
-    QVBoxLayout, QHBoxLayout, Qt, QAction, QToolButton, QIcon, with_qt5,
+    QVBoxLayout, QHBoxLayout, Qt, QToolButton, QIcon, with_qt5,
     QComboBox, QLabel)
 from psyplot_gui.common import (
     DockMixin, get_icon as get_psy_icon, PyErrorMessage)
@@ -18,11 +18,6 @@ if with_qt5:
     from PyQt5.QtWidgets import QHeaderView
 else:
     from PyQt4.QtGui import QHeaderView
-
-
-common_attributes = [
-    'latitude', 'longitude', 'site-name', 'reference', 'author',
-    'date', 'chronology']
 
 
 def get_doc_file(fname):
@@ -87,6 +82,9 @@ class StraditizerWidgets(QWidget, DockMixin):
     #: The :class:`straditize.straditizer.Straditizer` instance
     straditizer = None
 
+    #: open straditizers
+    _straditizers = []
+
     dock_position = Qt.LeftDockWidgetArea
 
     hidden = True
@@ -105,6 +103,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         from straditize.widgets.plots import PlotControl
         from straditize.widgets.axes_translations import AxesTranslations
         from straditize.widgets.image_correction import ImageRotator
+        self._straditizers = []
         super(StraditizerWidgets, self).__init__(*args, **kwargs)
         self.tree = QTreeWidget(parent=self)
         self.tree.setSelectionMode(QTreeWidget.NoSelection)
@@ -115,6 +114,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.cancel_button = EnableButton('Cancel', parent=self)
         self.attrs_button = QPushButton('Attributes', parent=self)
         self.error_msg = PyErrorMessage(self)
+        self.stradi_combo = QComboBox()
 
         # ---------------------------------------------------------------------
         # --------------------------- Tree widgets ----------------------------
@@ -188,6 +188,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         btn_box.addWidget(self.cancel_button)
 
         vbox = QVBoxLayout()
+        vbox.addWidget(self.stradi_combo)
         vbox.addWidget(self.tree)
         vbox.addLayout(attrs_box)
         vbox.addLayout(btn_box)
@@ -201,6 +202,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         # ---------------------------------------------------------------------
         # --------------------------- Connections -----------------------------
         # ---------------------------------------------------------------------
+        self.stradi_combo.currentIndexChanged.connect(self.set_current_stradi)
         self.refresh_button.clicked.connect(self.refresh)
         self.attrs_button.clicked.connect(self.edit_attrs)
         self.open_external.connect(self._create_straditizer_from_args)
@@ -284,10 +286,13 @@ class StraditizerWidgets(QWidget, DockMixin):
             model.setData(model.index(n, 0), key)
             model.setData(model.index(n, 1), '', change_type=six.text_type)
         from psyplot_gui.main import mainwindow
+        from straditize.straditizer import common_attributes
         attrs = self.straditizer.attrs
         editor = mainwindow.new_data_frame_editor(
             attrs, 'Straditizer attributes')
         editor.table.resizeColumnToContents(1)
+        editor.table.horizontalHeader().setVisible(False)
+        editor.table.frozen_table_view.horizontalHeader().setVisible(False)
         combo = QComboBox()
         combo.addItems([''] + common_attributes)
         combo.currentTextChanged.connect(add_attr)
@@ -300,6 +305,15 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     def refresh(self):
         """Refresh from the straditizer"""
+        for i, stradi in enumerate(self._straditizers):
+            for key in ['project_file', 'image_file']:
+                try:
+                    self.stradi_combo.setItemText(
+                        i, osp.basename(stradi.get_attr(key)))
+                except KeyError:
+                    pass
+                else:
+                    break
         self.attrs_button.setEnabled(self.straditizer is not None)
         self.menu_actions.refresh()
         self.digitizer.refresh()
@@ -316,6 +330,57 @@ class StraditizerWidgets(QWidget, DockMixin):
             btn.clicked.connect(button.click)
         return button
 
+    def raise_figures(self):
+        from psyplot_gui.main import mainwindow
+        if mainwindow.figures and self.straditizer:
+            dock = self.straditizer.ax.figure.canvas.manager.window
+            dock.widget().show_plugin()
+            dock.raise_()
+            if self.straditizer.magni is not None:
+                dock = self.straditizer.magni.ax.figure.canvas.manager.window
+                dock.widget().show_plugin()
+                dock.raise_()
+
+    def set_current_stradi(self, i):
+        """Set the i-th straditizer to the current one"""
+        if not self._straditizers:
+            return
+        self.straditizer = self._straditizers[i]
+        self.menu_actions.set_stradi_in_console()
+        block = self.stradi_combo.blockSignals(True)
+        self.stradi_combo.setCurrentIndex(i)
+        self.stradi_combo.blockSignals(block)
+        self.raise_figures()
+        self.refresh()
+
+    def close_straditizer(self):
+        stradi = self.straditizer
+        stradi.close()
+        try:
+            i = self._straditizers.index(stradi)
+        except ValueError:
+            pass
+        else:
+            del self._straditizers[i]
+            self.stradi_combo.removeItem(i)
+        if self._straditizers:
+            self.stradi_combo.setCurrentIndex(0)
+        else:
+            self.straditizer = None
+
+    def close_all_straditizers(self):
+        for stradi in self._straditizers:
+            stradi.close()
+        self._straditizers.clear()
+        self.stradi_combo.clear()
+        self.refresh()
+
+    def add_straditizer(self, stradi):
+        if stradi and stradi not in self._straditizers:
+            self._straditizers.append(stradi)
+            self.stradi_combo.addItem(' ')
+            self.set_current_stradi(len(self._straditizers) - 1)
+
 
 class StraditizerControlBase(object):
     """A base class for the straditizer widget"""
@@ -330,6 +395,7 @@ class StraditizerControlBase(object):
     @straditizer.setter
     def straditizer(self, value):
         self.straditizer_widgets.straditizer = value
+        self.straditizer_widgets.add_straditizer(value)
 
     @property
     def help_explorer(self):
