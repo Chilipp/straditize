@@ -2198,11 +2198,12 @@ class BarDataReader(DataReader):
                 ds, v('nbars'), list(map(len, self._all_indices)))
 
             # save the bars to split
-            self.create_variable(
-                ds, v('splitted'), list(chain.from_iterable(
-                    t[1] for t in sorted(self._splitted.items()))))
-            nbars = [len(t[1]) for t in sorted(self._splitted.items())]
-            self.create_variable(ds, v('nsplit'), nbars)
+            if self._splitted and any(self._splitted.values()):
+                self.create_variable(
+                    ds, v('splitted'), list(chain.from_iterable(
+                        t[1] for t in sorted(self._splitted.items()))))
+                nbars = [len(t[1]) for t in sorted(self._splitted.items())]
+                self.create_variable(ds, v('nsplit'), nbars)
 
         if self.min_len is not None:
             self.create_variable(ds, v('min_len'), self.min_len)
@@ -2233,11 +2234,15 @@ class BarDataReader(DataReader):
             ret._all_indices = [
                 bars[s:e] for s, e in zip(chain([0], nbars[:-1]), nbars)]
             # splitted bars
-            bars = ds[v('splitted')].values.tolist()
-            nbars = np.cumsum(ds[v('nsplit')].values)
-            ret._splitted = {
-                ret.columns[i]: bars[s:e]
-                for i, (s, e) in enumerate(zip(chain([0], nbars[:-1]), nbars))}
+            if v('splitted') in ds:
+                bars = ds[v('splitted')].values.tolist()
+                nbars = np.cumsum(ds[v('nsplit')].values)
+                ret._splitted = {
+                    ret.columns[i]: bars[s:e]
+                    for i, (s, e) in enumerate(zip(chain([0], nbars[:-1]),
+                                                   nbars))}
+            else:
+                ret._splitted = {}
         if v('min_len') in ds:
             ret.min_len = ds[v('min_len')].values
         if v('max_len') in ds:
