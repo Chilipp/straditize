@@ -115,6 +115,10 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.attrs_button = QPushButton('Attributes', parent=self)
         self.error_msg = PyErrorMessage(self)
         self.stradi_combo = QComboBox()
+        self.btn_open_stradi = QToolButton()
+        self.btn_open_stradi.setIcon(QIcon(get_psy_icon('run_arrow.png')))
+        self.btn_close_stradi = QToolButton()
+        self.btn_close_stradi.setIcon(QIcon(get_psy_icon('invalid.png')))
 
         # ---------------------------------------------------------------------
         # --------------------------- Tree widgets ----------------------------
@@ -176,6 +180,11 @@ class StraditizerWidgets(QWidget, DockMixin):
         # --------------------------- Layouts ---------------------------------
         # ---------------------------------------------------------------------
 
+        stradi_box = QHBoxLayout()
+        stradi_box.addWidget(self.stradi_combo, 1)
+        stradi_box.addWidget(self.btn_open_stradi)
+        stradi_box.addWidget(self.btn_close_stradi)
+
         attrs_box = QHBoxLayout()
         attrs_box.addWidget(self.attrs_button)
         attrs_box.addStretch(0)
@@ -188,7 +197,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         btn_box.addWidget(self.cancel_button)
 
         vbox = QVBoxLayout()
-        vbox.addWidget(self.stradi_combo)
+        vbox.addLayout(stradi_box)
         vbox.addWidget(self.tree)
         vbox.addLayout(attrs_box)
         vbox.addLayout(btn_box)
@@ -206,6 +215,9 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.refresh_button.clicked.connect(self.refresh)
         self.attrs_button.clicked.connect(self.edit_attrs)
         self.open_external.connect(self._create_straditizer_from_args)
+        self.btn_open_stradi.clicked.connect(
+            self.menu_actions.open_straditizer)
+        self.btn_close_stradi.clicked.connect(self.close_straditizer)
 
         self.refresh()
         header = self.tree.header()
@@ -314,7 +326,11 @@ class StraditizerWidgets(QWidget, DockMixin):
                     pass
                 else:
                     break
-        self.attrs_button.setEnabled(self.straditizer is not None)
+        # toggle visibility of close button and attributes button
+        enable = self.straditizer is not None
+        self.btn_close_stradi.setVisible(enable)
+        self.attrs_button.setEnabled(enable)
+        # refresh controls
         self.menu_actions.refresh()
         self.digitizer.refresh()
         self.selection_toolbar.refresh()
@@ -367,6 +383,7 @@ class StraditizerWidgets(QWidget, DockMixin):
             self.stradi_combo.setCurrentIndex(0)
         else:
             self.straditizer = None
+            self.refresh()
 
     def close_all_straditizers(self):
         for stradi in self._straditizers:
