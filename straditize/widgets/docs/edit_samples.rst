@@ -1,6 +1,6 @@
 .. include:: <isonum.txt>
 
-.. _find-samples:
+.. _edit-samples:
 
 Editing samples
 ===============

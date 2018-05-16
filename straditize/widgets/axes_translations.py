@@ -49,6 +49,7 @@ class AxesTranslations(StraditizerControlBase):
         if self.straditizer is None:
             return False
         elif (w is self.btn_marks_for_x and
-              self.straditizer.data_reader is None):
+              (self.straditizer.data_reader is None or
+               self.straditizer.data_reader._column_starts is None)):
             return False
         return True

@@ -23,3 +23,18 @@ The first step is to load the picture of your diagram.
        :width: 100%
 
    and select the image file you want to load.
+
+   .. only:: html
+
+       Alternatively, you can use the use the :kbd:`Control-O` (:kbd:`⌘-O` on
+       MacOS) keyboard shortcut or the |arrow| button at the top of the
+       straditizer control.
+
+   .. only:: not html
+
+       Alternatively, you can use the :kbd:`Control-O` (:kbd:`Command-O` on
+       MacOS) keyboard shortcut or the |arrow| button at the top of the
+       straditizer control.
+
+.. |arrow| image:: run_arrow.png
+   :width: 1.3em

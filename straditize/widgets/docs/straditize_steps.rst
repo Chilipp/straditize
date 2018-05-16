@@ -1,7 +1,7 @@
 .. _straditize-steps:
 
-Straditize steps
-================
+Straditization steps
+====================
 
 Straditize provides you lot's of possibilities for customizing the
 semi-automatic digitization of your diagram. However, there are certain steps

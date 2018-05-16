@@ -1249,7 +1249,7 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.marks_for_column_starts(threshold)
         self.straditizer.draw_figure()
         self.connect2apply(self.straditizer.update_column_starts,
-                           self.refresh,
+                           self.straditizer_widgets.refresh,
                            self.straditizer.draw_figure)
         self.connect2cancel(self.straditizer.remove_marks,
                             self.straditizer.draw_figure)

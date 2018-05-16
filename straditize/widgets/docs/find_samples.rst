@@ -1,4 +1,4 @@
-.. _edit-samples:
+.. _find-samples:
 
 Automatic samples identification
 ================================

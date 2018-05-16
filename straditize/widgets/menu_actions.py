@@ -193,7 +193,7 @@ class StraditizerMenuActions(StraditizerControlBase):
             tooltip='Export the full digitized data')
 
         self.export_final_action = self._add_action(
-            menu, 'Final data', self.export_final,
+            menu, 'Samples', self.export_final,
             tooltip='Export the data at the sample locations')
 
         # close menu
