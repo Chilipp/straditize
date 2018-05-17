@@ -3,3 +3,5 @@ include LICENSE
 include straditize/widgets/icons/*.png
 include straditize/widgets/docs/*.rst
 include straditize/widgets/docs/*.png
+include straditize/widgets/tutorial/docs/*.rst
+include straditize/widgets/tutorial/docs/*.png

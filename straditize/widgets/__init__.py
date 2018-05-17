@@ -85,6 +85,9 @@ class StraditizerWidgets(QWidget, DockMixin):
     #: open straditizers
     _straditizers = []
 
+    #: The :class:`straditize.widgets.tutorial.Tutorial` class
+    tutorial = None
+
     dock_position = Qt.LeftDockWidgetArea
 
     hidden = True
@@ -113,6 +116,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.apply_button = EnableButton('Apply', parent=self)
         self.cancel_button = EnableButton('Cancel', parent=self)
         self.attrs_button = QPushButton('Attributes', parent=self)
+        self.tutorial_button = QPushButton('Tutorial', parent=self)
         self.error_msg = PyErrorMessage(self)
         self.stradi_combo = QComboBox()
         self.btn_open_stradi = QToolButton()
@@ -188,6 +192,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         attrs_box = QHBoxLayout()
         attrs_box.addWidget(self.attrs_button)
         attrs_box.addStretch(0)
+        attrs_box.addWidget(self.tutorial_button)
 
         btn_box = QHBoxLayout()
         btn_box.addWidget(self.refresh_button)
@@ -214,6 +219,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.stradi_combo.currentIndexChanged.connect(self.set_current_stradi)
         self.refresh_button.clicked.connect(self.refresh)
         self.attrs_button.clicked.connect(self.edit_attrs)
+        self.tutorial_button.clicked.connect(self.start_tutorial)
         self.open_external.connect(self._create_straditizer_from_args)
         self.btn_open_stradi.clicked.connect(
             self.menu_actions.open_straditizer)
@@ -289,6 +295,12 @@ class StraditizerWidgets(QWidget, DockMixin):
                 self.refresh()
             if not self.is_shown:
                 self.switch_to_straditizer_layout()
+
+    def start_tutorial(self):
+        from straditize.widgets.tutorial import Tutorial
+        if self.tutorial is not None:
+            self.tutorial.close()
+        self.tutorial = Tutorial(self)
 
     def edit_attrs(self):
         def add_attr(key):

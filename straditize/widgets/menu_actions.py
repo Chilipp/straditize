@@ -149,6 +149,10 @@ class StraditizerMenuActions(StraditizerControlBase):
 
     window_layout_action = None
 
+    #: The path to a directory from where to open a straditizer. Is set in the
+    #: tutorial
+    _dirname_to_use = None
+
     @property
     def all_actions(self):
         return chain(self.save_actions, self.data_actions, self.text_actions)
@@ -268,7 +272,8 @@ class StraditizerMenuActions(StraditizerControlBase):
         from straditize.straditizer import Straditizer
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getOpenFileName(
-                self.straditizer_widgets, 'Straditizer project', os.getcwd(),
+                self.straditizer_widgets, 'Straditizer project',
+                self._dirname_to_use or os.getcwd(),
                 'Projects and images '
                 '(*.nc *.nc4 *.pkl *.jpeg *.jpg *.pdf *.png *.raw *.rgba *.tif'
                 ' *.tiff);;'
@@ -302,6 +307,7 @@ class StraditizerMenuActions(StraditizerControlBase):
             stradi = Straditizer(image, *args, **kwargs)
             stradi.set_attr('image_file', fname)
         self.finish_loading(stradi)
+        self._dirname_to_use = None
 
     def finish_loading(self, stradi):
         self.straditizer = stradi
