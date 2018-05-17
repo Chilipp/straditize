@@ -24,6 +24,7 @@ requirements:
     - pyqt>=5.6.0
     - scipy
     - scikit-image
+    - openpyxl
 
 test:
   requires:
