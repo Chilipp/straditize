@@ -56,7 +56,8 @@ docs/_build/
 docs/index.doctree
 docs/gui/
 docs/api/
-docs/tutorial/
+docs/tutorial/*.rst
+docs/tutorial/*.png
 !docs/tutorial/index.rst
 
 # test results
