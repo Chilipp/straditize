@@ -104,6 +104,7 @@ Documentation
     about
     installing
     command_line
+    tutorial/index
     gui/straditize
     api/straditize
     todos

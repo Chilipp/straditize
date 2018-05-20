@@ -117,9 +117,11 @@ class ImageRotator(StraditizerControlBase, QWidget):
         dy = y0 - y1
 
         if self._ha:
-            self.txt_rotate.setText('%1.3g' % np.rad2deg(np.arctan(dy / dx)))
+            angle = np.arctan(dy / dx) if dx else np.sign(dy) * np.pi / 2.
+            self.txt_rotate.setText('%1.3g' % np.rad2deg(angle))
         elif self._va:
-            self.txt_rotate.setText('%1.3g' % -np.rad2deg(np.arctan(dx / dy)))
+            angle = np.arctan(dx / dy) if dy else np.sign(dx) * np.pi / 2.
+            self.txt_rotate.setText('%1.3g' % -np.rad2deg(angle))
 
     def enable_or_disable_widgets(self, b):
         super(ImageRotator, self).enable_or_disable_widgets(b)

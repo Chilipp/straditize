@@ -274,7 +274,7 @@ class DigitizingControl(StraditizerControlBase):
         self.sp_min_lw.setToolTip(
             'Set the minimal width for selected vertical or horizontal lines')
 
-        self.cb_max_lw = QCheckBox('Maximum axis width')
+        self.cb_max_lw = QCheckBox('Maximum line width')
         self.sp_max_lw = QSpinBox()
         self.sp_max_lw.setMaximum(10000)
         self.sp_max_lw.setValue(20)
@@ -320,13 +320,14 @@ class DigitizingControl(StraditizerControlBase):
 
         self.txt_min_len = QLineEdit()
         self.txt_min_len.setToolTip(
-            'Minimum length of a potential sample to include')
+            'Minimum length of a potential sample to be included')
         self.txt_max_len = QLineEdit()
-        self.txt_min_len.setToolTip(
-            'Maximum length of a potential sample to include')
+        self.txt_max_len.setText('8')
+        self.txt_max_len.setToolTip(
+            'Maximum length of a potential sample to be included')
         self.sp_pixel_tol = QSpinBox()
         self.sp_pixel_tol.setMaximum(10000)
-        self.sp_pixel_tol.setValue(2)
+        self.sp_pixel_tol.setValue(5)
         self.sp_pixel_tol.setToolTip(
             'Minimum distance between two measurements in pixels')
 
@@ -639,7 +640,7 @@ class DigitizingControl(StraditizerControlBase):
             connections=[self.btn_column_starts])
 
         # 1: column specific readers
-        child = QTreeWidgetItem(0)
+        self.current_reader_item = child = QTreeWidgetItem(0)
         child.setText(0, 'Current reader')
         item.addChild(child)
         child2 = QTreeWidgetItem(0)
@@ -690,7 +691,7 @@ class DigitizingControl(StraditizerControlBase):
         self.tree.setItemWidget(child2, 0, w)
 
         # 3: parts to remove features from the binary image
-        child = QTreeWidgetItem(0)
+        self.remove_child = child = QTreeWidgetItem(0)
         child.setText(0, 'Remove features')
         item.addChild(child)
         self.add_info_button(child, 'removing_features.rst')
@@ -758,7 +759,7 @@ class DigitizingControl(StraditizerControlBase):
         self.tree.setItemWidget(small_child2, 0, w)
 
         # lines
-        line_child = QTreeWidgetItem(0)
+        self.remove_line_child = line_child = QTreeWidgetItem(0)
         hbox = QHBoxLayout()
         hbox.addWidget(self.btn_remove_vlines)
         hbox.addWidget(self.btn_remove_hlines)
@@ -776,7 +777,7 @@ class DigitizingControl(StraditizerControlBase):
         layout.addWidget(QLabel('Minimum fraction:'), 0, 0)
         layout.addWidget(self.txt_line_fraction, 0, 1)
         layout.addWidget(QLabel('%'), 0, 2)
-        layout.addWidget(QLabel('Minimum axis width'), 1, 0)
+        layout.addWidget(QLabel('Minimum line width'), 1, 0)
         layout.addWidget(self.sp_min_lw, 1, 1)
         layout.addWidget(QLabel('px'), 1, 2)
         layout.addWidget(self.cb_max_lw, 2, 0)
@@ -819,7 +820,7 @@ class DigitizingControl(StraditizerControlBase):
         self.bar_split_child.setHidden(not self.tree_bar_split.filled)
 
         # 6: edit samples button
-        child = QTreeWidgetItem(0)
+        self.edit_samples_child = child = QTreeWidgetItem(0)
         child.setText(0, 'Edit samples')
         item.addChild(child)
         self.add_info_button(child, 'samples.rst')
@@ -1053,7 +1054,9 @@ class DigitizingControl(StraditizerControlBase):
                 chain.from_iterable([i] * ncols for i in range(nrows)),
                 list(range(ncols)) * nrows)
         args = (self.straditizer.draw_figure, ) if not draw_sep else ()
-        self.connect2apply(lambda: self.straditizer.update_samples_sep(),
+        update = self.straditizer.update_samples_sep if draw_sep else \
+            self.straditizer.update_samples
+        self.connect2apply(lambda: update(),
                            self._close_samples_fig,
                            dock.close,
                            self.straditizer_widgets.refresh, *args)
@@ -1088,6 +1091,12 @@ class DigitizingControl(StraditizerControlBase):
         if reader.is_exaggerated:
             reader = reader.non_exaggerated_reader
         reader.digitize()
+        pc = self.straditizer_widgets.plot_control.table
+        if pc.can_plot_full_df():
+            if pc.get_full_df_lines():
+                pc.remove_full_df_plot()
+            pc.plot_full_df()
+            pc.refresh()
 
     def digitize_exaggerations(self):
         reader = self.reader
@@ -1110,7 +1119,6 @@ class DigitizingControl(StraditizerControlBase):
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
             tb.wand_action.setChecked(True)
-            tb.toggle_selection()
         tb.select_action.setEnabled(False)
         tb.auto_expand = True
         self.straditizer.draw_figure()
@@ -1130,7 +1138,6 @@ class DigitizingControl(StraditizerControlBase):
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
             tb.wand_action.setChecked(True)
-            tb.toggle_selection()
         tb.select_action.setEnabled(False)
         tb.auto_expand = True
         self.straditizer.draw_figure()

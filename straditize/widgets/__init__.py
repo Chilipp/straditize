@@ -3,6 +3,7 @@
 This module contains widgets to digitize the straditizer diagrams through a GUI
 """
 import six
+from functools import partial
 import os.path as osp
 from psyplot_gui.compat.qtcompat import (
     QWidget, QtCore, QPushButton, QTreeWidget, QTreeWidgetItem,
@@ -117,6 +118,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.cancel_button = EnableButton('Cancel', parent=self)
         self.attrs_button = QPushButton('Attributes', parent=self)
         self.tutorial_button = QPushButton('Tutorial', parent=self)
+        self.tutorial_button.setCheckable(True)
         self.error_msg = PyErrorMessage(self)
         self.stradi_combo = QComboBox()
         self.btn_open_stradi = QToolButton()
@@ -133,19 +135,19 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.menu_actions = StraditizerMenuActions(self)
 
         self.digitizer = DigitizingControl(self)
-        item = QTreeWidgetItem(0)
+        self.digitizer_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Digitization control')
         self.tree.addTopLevelItem(item)
         self.digitizer.setup_children(item)
 
         self.axes_translations = AxesTranslations(self)
-        item = QTreeWidgetItem(0)
+        self.axes_translations_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Axes translations')
         self.tree.addTopLevelItem(item)
         self.axes_translations.setup_children(item)
 
         self.image_rotator = ImageRotator(self)
-        item = QTreeWidgetItem(0)
+        self.image_rotator_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Rotate image')
         child = QTreeWidgetItem(0)
         item.addChild(child)
@@ -153,7 +155,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.tree.setItemWidget(child, 0, self.image_rotator)
 
         self.plot_control = PlotControl(self)
-        item = QTreeWidgetItem(0)
+        self.plot_control_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Plot control')
         child = QTreeWidgetItem(0)
         item.addChild(child)
@@ -162,7 +164,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.add_info_button(item, 'plot_control.rst')
 
         self.marker_control = MarkerControl(self)
-        item = QTreeWidgetItem(0)
+        self.marker_control_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Marker control')
         child = QTreeWidgetItem(0)
         item.addChild(child)
@@ -296,11 +298,14 @@ class StraditizerWidgets(QWidget, DockMixin):
             if not self.is_shown:
                 self.switch_to_straditizer_layout()
 
-    def start_tutorial(self):
+    def start_tutorial(self, state):
         from straditize.widgets.tutorial import Tutorial
-        if self.tutorial is not None:
+        if self.tutorial is not None or not state:
             self.tutorial.close()
-        self.tutorial = Tutorial(self)
+            self.tutorial_button.setText('Tutorial')
+        elif state:
+            self.tutorial = Tutorial(self)
+            self.tutorial_button.setText('Stop tutorial')
 
     def edit_attrs(self):
         def add_attr(key):
@@ -330,14 +335,10 @@ class StraditizerWidgets(QWidget, DockMixin):
     def refresh(self):
         """Refresh from the straditizer"""
         for i, stradi in enumerate(self._straditizers):
-            for key in ['project_file', 'image_file']:
-                try:
-                    self.stradi_combo.setItemText(
-                        i, osp.basename(stradi.get_attr(key)))
-                except KeyError:
-                    pass
-                else:
-                    break
+            self.stradi_combo.setItemText(
+                i,
+                self.get_attr(stradi, 'project_file') or
+                self.get_attr(stradi, 'image_file') or '')
         # toggle visibility of close button and attributes button
         enable = self.straditizer is not None
         self.btn_close_stradi.setVisible(enable)
@@ -349,6 +350,14 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.plot_control.refresh()
         self.marker_control.refresh()
         self.axes_translations.refresh()
+        if self.tutorial is not None:
+            self.tutorial.refresh()
+
+    def get_attr(self, stradi, attr):
+        try:
+            return stradi.get_attr(attr)
+        except KeyError:
+            pass
 
     def add_info_button(self, child, fname=None, rst=None, name=None,
                         connections=[]):
@@ -381,8 +390,8 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.raise_figures()
         self.refresh()
 
-    def close_straditizer(self):
-        stradi = self.straditizer
+    def _close_stradi(self, stradi):
+        is_current = stradi is self.straditizer
         stradi.close()
         try:
             i = self._straditizers.index(stradi)
@@ -391,11 +400,14 @@ class StraditizerWidgets(QWidget, DockMixin):
         else:
             del self._straditizers[i]
             self.stradi_combo.removeItem(i)
-        if self._straditizers:
+        if is_current and self._straditizers:
             self.stradi_combo.setCurrentIndex(0)
-        else:
+        elif not self._straditizers:
             self.straditizer = None
             self.refresh()
+
+    def close_straditizer(self):
+        self._close_stradi(self.straditizer)
 
     def close_all_straditizers(self):
         for stradi in self._straditizers:
@@ -511,7 +523,8 @@ class InfoButton(QToolButton):
         self.fname = fname
         self.rst = rst
         self.files = glob.glob(get_doc_file('*.rst')) + glob.glob(
-            get_doc_file('*.png')) + glob.glob(get_icon('*.png'))
+            get_psy_icon('*.png')) + glob.glob(get_doc_file('*.png')) + \
+            glob.glob(get_icon('*.png'))
         self.name = name
         QToolButton.__init__(self, parent)
         self.setIcon(QIcon(get_psy_icon('info.png')))

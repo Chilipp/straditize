@@ -37,7 +37,7 @@ Binary image:
     currently selected columns.
 Diagram part:
     This draws a red rectangle around the `diagram part` (see the
-    :ret:`terminology`)
+    :ref:`terminology`)
 Column starts:
     Red lines showing you, where each column starts of out of the currently
     selected columns starts

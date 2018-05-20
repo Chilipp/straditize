@@ -1,5 +1,3 @@
-.. _area-tutorial:
-
 Load the image of the diagram
 =============================
 

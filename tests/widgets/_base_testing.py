@@ -327,6 +327,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         x0, y0 = ax.transData.transform([pos])[0]
         canvas.key_press_event('shift')
         canvas.button_press_event(x0, y0, 1)
+        canvas.button_release_event(x0, y0, 1)
         self.assertGreater(len(marks), n, msg='No new marks added!')
 
     def remove_mark(self, mark):

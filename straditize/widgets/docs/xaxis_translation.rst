@@ -9,25 +9,26 @@ data or Kelvin for temperature, etc.).
 
 To translate the x-axis information,
 
-1. Click the :guilabel:`Insert X-axis values` button in the `Axes translations`
+1. Expand the `Axes translations` tab in the digitization control
+2. Click the :guilabel:`Insert X-axis values` button in the `Axes translations`
    section of the straditizer control (if not already done)
-2. Shift-leftclick on the plot in one of the columns to enter the corresponding
+3. Shift-leftclick on the plot in one of the columns to enter the corresponding
    x-value.
 
    .. image:: select-x0_1.png
 
-3. A small dialog will appear where you should enter the x-value to use (in
+4. A small dialog will appear where you should enter the x-value to use (in
    this case, ``10``)
 
    .. image:: select-x0_2.png
 
-4. After hitting the :guilabel:`Ok` button, you will see a mark on the plot
+5. After hitting the :guilabel:`Ok` button, you will see a mark on the plot
    (blue line). You can select the mark via leftclick and drag it to a
    different location or you can delete it via rightclick.
 
    .. image:: select-x0_3.png
 
-5. now repeat steps 2-4 on a second point in the same column
+6. now repeat steps 3-5 on a second point in the same column
 
    - Select another point
 
@@ -41,7 +42,7 @@ To translate the x-axis information,
 
      .. image:: select-x1_3.png
 
-6. Click the :guilabel:`Apply` button at the bottom of the straditizer control
+7. Click the :guilabel:`Apply` button at the bottom of the straditizer control
 when you are done.
 
 .. note::

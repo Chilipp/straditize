@@ -1,17 +1,11 @@
-.. _yaxis-translation:
-
-Translating the shared vertical axis
-====================================
-For your final product, straditize needs to know about how the data in the
-diagram is scaled, such that we can transform the final sample information from
-the pixel coordinates into the units of the diagram (e.g. years or meters in
-case of time or depth).
-
-To translate the y-axis information,
+Translating the y-axis
+======================
+To correctly reproduce the diagram data, there are now only to more things to
+know, that is the scaling of the y- and x-axes in the diagram.
 
 1. Expand the `Axes translations` tab in the digitization control
 2. Click the :guilabel:`Insert Y-axis values` button in the `Axes translations`
-   section of the straditizer control (if not already done)
+   section of the straditizer control
 3. Shift-leftclick on the plot to enter the corresponding y-value.
 
    .. image:: select-y0_1.png

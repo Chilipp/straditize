@@ -104,6 +104,13 @@ class Straditizer(LabelSelection):
             raise ValueError("The data limits have not been set yet!")
         return np.asarray(self._yaxis_px_orig) - np.min(self.data_ylim)
 
+    @yaxis_px.setter
+    def yaxis_px(self, value):
+        if value is None:
+            self._yaxis_px_orig = None
+        else:
+            self._yaxis_px_orig = np.asarray(value) + np.min(self.data_ylim)
+
     yaxis_data = None
 
     mark_cids = set()
@@ -164,13 +171,13 @@ class Straditizer(LabelSelection):
         """
         from PIL import Image
         if attrs is None:
-            self.attrs = default_attrs
+            self.attrs = default_attrs.copy(True)
         elif isinstance(attrs, dict):
             self.attrs_dict = attrs
         else:
             self.attrs = attrs
         if isinstance(image, six.string_types):
-            self.attrs.loc['image_file'] = image
+            self.set_attr('image_file', image)
             image = Image.open(image)
         try:
             mode = image.mode
@@ -333,8 +340,8 @@ class Straditizer(LabelSelection):
 
     def marks_for_data_selection(self, nums=2):
         def new_mark(pos):
-            if len(self.marks) == 4:
-                raise ValueError("Cannot use more than 4 marks!")
+            if len(self.marks) == nums:
+                raise ValueError("Cannot use more than %i marks!" % nums)
             return cm.CrossMarks(pos, ax=self.ax, idx_h=idx_h,
                                  idx_v=idx_v, zorder=2, c='b',
                                  xlim=xlim, ylim=ylim)
@@ -814,7 +821,7 @@ class Straditizer(LabelSelection):
                 xlim=xlim, ylim=ylim, alpha=0.5,
                 linewidth=1.5, selectable=['h'], marker='x',
                 select_props={'c': 'r', 'lw': 2.0},
-                connected_artists=artists, ax=ax)
+                connected_artists=artists, ax=ax, hide_vertical=True)
 
         def new_mark(pos):
             return [_new_mark(
@@ -883,18 +890,12 @@ class Straditizer(LabelSelection):
     def marks_for_samples_sep(self, nrows=3):
         def _new_mark(pos, ax, artists=[]):
             idx_h = all_idx_h[ax]
-            ret = cm.CrossMarks(
+            return cm.CrossMarks(
                 pos, zorder=2, idx_v=idx_v, idx_h=idx_h,
                 xlim=(0, idx_h.max()),
                 alpha=0.5, linewidth=1.5, selectable=['h'],
                 marker='x', connected_artists=artists,
-                ax=ax, select_props={'c': 'r', 'lw': 2.0})
-            if self.marks:
-                ret.hide_vertical = self.marks[0].hide_vertical
-                ret.hide_horizontal = self.marks[0].hide_horizontal
-            else:
-                ret.hide_vertical = True
-            return ret
+                ax=ax, select_props={'c': 'r', 'lw': 2.0}, hide_vertical=True)
 
         def new_mark(pos):
             y = np.round(pos[-1])
@@ -1018,6 +1019,7 @@ class Straditizer(LabelSelection):
 
     def close(self):
         import matplotlib.pyplot as plt
+        self.remove_marks()
         plt.close(self.ax.figure)
         if self.magni is not None:
             plt.close(self.magni.ax.figure)

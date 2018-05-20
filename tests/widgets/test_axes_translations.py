@@ -1,8 +1,5 @@
 """Test the straditize.widgets.axes_translations module"""
 from __future__ import division
-import numpy as np
-import pandas as pd
-import os.path as osp
 import _base_testing as bt
 import unittest
 from psyplot_gui.compat.qtcompat import QTest, Qt
@@ -62,6 +59,11 @@ class AxesTranslation(bt.StraditizeWidgetsTestCase):
         ref0 = 50. * orig_final_df.iloc[-1, 0] / orig_final_df.iloc[-1, 1]
         self.assertEqual(final_df.iloc[-1, 0], ref0)
 
+        # test the setter
+        xaxis_px = self.reader.xaxis_px.copy()
+        self.reader.xaxis_px = self.reader.xaxis_px
+        self.assertEqual(list(self.reader.xaxis_px), list(xaxis_px))
+
     def test_yaxes_conversion(self):
         """Test the exporting of the final DataFrame"""
         # create a reader with samples
@@ -107,6 +109,10 @@ class AxesTranslation(bt.StraditizeWidgetsTestCase):
         final_df = self.straditizer.final_df
         self.assertEqual(final_df.index[-1], 50)
         self.assertEqual(final_df.index[0], 0)
+
+        # test the setter
+        self.straditizer.yaxis_px = self.straditizer.yaxis_px
+        self.assertEqual(list(self.straditizer._yaxis_px_orig), [y0, y1])
 
 
 if __name__ == '__main__':

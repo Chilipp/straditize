@@ -54,7 +54,8 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             for i, (y, marks) in enumerate(self.marks):
                 if mark in marks:
                     self.marks[i] = (mark.y, marks)
-                    self.update_lines()
+                    if self.lines:
+                        self.update_lines()
                     break
             self.sort_marks()
             self.reset()
@@ -278,7 +279,8 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
         for i, (y, m) in enumerate(self.marks):
             if m is mark:
                 self.marks[i] = (mark.y, mark)
-                self.update_lines()
+                if self.lines:
+                    self.update_lines()
                 break
         self.sort_marks()
         self.reset()

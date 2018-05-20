@@ -117,6 +117,7 @@ class StackedReader(DataReader, StraditizerControlBase):
         self.straditizer_widgets.selection_toolbar.data_obj = self
         self.apply_button.clicked.connect(
             self.add_col if add_on_apply else self.update_col)
+        self.apply_button.clicked.connect(self.update_plotted_full_df)
         self.straditizer_widgets.selection_toolbar.start_selection(
             labels, rgba=self.image_array(), remove_on_apply=False)
         self.select_all_labels()
@@ -135,6 +136,12 @@ class StackedReader(DataReader, StraditizerControlBase):
             start = self.full_df.iloc[:, :idx].values.sum(axis=1)
         start += self.column_starts[0]
         return start
+
+    def update_plotted_full_df(self):
+        pc = self.straditizer_widgets.plot_control.table
+        if pc.can_plot_full_df() and pc.get_full_df_lines():
+            pc.remove_full_df_plot()
+            pc.plot_full_df()
 
     def update_col(self):
         """Update the current column based on the selection.

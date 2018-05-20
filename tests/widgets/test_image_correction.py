@@ -14,11 +14,12 @@ class ImageRotatorTest(bt.StraditizeWidgetsTestCase):
 
     def test_horizontal_rotation(self):
         self.open_img()
+        self.straditizer.draw_figure()
         self.rotator.start_horizontal_alignment()
         self.add_mark((10, 10), ax=self.straditizer.ax)
         self.add_mark((10, 30))
         angle = self.rotator.angle
-        self.assertEqual(angle, 90)
+        self.assertEqual(angle, -90)
         rotated = self.straditizer.image.rotate(angle)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
                          Qt.LeftButton)
@@ -26,11 +27,12 @@ class ImageRotatorTest(bt.StraditizeWidgetsTestCase):
 
     def test_vertical_rotation(self):
         self.open_img()
+        self.straditizer.draw_figure()
         self.rotator.start_vertical_alignment()
         self.add_mark((10, 10), ax=self.straditizer.ax)
         self.add_mark((30, 10))
         angle = self.rotator.angle
-        self.assertEqual(angle, -90)
+        self.assertEqual(angle, 90)
         rotated = self.straditizer.image.rotate(angle)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
                          Qt.LeftButton)

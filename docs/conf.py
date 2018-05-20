@@ -24,6 +24,8 @@ import subprocess as spr
 from itertools import chain
 import sphinx_rtd_theme
 
+from psyplot_gui.common import get_icon as get_psy_icon
+
 if six.PY2:
     from urllib import urlopen
 else:
@@ -81,6 +83,25 @@ if not osp.exists(gui_dir) or on_rtd:
                            'widgets', 'icons', '*.png')))
     for f in files:
         shutil.copyfile(f, osp.join(gui_dir, osp.basename(f)))
+
+tutorial_dir = osp.join(osp.dirname(__file__), 'tutorial')
+files = chain(
+    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                       'widgets', 'tutorial', 'docs', '*.rst')),
+    glob.glob(get_psy_icon('*.png')),
+    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                       'widgets', 'tutorial', 'docs', '*.png')),
+    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                       'widgets', 'docs', '*.png')),
+    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                       'widgets', 'icons', '*.png')))
+for f in files:
+    shutil.copyfile(f, osp.join(tutorial_dir, osp.basename(f)))
+with open(osp.join('tutorial', 'straditize_tutorial_intro.rst')) as f:
+    s = f.read()
+with open(osp.join('tutorial', 'straditize_tutorial_intro.rst'), 'w') as f:
+    f.write(s.replace(':hidden:', ''))
+del s, f
 
 napoleon_use_admonition_for_examples = True
 

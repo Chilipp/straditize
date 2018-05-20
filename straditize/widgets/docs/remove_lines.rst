@@ -25,8 +25,8 @@ You can modify the recognition using three options
 Minimum fraction:
     This is the minimum fraction of a pixel column (for
     or row that must be covered
-Minimum axis width:
+Minimum line width:
     Lines are only selected, if their line width is greater than
     or equal to the given minimum axis width.
-Maximum axis width:
+Maximum line width:
     Lines are only selected up to the given maximum axis width

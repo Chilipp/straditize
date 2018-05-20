@@ -144,7 +144,8 @@ class CrossMarks(object):
                  draggable=['h', 'v'], idx_h=None, idx_v=None,
                  xlim=None, ylim=None, select_props={'c': 'r'},
                  auto_hide=False, connected_artists=[], lock=True,
-                 draw_lines=True, **kwargs):
+                 draw_lines=True, hide_vertical=None, hide_horizontal=None,
+                 **kwargs):
         """
         Parameters
         ----------
@@ -182,6 +183,12 @@ class CrossMarks(object):
         draw_lines: bool
             If True, the cross mark lines are drawn. Otherwise, you must call
             the `draw_lines` method explicitly
+        hide_vertical: bool
+            Boolean to control whether the vertical lines should be hidden. If
+            None, the default class attribute is used
+        hide_horizontal: bool
+            Boolean to control whether the horizontal lines should be hidden.
+            If None, the default class attribute is used
         ``**kwargs``
             Any other keyword argument that is passed to the
             :func:`matplotlib.pyplot.plot` function
@@ -196,6 +203,10 @@ class CrossMarks(object):
         self._constant_dist_y_marks = []
         self.selectable = list(selectable)
         self.draggable = list(draggable)
+        if hide_horizontal is not None:
+            self.hide_horizontal = hide_horizontal
+        if hide_vertical is not None:
+            self.hide_vertical = hide_vertical
         self._select_props = select_props.copy()
         self.press = None
         if idx_h is not None:

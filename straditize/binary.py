@@ -761,7 +761,7 @@ class DataReader(LabelSelection):
         """The reader that represents the exaggerations"""
         cols = set(self.columns)
         return next(
-            (child for child in chain([self.parent], self.parent.children)
+            (child for child in self.iter_all_readers
              if not child.is_exaggerated and cols <= set(child.columns or [])),
             None)
 
@@ -1017,7 +1017,7 @@ class DataReader(LabelSelection):
     docstrings.delete_params('DataReader._filter_lines.parameters', 'locs')
 
     @docstrings.with_indent(8)
-    def recognize_hlines(self, fraction=0.99, min_lw=2, max_lw=None,
+    def recognize_hlines(self, fraction=0.75, min_lw=2, max_lw=None,
                          remove=False, **kwargs):
         """Recognize horizontal lines in the plot and subtract them
 
@@ -1050,20 +1050,20 @@ class DataReader(LabelSelection):
         mask = (np.nansum(self.binary, axis=1) / float(self.binary.shape[1]) >
                 fraction)
         all_rows = np.where(mask)[0]
-        kwargs['extent'] = self.extent
-        for i, row in enumerate(all_rows, 1):
+        selection = self._filter_lines(all_rows, min_lw, max_lw)
+        for i, row in enumerate(selection if remove else all_rows, 1):
             arr[row, :] = i
         if remove:
-            self.hline_locs = np.unique(np.r_[self.hline_locs, all_rows])
-            self.labels[arr] = 0
-            self.binary[arr] = 0
+            self.hline_locs = np.unique(np.r_[self.hline_locs, selection])
+            self.binary[arr.astype(bool)] = 0
+            self.reset_labels()
             self.plot_im.set_array(self.labels)
             if self.magni_plot_im is not None:
                 self.magni_plot_im.set_array(self.labels)
         else:
+            kwargs['extent'] = self.extent
             kwargs.setdefault('zorder', self.plot_im.zorder + 0.1)
             self.enable_label_selection(arr, len(all_rows), **kwargs)
-            selection = self._filter_lines(all_rows, min_lw, max_lw)
             self.select_labels(np.where(np.isin(all_rows, selection))[0] + 1)
 
     def set_hline_locs_from_selection(self):
@@ -1072,7 +1072,7 @@ class DataReader(LabelSelection):
         self.hline_locs = np.unique(np.r_[self.hline_locs, rows])
 
     @docstrings.with_indent(8)
-    def recognize_vlines(self, fraction=0.99, min_lw=2, max_lw=None,
+    def recognize_vlines(self, fraction=0.75, min_lw=2, max_lw=None,
                          remove=False, **kwargs):
         """Recognize horizontal lines in the plot and subtract them
 
@@ -1105,20 +1105,20 @@ class DataReader(LabelSelection):
         mask = (np.nansum(self.binary, axis=0) / float(self.binary.shape[0]) >
                 fraction)
         all_cols = np.where(mask)[0]
-        kwargs['extent'] = self.extent
-        for i, col in enumerate(all_cols, 1):
+        selection = self._filter_lines(all_cols, min_lw, max_lw)
+        for i, col in enumerate(selection if remove else all_cols, 1):
             arr[:, col] = i
         if remove:
-            self.vline_locs = np.unique(np.r_[self.vline_locs, all_cols])
-            self.labels[arr] = 0
-            self.binary[arr] = 0
+            self.vline_locs = np.unique(np.r_[self.vline_locs, selection])
+            self.binary[arr.astype(bool)] = 0
+            self.reset_labels()
             self.plot_im.set_array(self.labels)
             if self.magni_plot_im is not None:
                 self.magni_plot_im.set_array(self.labels)
         else:
+            kwargs['extent'] = self.extent
             kwargs.setdefault('zorder', self.plot_im.zorder + 0.1)
             self.enable_label_selection(arr, len(all_cols), **kwargs)
-            selection = self._filter_lines(all_cols, min_lw, max_lw)
             self.select_labels(np.where(np.isin(all_cols, selection))[0] + 1)
 
     def set_vline_locs_from_selection(self):
@@ -1323,12 +1323,25 @@ class DataReader(LabelSelection):
         if self.extent is not None:
             ret -= np.min(self.extent[:2])
         starts = self.column_starts
-        indices = np.searchsorted(starts, ret)
-        indices[1] -= 1
+        indices = np.searchsorted(starts, ret) - 1
+        if ret[0] in starts:
+            indices[0] += 1
         if len(np.unique(indices)) > 1:
             raise ValueError("X-values have been used from different columns! "
                              "Columns %s" % list(indices))
         return ret - starts[indices[0]]
+
+    @xaxis_px.setter
+    def xaxis_px(self, value):
+        if value is None:
+            self._xaxis_px_orig = value
+        else:
+            value = np.array(value)
+            nmax = value[1]
+            if self.extent is not None:
+                value += np.min(self.extent[:2])
+            col = np.where(np.diff(self.column_bounds, axis=1) >= nmax)[0][0]
+            self._xaxis_px_orig = value + self.column_starts[col]
 
     xaxis_data = None
 
@@ -1639,6 +1652,22 @@ class DataReader(LabelSelection):
         excluded1.extend(excluded0)
         return included1, sorted(excluded1)
 
+    def get_reader_for_col(self, col):
+        """Get the reader for a specific column
+
+        Parameters
+        ----------
+        col: int
+            The column of interest
+
+        Returns
+        -------
+        DataReader or None
+            Either the reader or None if no reader could be found"""
+        return next((child for child in self.iter_all_readers
+                     if not child.is_exaggerated and col in child.columns),
+                    None)
+
     @docstrings.get_sectionsf('DataReader.unique_bars')
     @docstrings.dedent
     def unique_bars(self, min_fract=None, asdict=True, *args, **kwargs):
@@ -1663,12 +1692,9 @@ class DataReader(LabelSelection):
             in the returned list is a dictionary whose keys are the column
             indices and whose values are the indices for the corresponding
             column. Otherwise, a list of :class:`_Bar` objects is returned"""
-        def get_child(col):
-            return next(
-                child for child in chain([self.parent], self.parent.children)
-                if not child.is_exaggerated and col in child.columns)
         min_fract = min_fract or self.min_fract
         df = self.full_df.copy(True)
+        get_child = self.get_reader_for_col
         bars = list(chain.from_iterable(
             (_Bar(col, indices)
              for indices in get_child(col).find_potential_samples(
@@ -1692,7 +1718,7 @@ class DataReader(LabelSelection):
                               sections=['Parameters', 'Returns'])
     @docstrings.dedent
     @only_parent
-    def find_samples(self, min_fract=None, pixel_tol=2, *args, **kwargs):
+    def find_samples(self, min_fract=None, pixel_tol=5, *args, **kwargs):
         """
         Find the samples in the diagram
 
@@ -1775,8 +1801,11 @@ class DataReader(LabelSelection):
         else:
             return ret_locs, ret_rough
 
-    def merge_close_samples(self, locs, rough_locs=None, pixel_tol=2):
+    def merge_close_samples(self, locs, rough_locs=None, pixel_tol=5):
         samples = locs.index.values.copy()
+        #: We do not warn, if we are merging the first and last indices,
+        #: because this may be caused by the :attr:`samples_at_boundaries`
+        fl = {0, len(locs)}
         # now we check, that at least 2 pixels lie between the samples.
         # otherwise we merge them together
         mask = np.r_[True, samples[1:] - samples[:-1] > pixel_tol]
@@ -1801,19 +1830,14 @@ class DataReader(LabelSelection):
 
                 col_mask = (col_widths > 0).values
                 if col_mask.sum() > 1:
-                    warn("Distinct samples merged from %s in "
-                         "column %s!" % (
-                            rough_locs.iloc[j-1:k, i:i+2][
-                                col_mask[
-                                    :, np.newaxis]].values.ravel().tolist(),
-                            col))
-                elif col_mask.sum() == 0:
-                    continue
-                new_indices = sorted(chain.from_iterable(
-                    rough_locs.iloc[j-1:k, 2*i:2*i+2][
-                        col_mask[:, np.newaxis]].values))
-                rough_locs.iloc[j-1, 2*i:2*i+2] = [new_indices[0],
-                                                   new_indices[-1]]
+                    new_indices = rough_locs.iloc[j-1:k, i*2:i*2+2][
+                        col_mask[:, np.newaxis]].values.ravel().tolist()
+                    if not fl.intersection((j-1, k)):
+                        warn("Distinct samples merged from %s in "
+                             "column %s!" % (new_indices, col))
+                    new_indices.sort()
+                    rough_locs.iloc[j-1, 2*i:2*i+2] = [new_indices[0],
+                                                       new_indices[-1]]
         locs.index = samples
         rough_locs.index = samples
         not_duplicated = ~locs.index.duplicated()
