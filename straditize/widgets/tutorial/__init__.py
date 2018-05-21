@@ -645,7 +645,7 @@ class SeparateColumns(TutorialPage):
             else:
                 self.show_tooltip_at_widget(
                     "Click the <i>%s</i> button to start" % btn.text(), btn)
-        elif len(starts) != 34:
+        elif starts is not None and len(starts) != 34:
             if self.is_selecting:
                 self.show_tooltip_in_plot(
                     "There are 34 columns in the diagram. Select all or "
