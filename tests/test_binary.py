@@ -257,7 +257,7 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
         def test():
             self.reader.digitize()
             ref = self.sample.df.index
-            samples = self.reader.find_samples(max_len=6)[0].index
+            samples = self.reader.find_samples(max_len=6, pixel_tol=2)[0].index
             self.assertAlmostArrayEqual(
                 ref.shape, samples.shape, atol=2,
                 msg='Failed at iteration %i' % i)

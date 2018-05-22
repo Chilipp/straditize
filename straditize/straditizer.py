@@ -825,7 +825,7 @@ class Straditizer(LabelSelection):
 
         def new_mark(pos):
             return [_new_mark(
-                [starts + full_df.loc[np.round(pos[-1] - ylim[0])],
+                [np.array(starts + full_df.loc[np.round(pos[-1] - ylim[0])]),
                  np.round(pos[-1])])]
 
         def new_mark_and_range(key, row, row_indices):
@@ -872,20 +872,23 @@ class Straditizer(LabelSelection):
             'button_press_event', self._remove_mark_event))
 
     def update_samples(self, remove=True):
-        y0 = min(self.data_ylim)
-        x0 = min(self.data_xlim)
-        starts = self.data_reader.all_column_starts[np.newaxis] + x0
-        index = np.array(np.ceil([mark.y for mark in self.marks])) - y0
-        data = np.array(np.ceil([mark.xa for mark in self.marks])) - starts
-        df = pd.DataFrame(data, index=index.astype(int)).sort_index()
-        self.data_reader.sample_locs = df
-        self.data_reader._update_rough_locs()
+        if not self.marks:
+            self.data_reader.reset_samples()
+        else:
+            y0 = min(self.data_ylim)
+            x0 = min(self.data_xlim)
+            starts = self.data_reader.all_column_starts[np.newaxis] + x0
+            index = np.array(np.ceil([mark.y for mark in self.marks])) - y0
+            data = np.array(np.ceil([mark.xa for mark in self.marks])) - starts
+            df = pd.DataFrame(data, index=index.astype(int)).sort_index()
+            self.data_reader.sample_locs = df
+            self.data_reader._update_rough_locs()
         if remove:
             self.remove_marks()
             try:
                 del self._plotted_full_df
             except AttributeError:
-                pass
+                    pass
 
     def marks_for_samples_sep(self, nrows=3):
         def _new_mark(pos, ax, artists=[]):

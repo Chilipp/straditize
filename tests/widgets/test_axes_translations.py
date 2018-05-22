@@ -68,6 +68,7 @@ class AxesTranslation(bt.StraditizeWidgetsTestCase):
         """Test the exporting of the final DataFrame"""
         # create a reader with samples
         btn = self.straditizer_widgets.axes_translations.btn_marks_for_y
+        self.assertFalse(btn.isEnabled())
         self.init_reader()
         self.reader.digitize()
         self.reader._get_sample_locs()

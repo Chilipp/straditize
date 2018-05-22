@@ -533,6 +533,7 @@ class CrossMarks(object):
                 m._i_hline = self._i_hline
                 event.xdata, event.ydata = m.pos
                 m.on_press(event, True, False)
+            event.xdata, event.ydata = self.press[2:]
 
         for l in chain(self.other_connections, self.line_connections,
                        self.connected_artists):

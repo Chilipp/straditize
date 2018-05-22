@@ -75,6 +75,8 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
             self.window = main.mainwindow
         self.created_files = set()
         self.straditizer_widgets = get_straditizer_widgets(self.window)
+        self.straditizer_widgets.switch_to_straditizer_layout()
+        self.digitizer.sp_pixel_tol.setValue(2)
 
     def tearDown(self):
         import matplotlib.pyplot as plt
@@ -276,6 +278,8 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
     def set_data_lims(self, xlim=None, ylim=None):
         x0, x1 = xlim if xlim is not None else self.data_xlim
         y0, y1 = ylim if ylim is not None else self.data_ylim
+        self.assertTrue(
+            self.straditizer_widgets.digitizer.btn_select_data.isEnabled())
         QTest.mouseClick(self.straditizer_widgets.digitizer.btn_select_data,
                          Qt.LeftButton)
         self.straditizer._new_mark(x0, y0)
