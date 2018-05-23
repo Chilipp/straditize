@@ -432,13 +432,13 @@ class SelectDataPart(TutorialPage):
     """TutorialPage for selecting the data part"""
 
     #: The reference x- and y- limits
-    ref_lims = np.array([[307, 2066], [556, 1326]])
+    ref_lims = np.array([[315, 1946], [511, 1311]])
 
     #: Valid ranges for xmin and xmax
-    valid_xlims = np.array([[300, 311], [2037, 2071]])
+    valid_xlims = np.array([[310, 319], [1928, 1960]])
 
     #: Valid ranges for ymin and ymax
-    valid_ylims = np.array([[554, 557], [1321, 1327]])
+    valid_ylims = np.array([[508, 513], [1307, 1312]])
 
     marks = []
 
@@ -607,7 +607,7 @@ class SeparateColumns(TutorialPage):
     def is_finished(self):
         reader = self.straditizer_widgets.straditizer.data_reader
         return (reader._column_starts is not None and
-                len(reader._column_starts) == 34)
+                len(reader._column_starts) == 28)
 
     def skip(self):
         reader = self.straditizer_widgets.straditizer.data_reader
@@ -645,15 +645,15 @@ class SeparateColumns(TutorialPage):
             else:
                 self.show_tooltip_at_widget(
                     "Click the <i>%s</i> button to start" % btn.text(), btn)
-        elif starts is not None and len(starts) != 34:
+        elif starts is not None and len(starts) != 28:
             if self.is_selecting:
                 self.show_tooltip_in_plot(
-                    "There are 34 columns in the diagram. Select all or "
+                    "There are 28 columns in the diagram. Select all or "
                     "cancel and hit the <i>Reset</i> button",
                     stradi.data_xlim.mean(), stradi.data_ylim.mean())
             else:
                 self.show_tooltip_at_widget(
-                    "The diagram has 34 columns, not %i. Hit the <i>Reset</i> "
+                    "The diagram has 28 columns, not %i. Hit the <i>Reset</i> "
                     "button or modify the column starts.",
                     sw.digitizer.btn_reset_columns)
         elif self.is_selecting:  # currently creating marks
@@ -751,9 +751,9 @@ class RemoveLines(TutorialPage):
                     self.show_tooltip_at_widget(
                         "Enable the maximum linewidth",
                         sw.digitizer.cb_max_lw)
-                elif sw.digitizer.sp_max_lw.value() != 1:
+                elif sw.digitizer.sp_max_lw.value() != 2:
                     self.show_tooltip_at_widget(
-                        "Set the maximum line width to 1",
+                        "Set the maximum line width to 2",
                         sw.digitizer.sp_max_lw)
                 elif lf > 30:
                     self.show_tooltip_at_widget(
@@ -856,7 +856,7 @@ class TranslateYAxis(TutorialPage):
         self.clicked_correct_button()
         self.straditizer_widgets.straditizer.yaxis_data = np.array([300, 350])
         self.straditizer_widgets.straditizer._yaxis_px_orig = \
-            np.array([940, 1070])
+            np.array([910, 1045])
 
     def activate(self):
         btn = self.straditizer_widgets.axes_translations.btn_marks_for_y
@@ -924,20 +924,20 @@ class TranslateXAxis(TutorialPage):
         reader = reader.get_reader_for_col(0)
         if len(reader.columns) > 1:
             reader = reader.new_child_for_cols([0], reader.__class__)
-        reader._xaxis_px_orig = np.array([362, 413])
-        reader.xaxis_data = np.array([50., 100.])
+        reader._xaxis_px_orig = np.array([321, 427])
+        reader.xaxis_data = np.array([0., 100.])
 
         # pollen concentration
-        reader = reader.get_reader_for_col(33)
+        reader = reader.get_reader_for_col(27)
         if len(reader.columns) > 1:
-            reader = reader.new_child_for_cols([33], reader.__class__)
-        reader._xaxis_px_orig = np.array([1970, 2046])
-        reader.xaxis_data = np.array([30000., 60000.])
+            reader = reader.new_child_for_cols([27], reader.__class__)
+        reader._xaxis_px_orig = np.array([1776, 1855])
+        reader.xaxis_data = np.array([0., 30000.])
 
         # pollen taxa
         reader = reader.get_reader_for_col(1)
-        reader._xaxis_px_orig = np.array([521, 563])
-        reader.xaxis_data = np.array([20., 40.])
+        reader._xaxis_px_orig = np.array([499, 583])
+        reader.xaxis_data = np.array([0., 40.])
         self.straditizer_widgets.refresh()
 
     def refresh(self):
@@ -982,7 +982,7 @@ class TranslateXAxis(TutorialPage):
         stradi = sw.straditizer
         current = stradi.data_reader
         reader = current.get_reader_for_col(col)
-        if col in [0, 33] and len(reader.columns) > 1:
+        if col in [0, 27] and len(reader.columns) > 1:
             # no child reader has yet been created
             if not self.is_selecting and not reader_item.isExpanded():
                 self.show_tooltip_at_widget(
@@ -1064,7 +1064,7 @@ class TranslateXAxis(TutorialPage):
         if self.is_finished:
             super().hint()
         else:
-            for col in [0, 33, 1]:
+            for col in [0, 27, 1]:
                 if not self.hint_for_col(col):
                     break
 

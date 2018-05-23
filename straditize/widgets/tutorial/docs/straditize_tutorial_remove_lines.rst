@@ -34,8 +34,7 @@ Horizontal lines
 Vertical lines (y-axes)
 -----------------------
 
-1. Enable the maximum line width and set it to a reasonable value (here it is
-   also 1 pixel)
+1. Enable the maximum line width and set it to 2 pixel
 2. Set the minimum fraction to 30%
 3. Click the :guilabel:`vertical lines` button and the vertical lines turn
    red and are marked for removement.

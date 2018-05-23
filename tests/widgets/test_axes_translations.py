@@ -20,6 +20,7 @@ class AxesTranslation(bt.StraditizeWidgetsTestCase):
         self.assertTrue(btn.isEnabled())
 
         # create the marks
+        self.straditizer_widgets.axes_translations.marks_for_x(False)
         QTest.mouseClick(btn, Qt.LeftButton)
         x0 = self.data_xlim[0] + self.reader.column_starts[1]
         x1 = x0 + self.reader.sample_locs.iloc[-1, 1]
