@@ -9,10 +9,11 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda config --add channels conda-forge
   - conda update -q conda
-  - conda install conda-build
+  - conda install conda-build constructor
   - conda info -a
 
 build: false
 
 test_script:
   - conda build conda-recipe
+  - constructor straditize-conda

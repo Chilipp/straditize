@@ -80,3 +80,7 @@ tests/test_diagram*.png
 tests/chinese.*
 
 *.pkl
+
+# installers
+straditize-conda-*.sh
+straditize-conda-*.exe
