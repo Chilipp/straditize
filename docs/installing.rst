@@ -35,19 +35,21 @@ Installation via standalone installers
 Installation using conda
 ^^^^^^^^^^^^^^^^^^^^^^^^
 We highly recommend to use conda_ for installing straditize. Here you can
-install it via manually via the :ref:`conda-forge <install-conda-man>` channel
-or you can use one of our
-:ref:`preconfigured environment files <install-conda-env>`.
+install it via manually via the `chilipp channel`_
 
-.. _install-conda-man:
-
-Manual installation
-~~~~~~~~~~~~~~~~~~~~
 After downloading the installer from anaconda_, you can install straditize simply
 via::
 
     $ conda config --add channels conda-forge
     $ conda install -c chilipp/label/dev straditize
+
+or install it into a new environment via::
+
+    $ conda create -n straditize -c chilipp/label/dev straditize
+
+and then activate the new environment via
+
+    $ conda activate straditize
 
 .. _install-pip:
 
@@ -112,6 +114,7 @@ We furthermore recommend to use
 .. _gdal: http://www.gdal.org/
 .. _conda: http://conda.io/
 .. _anaconda: https://www.continuum.io/downloads
+.. _chilipp channel: https://anaconda.org/chilipp
 .. _matplotlib: http://matplotlib.org
 .. _xarray installation notes: http://xarray.pydata.org/en/stable/installing.html
 .. _xarray: http://xarray.pydata.org/
@@ -146,6 +149,38 @@ Then build the docs via::
 
 .. _github: https://github.com/Chilipp/straditize
 .. _pytest: https://pytest.org/latest/contents.html
+
+
+.. _update:
+
+Updating straditize
+-------------------
+
+.. _update-standalone:
+
+Updating standalone app
+^^^^^^^^^^^^^^^^^^^^^^^
+.. todo::
+
+    Need to document how to update the standalone app
+
+.. _update-conda:
+
+Updating via conda
+^^^^^^^^^^^^^^^^^^
+If you installed straditize via conda (see :ref:`install-conda`), you can
+update it via::
+
+    $ conda update -c chilipp/label/dev straditize
+
+.. _update-pip:
+
+Updating via pip
+^^^^^^^^^^^^^^^^
+If you installed it via ``pip`` (see :ref:`install-pip`), you can update it
+via::
+
+    $ pip install -U straditize
 
 
 .. _uninstall:

@@ -53,7 +53,7 @@ procedure is more or less the same, as before with the y-axis:
 The `Pollen Concentration` column
 ---------------------------------
 1. In the `Current reader` dropdown menu, select the reader for the columns
-   1-33
+   1-27
 2. Click the :guilabel:`+` button to start the selection for a new reader
 3. Click in the plot on the last column. It will turn red
 
@@ -62,7 +62,7 @@ The `Pollen Concentration` column
 4. Click the :guilabel:`Apply` button and select the `line` (or `area`) reader
    in the appearing dialog (they are both equivalent in their algorithms).
 5. In the dropdown menu in the `Current reader` tab, select the reader for
-   *Column 33* to make it the current reader.
+   *Column 27* to make it the current reader.
 
 Now, we select the values for interpreting the x-axis of this column. The
 procedure is the same as above:
@@ -91,7 +91,7 @@ Luckily, as it is common for pollen diagrams, they all have the same scaling.
 Therefore it is enough to perform the above steps just for one of the columns.
 
 1. In the dropdown menu in the `Current reader` tab, select the reader for
-   *Columns 1-32* to make it the current reader.
+   *Columns 1-26* to make it the current reader.
 2. Click the :guilabel:`Insert X-axis values` button in the `Axes translations`
    section of the straditizer control
 3. In the appearing dialog, enter the x-value of the column start (here again
