@@ -224,9 +224,10 @@ class PatternSelectionWidget(QWidget, DockMixin):
             self.lbl_thresh.setVisible(True)
             self.modify_selection(self.sl_thresh.value())
         else:
-            obj._selection_arr[:] = self._orig_selection_arr
-            obj._select_img.set_array(self._orig_selection_arr)
-            obj.select_labels(self._selected_labels)
+            if obj._selection_arr is not None:
+                obj._selection_arr[:] = self._orig_selection_arr
+                obj._select_img.set_array(self._orig_selection_arr)
+                obj.select_labels(self._selected_labels)
             del self._orig_selection_arr, self._selected_labels
             self.btn_select.setText('Select pattern')
             self.sl_thresh.setVisible(False)
