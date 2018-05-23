@@ -303,6 +303,7 @@ class VerticalNavigationSlider(NavigationSliderMixin, VerticalSlider):
         args, kwargs = self.init_navigation_slider(ax, 'vertical', sax)
         super().__init__(*args, **kwargs)
         self.connect_to_src()
+        self.ax.invert_yaxis()
 
     def connect_to_src(self):
         super().connect_to_src()
