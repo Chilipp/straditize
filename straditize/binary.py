@@ -1110,6 +1110,7 @@ class DataReader(LabelSelection):
             arr[:, col] = i
         if remove:
             self.vline_locs = np.unique(np.r_[self.vline_locs, selection])
+            self._shift_column_starts(selection)
             self.binary[arr.astype(bool)] = 0
             self.reset_labels()
             self.plot_im.set_array(self.labels)
@@ -1125,6 +1126,17 @@ class DataReader(LabelSelection):
         selection = self.selected_part
         cols = np.where(selection[0, :])[0]
         self.vline_locs = np.unique(np.r_[self.vline_locs, cols])
+        self._shift_column_starts(cols)
+
+    def _shift_column_starts(self, locs):
+        """Shift the column starts after the removement of vertical lines"""
+        starts = self._column_starts
+        if starts is not None:
+            locs = np.asarray(locs)
+            mask = np.isin(starts, locs)
+            while mask.any():
+                starts[mask] += 1
+                mask = np.isin(starts, locs)
 
     def color_labels(self, categorize=1):
         """The labels of the colored array"""
