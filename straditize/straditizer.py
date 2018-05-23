@@ -469,21 +469,29 @@ class Straditizer(LabelSelection):
                     orig_s += 'Column %i x=%s' % (col, ax.format_xdata(col_x))
         return orig_s
 
-    def marks_for_x_values(self):
-        """Create two marks for selecting the x-values"""
-        def new_mark(pos, **kwargs):
+    def marks_for_x_values(self, at_col_start=True):
+        """Create two marks for selecting the x-values
+
+        Parameters
+        ----------
+        at_col_start: bool
+            If True, and no translation has yet been performed, create a mark
+            at the column start and ask for the corresponding value
+        """
+        def new_mark(pos, initial=None, label=None, **kwargs):
             if len(self.marks) == 2:
                 raise ValueError("Cannot use more than 2 marks!")
             ret = cm.DraggableVLineText(
                 np.round(pos[0]), ax=self.ax, idx_h=idx_h, zorder=2,
                 message=msg, dtype=float, c='b', **kwargs)
             if 'value' not in kwargs:
-                ret.ask_for_value()
+                ret.ax.figure.canvas.draw_idle()
+                ret.ask_for_value(initial, label)
             return ret
 
         idx_h = self.indexes['x']
         self.remove_marks()
-        msg = 'Enter the corresponding percentage for this point.'
+        msg = 'Enter the x-axis value for this point.'
         self.marks = marks = []
         reader = self.data_reader
         if reader._xaxis_px_orig is not None:
@@ -493,6 +501,14 @@ class Straditizer(LabelSelection):
 
             marks[0].connect_marks(marks)
             self.create_magni_marks(marks)
+        elif at_col_start:
+            starts = reader.column_starts + self.data_xlim[0]
+            xmin, xmax = self.ax.get_xlim()
+            visible_col = next(
+                (s for s in starts if s >= xmin and s <= xmax), None)
+            if visible_col is not None:
+                marks.append(new_mark(
+                    (visible_col, 0), 0, 'Enter the value at column start'))
         self.mark_cids.add(self.fig.canvas.mpl_connect(
             'button_press_event', self._add_mark_event(new_mark)))
         self.mark_cids.add(self.fig.canvas.mpl_connect(
@@ -513,11 +529,12 @@ class Straditizer(LabelSelection):
                 np.round(pos[1]), ax=self.ax, idx_v=idx_v, c='b', zorder=2,
                 message=msg, dtype=float, **kwargs)
             if 'value' not in kwargs:
+                ret.ax.figure.canvas.draw_idle()
                 ret.ask_for_value()
             return ret
         idx_v = self.indexes['y']
         self.remove_marks()
-        msg = 'Enter the corresponding percentage for this point.'
+        msg = 'Enter the y-axis value for this point.'
         self.marks = marks = []
         if self._yaxis_px_orig is not None:
             y0, y1 = self._yaxis_px_orig

@@ -893,17 +893,25 @@ class CrossMarkText(CrossMarks):
         self.dtype = kwargs.pop('dtype', str)
         self.message = kwargs.pop('message',
                                   'Enter the value for this position')
+        self.label = kwargs.pop('label', self.message)
+        self.value = kwargs.pop('value', None)
         super(CrossMarkText, self).__init__(*args, **kwargs)
 
-    def on_release(self, event, *args, **kwargs):
-        from psyplot_gui.compat.qtcompat import QInputDialog
+    def ask_for_value(self, val=None, label=None):
+        from psyplot_gui.compat.qtcompat import QInputDialog, QLineEdit
         from psyplot_gui.main import mainwindow
+        initial = str(val) if val is not None else ''
+        value, ok = QInputDialog().getText(
+            mainwindow, self.message, label or self.label, QLineEdit.Normal,
+            initial)
+        if ok:
+            self.value = self.dtype(value)
+
+    def on_release(self, event, *args, **kwargs):
         # ask for the value if the shift key is not pressed
         if (kwargs.get('ask', True) and self.press is not None and
                 event.key != 'shift'):
-            value, ok = QInputDialog().getText(mainwindow, self.message, '')
-            if ok:
-                self.value = self.dtype(value)
+            self.ask_for_value()
         kwargs['ask'] = False
         super(CrossMarkText, self).on_release(event, *args, **kwargs)
 
@@ -922,6 +930,7 @@ class DraggableHLineText(DraggableHLine):
         self.dtype = kwargs.pop('dtype', str)
         self.message = kwargs.pop('message',
                                   'Enter the value for this position')
+        self.label = kwargs.pop('label', self.message)
         self.value = kwargs.pop('value', None)
         super(DraggableHLineText, self).__init__(*args, **kwargs)
 
@@ -933,10 +942,13 @@ class DraggableHLineText(DraggableHLine):
         kwargs['ask'] = False
         super(DraggableHLineText, self).on_release(event, *args, **kwargs)
 
-    def ask_for_value(self):
-        from psyplot_gui.compat.qtcompat import QInputDialog
+    def ask_for_value(self, val=None, label=None):
+        from psyplot_gui.compat.qtcompat import QInputDialog, QLineEdit
         from psyplot_gui.main import mainwindow
-        value, ok = QInputDialog().getText(mainwindow, self.message, '')
+        initial = str(val) if val is not None else ''
+        value, ok = QInputDialog().getText(
+            mainwindow, self.message, label or self.label, QLineEdit.Normal,
+            initial)
         if ok:
             self.value = self.dtype(value)
 
@@ -944,6 +956,8 @@ class DraggableHLineText(DraggableHLine):
         ret = super(DraggableHLineText, self).__reduce__()
         ret[2]['dtype'] = self.dtype
         ret[2]['message'] = self.message
+        ret[2]['label'] = self.label
+        ret[2]['value'] = self.value
         return ret
 
 
@@ -955,6 +969,7 @@ class DraggableVLineText(DraggableVLine):
         self.dtype = kwargs.pop('dtype', str)
         self.message = kwargs.pop('message',
                                   'Enter the value for this position')
+        self.label = kwargs.pop('label', self.message)
         self.value = kwargs.pop('value', None)
         super(DraggableVLineText, self).__init__(*args, **kwargs)
 
@@ -966,10 +981,13 @@ class DraggableVLineText(DraggableVLine):
         kwargs['ask'] = False
         super(DraggableVLineText, self).on_release(event, *args, **kwargs)
 
-    def ask_for_value(self):
-        from psyplot_gui.compat.qtcompat import QInputDialog
+    def ask_for_value(self, val=None, label=None):
+        from psyplot_gui.compat.qtcompat import QInputDialog, QLineEdit
         from psyplot_gui.main import mainwindow
-        value, ok = QInputDialog().getText(mainwindow, self.message, '')
+        initial = str(val) if val is not None else ''
+        value, ok = QInputDialog().getText(
+            mainwindow, self.message, label or self.label, QLineEdit.Normal,
+            initial)
         if ok:
             self.value = self.dtype(value)
 
@@ -977,4 +995,6 @@ class DraggableVLineText(DraggableVLine):
         ret = super(DraggableVLineText, self).__reduce__()
         ret[2]['dtype'] = self.dtype
         ret[2]['message'] = self.message
+        ret[2]['label'] = self.label
+        ret[2]['value'] = self.value
         return ret
