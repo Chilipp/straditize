@@ -1760,7 +1760,7 @@ class DataReader(LabelSelection):
             index[i] = loc
             for col, (imin, imax) in d.items():
                 locations[i, col] = np.round(
-                    full_df.loc[imin:imax, col].mean())
+                    full_df.iloc[imin:imax, col].mean())
                 rough_locations[i + 1, 2*col:2*col+2] = [imin, imax]
             for col in all_cols.difference(d):
                 locations[i, col] = full_df.loc[loc, col]
@@ -1803,9 +1803,6 @@ class DataReader(LabelSelection):
 
     def merge_close_samples(self, locs, rough_locs=None, pixel_tol=5):
         samples = locs.index.values.copy()
-        #: We do not warn, if we are merging the first and last indices,
-        #: because this may be caused by the :attr:`samples_at_boundaries`
-        fl = {0, len(locs)}
         # now we check, that at least 2 pixels lie between the samples.
         # otherwise we merge them together
         mask = np.r_[True, samples[1:] - samples[:-1] > pixel_tol]
@@ -1817,27 +1814,33 @@ class DataReader(LabelSelection):
         # ``False`` values and the first entry in `keys` is True.
         for j, k in zip(indices[istart::2], indices[istart+1::2]):
             # use the extrema with the smallest widths
-            widths = (rough_locs.iloc[j-1:k, 1::2] -
-                      rough_locs.iloc[j-1:k, ::2].values)
-            minwidth = np.nanmin(widths[widths > 0].values)
-            mask = (widths.values == minwidth).any(axis=1)
-            new_loc = samples[j-1:k][mask].mean()
-            samples[j-1:k] = new_loc
-            for i, ((col, vals), (_, col_widths)) in enumerate(
-                    zip(locs.items(), widths.items())):
-                locs.iloc[j-1:k, i] = vals.iloc[
-                    vals.index.get_loc(new_loc, 'nearest')]
+            if j - 1 == 0:
+                samples[j-1:k] = samples[k-1]
+                for i in range(j-1, k-1):
+                    locs.iloc[i, :] = locs.iloc[k-1, :].values
+            elif k == len(locs):
+                samples[j-1:k] = samples[j-1]
+            else:
+                widths = (rough_locs.iloc[j-1:k, 1::2] -
+                          rough_locs.iloc[j-1:k, ::2].values)
+                minwidth = np.nanmin(widths[widths > 0].values)
+                mask = (widths.values == minwidth).any(axis=1)
+                new_loc = samples[j-1:k][mask].mean()
+                samples[j-1:k] = new_loc
+                for i, ((col, vals), (_, col_widths)) in enumerate(
+                        zip(locs.items(), widths.items())):
+                    locs.iloc[j-1:k, i] = vals.iloc[
+                        vals.index.get_loc(new_loc, 'nearest')]
 
-                col_mask = (col_widths > 0).values
-                if col_mask.sum() > 1:
-                    new_indices = rough_locs.iloc[j-1:k, i*2:i*2+2][
-                        col_mask[:, np.newaxis]].values.ravel().tolist()
-                    if not fl.intersection((j-1, k)):
+                    col_mask = (col_widths > 0).values
+                    if col_mask.sum() > 1:
+                        new_indices = rough_locs.iloc[j-1:k, i*2:i*2+2][
+                            col_mask[:, np.newaxis]].values.ravel().tolist()
                         warn("Distinct samples merged from %s in "
                              "column %s!" % (new_indices, col))
-                    new_indices.sort()
-                    rough_locs.iloc[j-1, 2*i:2*i+2] = [new_indices[0],
-                                                       new_indices[-1]]
+                        new_indices.sort()
+                        rough_locs.iloc[j-1, 2*i:2*i+2] = [new_indices[0],
+                                                           new_indices[-1]]
         locs.index = samples
         rough_locs.index = samples
         not_duplicated = ~locs.index.duplicated()
