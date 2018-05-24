@@ -35,7 +35,8 @@ before_install:
     fi
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-"${OS_NAME}"-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
+  - export ORIGPATH=$PATH
+  - export PATH="$HOME/miniconda/bin:$ORIGPATH"
   - hash -r
   - reset_secure
 
@@ -68,10 +69,7 @@ script:
     - constructor straditize-conda
     # test the installer
     - DEBUG_STRADITIZE_INSTALLATION=1 NO_STRADITIZE_ALIAS=1 NO_STRADITIZE_APP=1 bash straditize-conda-*-"${OS_NAME}"-*.sh -p $HOME/straditize-conda -b
-    - conda deactivate &&
-      unset conda &&
-      . $HOME/straditize-conda/etc/profile.d/conda.sh &&
-      conda activate base &&
+    - export PATH="$HOME/straditize-conda/bin:$ORIGPATH" &&
       hash -r &&
       pip install pytest
     - py.test -xv tests/widgets/test_samples_table.py
