@@ -91,7 +91,7 @@ deploy:
     skip_cleanup: true
     on:
       all_branches: true
-      repo: Chilipp/straditize-conda
+      repo: Chilipp/straditize
       # do not deploy releases
       condition: '$TRAVIS_TAG == ""'
   - provider: script
@@ -99,6 +99,6 @@ deploy:
     skip_cleanup: true
     on:
       all_branches: true
-      repo: Chilipp/straditize-conda
+      repo: Chilipp/straditize
       # do not deploy releases
       condition: '$TRAVIS_TAG == ""'
