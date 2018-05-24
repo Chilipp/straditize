@@ -25,7 +25,7 @@ test_script:
     - conda build conda-recipe
     - constructor straditize-conda
     # test installer
-    - "powershell ./ci/install_straditize.ps1"
+    - "powershell ./ci/install_straditize_conda.ps1"
     - "SET PATH=%STRADITIZE_PYTHON%;%STRADITIZE_PYTHON%\\Scripts;%ORIGPATH%"
     - pip install pytest
     - py.test -xv tests/widgets/test_samples_table.py
