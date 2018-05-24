@@ -4,7 +4,7 @@ version: 0.01
 channels:
     - file:///home/travis/miniconda/conda-bld [linux]
     - file:///Users/travis/miniconda/conda-bld [osx]
-    - file:///C:/Python36-conda/conda-bld [win]
+    - file:///C:/Miniconda36-x64/conda-bld [win]
     - https://conda.anaconda.org/conda-forge
     - http://repo.continuum.io/pkgs/main
     - http://repo.continuum.io/pkgs/free
