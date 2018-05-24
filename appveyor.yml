@@ -1,7 +1,10 @@
 environment:
   PYTHON: "C:\\Miniconda36-x64"
+  STRADITIZE_PYTHON: "C:\\straditize-conda-installation"
+  PYTHON_ARCH: "64"
 
 install:
+  - "SET ORIGPATH=%PATH%"
    # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
   # the parent CMD process).
@@ -17,3 +20,8 @@ build: false
 test_script:
   - conda build conda-recipe
   - constructor straditize-conda
+  # test installer
+  - "powershell ./ci/install_straditize.ps1"
+  - "SET PATH=%STRADITIZE_PYTHON%;%STRADITIZE_PYTHON%\\Scripts;%ORIGPATH%"
+  - pip install pytest
+  - py.test -xv tests/widgets/test_samples_table.py

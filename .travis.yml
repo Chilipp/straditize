@@ -3,12 +3,26 @@ sudo: false # use container based build
 
 env:
   - PYTHON_VERSION=3.6
+  secure: "IDmpBixbdF6V0ZY9ZepU/zWaY0/IjWHUMWi/cqAUH23xrZfsoJdqwMspVoXDYqyUHHUm66ugLfV3TeYZf0+9Y3u2tBIOrfvp/MjhHzxOe6158QZiHH0KfPmfceM6Y0xnhGA7yP2hJKRJHm8t2CHn4aqbn+Pf79WBczY0+8otB81rVWKa/19L2in4xabOd6kS5IAdemEDU7DJMss59yQGbHfsHoJvPhb3Szixd9Ggl2jaaYaBhGQPPjxV4TqbuaJz76neZB5uBEcma4E9kSngecmqTabv+zE/v6Wmg6F5Dee+y/y5rPIe4Gj4omGiQ7m73lNxn1BGywPkcGAHc+TBGwino7r0mou8uPL2ehCSjUge8izoePTIL07IJt7i0Q5ANpFkyQjD98I7KpMHyyVW9MRQfO1YO+lUCJaEb3QciRYSOj1KBw/+FTsv2/Yi9COykbi8mt5tna+QKUOP33Td2HCNTbF8lZwUbevgOpZEVXOPrNqs3CXC7Q6Bgv0P9JyIXWhhNZKKyxJ0eAYAWsJgE1JYhc7wKlrijsVZvvMZL4i1tPtdE8meWyFK+Vik7FU+1v7dX8bBqgQ66knenUtZLg3wlrSOXbjCzpqeRxN+irVVkApPHrHatNq05UiP4YXbu33X8KqrRtmgDLfUoU++tySpeukjB+5CEE8CK5iiTAc="
+  secure: "mMzWbay7oFEC9jQQiqGek+T48Iuxt0LsD0pbGre5q3uv0Ip0s9lyJqvf64cGZKUpdbHzO7nyZQpmNKU5ZeVLfWPhRwSYERvI+2ZYiDIpZ+oXauGCZ2xfMzxKNHvdfLpeoP+G1+z4R+TFyUvfcnzrtpXnJh779m07CF/g3+5XGIj16h6kJi3EpPh4Yk7EUQqqAvvjcOkA+cZWmHKh2Gfm6JcCYwYKMY60FSNkrpyfNlqPVYvl64cNKUWCY/u5sc2WrtGijOHSuScyz005aL4AcLBMam/qpwosO58m12xDDf6CYZDgxA/3+OaVrGg37T0H5TMJwsGhnSOKIILYbtd4RKt1tmj1ZUxwByXo/GXiwPXp0PT9jWqb1m+/9+xVYT/MuBYKkDRnoF8og45yvkeqJ1Cmdcf1H4/ngMaTQhHc7uL1KtoL6Fgrg9KxwxfGYZUM1ejKzv6xpYU7ljBa9IgIFw05kehU9IdpR7JIafDGjT+QU3d84e9+NMk7QsbR0ViJFphB2uzhASICvS2q2yfI5yV/l6g3CusHYBvle7Pdf+0I3g3hc/H+aauVSnVGeY3lRPoZWYqGFGrfLLL4IDxaiM+lx8HVo+oO1ayrKZ0oD6VCjCalSv5ztC9Y4FuBVUKVMD0+NGrm/BfwZqQ0QNZjY3cCT0oVfPctlmX1l8xnvzg="
 
 os:
   - linux
   - osx
 
 before_install:
+  # define functions to unset and reset encrypted variables
+  - function unset_secure {
+        SWITCH_DRIVE_PW_SAVE=$SWITCH_DRIVE_PW;
+        unset SWITCH_DRIVE_PW;
+        CONDA_TOKEN_SAVE=$CONDA_REPO_TOKEN;
+        unset CONDA_REPO_TOKEN;
+        }
+  - function reset_secure {
+        export SWITCH_DRIVE_PW=$SWITCH_DRIVE_PW_SAVE;
+        export CONDA_REPO_TOKEN=$CONDA_TOKEN_SAVE;
+        }
+  - unset_secure
   # increase open files limit
   - ulimit -a
   - ulimit -Sn 10000
@@ -23,6 +37,7 @@ before_install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
+  - reset_secure
 
 before_script:
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
@@ -32,14 +47,59 @@ before_script:
     fi
 
 install:
-  - |
-      echo ""
-      echo "Configuring conda."
-      conda config --set always_yes yes --set changeps1 no
-      conda config --add channels conda-forge
-      conda update -q conda
-      conda install conda-build constructor
-      conda info -a
+    # unset the global SWITCH_DRIVE_PW variable because it is not needed during
+    # the tests. This decreases the vulnerability
+    - unset_secure
+    - |
+        echo ""
+        echo "Configuring conda."
+        conda config --set always_yes yes --set changeps1 no
+        conda config --add channels conda-forge
+        conda update -q conda
+        conda install conda-build constructor
+        conda info -a
+    - reset_secure
 script:
-- conda build conda-recipe
-- constructor straditize-conda
+    # unset the global SWITCH_DRIVE_PW variable because it is not needed during
+    # the tests. This decreases the vulnerability
+    - unset_secure
+    # install conda
+    - conda build conda-recipe
+    - constructor straditize-conda
+    # test the installer
+    - DEBUG_STRADITIZE_INSTALLATION=1 NO_STRADITIZE_ALIAS=1 NO_STRADITIZE_APP=1 bash straditize-conda-*-"${OS_NAME}"-*.sh -p $HOME/straditize-conda -b
+    - conda deactivate &&
+      unset conda &&
+      . $HOME/straditize-conda/etc/profile.d/conda.sh &&
+      conda activate base &&
+      hash -r &&
+      pip install pytest
+    - py.test -xv tests/widgets/test_samples_table.py
+    # export the pw to make it available for the deploy
+    - reset_secure
+
+before_deploy:
+    - 'export FINAL_FILE="$(ls straditize-conda-*-${OS_NAME}-*.sh) $(ls straditize-conda-*-${OS_NAME}-*.pkg || :)"'
+    - if [[ $TRAVIS_BRANCH == nightly ]]; then
+          conda install conda-build anaconda-client;
+          export BUILDS="$(ls $HOME/miniconda/conda-bld/${TRAVIS_OS_NAME}-64/*.tar.bz2)";
+      fi
+
+deploy:
+  - provider: script
+    script: ci/deploy_switchdrive.sh "philipp.sommer@unil.ch:$SWITCH_DRIVE_PW" $FINAL_FILE
+    skip_cleanup: true
+    on:
+      all_branches: true
+      repo: Chilipp/straditize-conda
+      # do not deploy releases
+      condition: '$TRAVIS_TAG == ""'
+  - provider: script
+    script: ci/deploy_anaconda.sh
+    skip_cleanup: true
+    on:
+    on:
+      all_branches: true
+      repo: Chilipp/straditize-conda
+      # do not deploy releases
+      condition: '$TRAVIS_TAG == ""'
