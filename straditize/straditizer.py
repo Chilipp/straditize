@@ -92,6 +92,14 @@ class Straditizer(LabelSelection):
 
     data_ylim = None
 
+    #: The :class:`straditize.ocr.ColNamesReader` for reading the column names
+    colnames_reader = None
+
+    colnames_xlim = None
+
+    colnames_ylim = None
+
+
     _orig_format_coord = None
 
     _yaxis_px_orig = None
@@ -407,33 +415,74 @@ class Straditizer(LabelSelection):
         self.remove_marks()
         self.draw_data_box()
 
+    def update_colnames_part(self):
+        marks = self.marks
+        x = np.unique(np.ceil([m.pos[0] for m in marks]))
+        y = np.unique(np.ceil([m.pos[1] for m in marks]))
+        if len(x) != 2:
+            raise ValueError(
+                "Need exactly two x-values for extracting the data! Got %i" % (
+                    len(x)))
+        if len(y) != 2:
+            raise ValueError(
+                "Need exactly two y-values for extracting the data! Got %i" % (
+                    len(y)))
+        self.colnames_xlim = x
+        self.colnames_ylim = y
+        self.remove_marks()
+        self.draw_colnames_box()
+
+    def _draw_box(self, xlim, ylim):
+        box = self.ax.bar(xlim[0], np.diff(ylim)[0], np.diff(xlim)[0],
+                          ylim[0], edgecolor='r', facecolor='none',
+                          align='edge', linewidth=2)[0]
+        if self.magni is not None:
+            magni_box = self.magni.ax.bar(
+                xlim[0], np.diff(ylim)[0], np.diff(xlim)[0], ylim[0],
+                edgecolor='r', facecolor='none', align='edge', linewidth=2)[0]
+        else:
+            magni_box = None
+        return box, magni_box
+
     def draw_data_box(self):
         # plot a box around the plot
         self.remove_data_box()
-        x = self.data_xlim
-        y = self.data_ylim
-        self.data_box = self.ax.bar(x[0], np.diff(y)[0], np.diff(x)[0],
-                                    y[0], edgecolor='r', facecolor='none',
-                                    align='edge', linewidth=2)[0]
-        if self.magni is not None:
-            self.magni_data_box = self.magni.ax.bar(
-                x[0], np.diff(y)[0], np.diff(x)[0], y[0], edgecolor='r',
-                facecolor='none', align='edge', linewidth=2)[0]
+        self.data_box, self.magni_data_box = self._draw_box(
+            self.data_xlim, self.data_ylim)
 
     def remove_data_box(self):
         """Remove the data_box"""
-        if hasattr(self, 'data_box'):
+        if getattr(self, 'data_box', None) is not None:
             try:
                 self.data_box.remove()
             except ValueError:
                 pass
             del self.data_box
-        if hasattr(self, 'magni_data_box'):
+        if getattr(self, 'magni_data_box', None) is not None:
             try:
                 self.magni_data_box.remove()
             except ValueError:
                 pass
-            del self.magni_data_box
+
+    def draw_colnames_box(self):
+        # plot a box around the plot
+        self.remove_colnames_box()
+        self.colnames_box, self.magni_colnames_box = self._draw_box(
+            self.colnames_xlim, self.colnames_ylim)
+
+    def remove_colnames_box(self):
+        """Remove the colnames_box"""
+        if getattr(self, 'colnames_box', None) is not None:
+            try:
+                self.colnames_box.remove()
+            except ValueError:
+                pass
+            del self.colnames_box
+        if getattr(self, 'magni_colnames_box', None) is not None:
+            try:
+                self.magni_colnames_box.remove()
+            except ValueError:
+                pass
 
     def format_coord(self, x, y):
         """Format x and y to include the :attr:`data_reader` attribute
@@ -640,6 +689,15 @@ class Straditizer(LabelSelection):
             fig.canvas.mpl_disconnect(cid)
         self.mark_cids.clear()
 
+    def init_colnames_reader(self, ax=None, **kwargs):
+        from straditize.ocr import ColNamesReader
+        x0, x1 = map(int, self.colnames_xlim)
+        y0, y1 = map(int, self.colnames_ylim)
+        ax = ax or self.ax
+        self.colnames_reader = ColNamesReader(
+            self.image.crop([x0, y0, x1, y1]), ax=ax, extent=[x0, x1, y1, y0],
+            magni=self.magni, **kwargs)
+
     def init_reader(self, reader_type='area', ax=None, **kwargs):
         x0, x1 = map(int, self.data_xlim)
         y0, y1 = map(int, self.data_ylim)
@@ -749,6 +807,51 @@ class Straditizer(LabelSelection):
             self.data_reader.columns = None
         self.remove_marks()
 
+    def marks_for_occurences(self):
+        """Create marks for editing the occurences"""
+        def get_col(x):
+            return next(i for i, (s, e) in enumerate(bounds)
+                        if s <= x and e >= x)
+
+        def new_mark(pos):
+            col = get_col(pos[0])
+            xlim = tuple(bounds[col])
+            return [cm.DraggableHLine(
+                        pos[1], xlim=xlim, ax=self.ax, idx_v=idx_v,
+                        zorder=2)]
+
+        def _new_mark(pos):
+            pos = list(pos)
+            pos[0] += self.data_xlim[0]
+            pos[1] += self.data_ylim[0]
+            return new_mark(pos)
+
+        reader = self.data_reader
+        bounds = reader.all_column_bounds + self.data_xlim[0]
+        idx_v = self.indexes['y']
+
+        self.marks = marks = list(chain.from_iterable(
+            map(_new_mark, sorted(reader.occurences))))
+        if marks:
+            marks[0].connect_marks(marks)
+            self.create_magni_marks(marks)
+        if not self.data_reader.children:
+            self.mark_cids.add(self.fig.canvas.mpl_connect(
+                'button_press_event', self._add_mark_event(new_mark)))
+            self.mark_cids.add(self.fig.canvas.mpl_connect(
+                'button_press_event', self._remove_mark_event))
+
+    def update_occurences(self, remove=True):
+        """Set the occurences from the given marks"""
+        def get_pos(mark):
+            pos = mark.pos
+            return (pos[0] - x0, pos[1] - y0)
+        x0 = self.data_xlim[0]
+        y0 = self.data_ylim[0]
+        self.data_reader.occurences = set(map(get_pos, self.marks))
+        if remove:
+            self.remove_marks()
+
     def digitize_diagram(self):
         self.data_reader.digitize()
         self.data_reader.plot_full_df()
@@ -833,12 +936,14 @@ class Straditizer(LabelSelection):
 
     def marks_for_samples(self):
         def _new_mark(pos, artists=[]):
-            return cm.CrossMarks(
+            ret = cm.CrossMarks(
                 pos, zorder=2, idx_v=idx_v, idx_h=idx_h,
                 xlim=xlim, ylim=ylim, alpha=0.5,
                 linewidth=1.5, selectable=['h'], marker='x',
                 select_props={'c': 'r', 'lw': 2.0},
                 connected_artists=artists, ax=ax, hide_vertical=True)
+            ret._is_occurence = [False] * len(ret.xa)
+            return ret
 
         def new_mark(pos):
             return [_new_mark(
@@ -858,10 +963,14 @@ class Straditizer(LabelSelection):
                             s + full_df.iloc[imin:imax, col],
                             ylim[0] + np.arange(imin, imax), c='0.5', lw=0,
                             marker='+'))
-            return [_new_mark([starts + np.array(row), min(ylim) + key],
-                              artists)]
+            mark = _new_mark([starts + np.where(row == occ_val, means, row),
+                              min(ylim) + key], artists)
+            mark._is_occurence = [val == occ_val for val in row]
+            return [mark]
 
         reader = self.data_reader
+        occ_val = reader.occurences_value
+        means = reader.column_bounds.mean(axis=1)
         if reader.full_df is None:
             reader.digitize()
         df = reader.sample_locs
@@ -897,6 +1006,9 @@ class Straditizer(LabelSelection):
             starts = self.data_reader.all_column_starts[np.newaxis] + x0
             index = np.array(np.ceil([mark.y for mark in self.marks])) - y0
             data = np.array(np.ceil([mark.xa for mark in self.marks])) - starts
+            is_occurence = np.array(
+                [mark._is_occurence for mark in self.marks], bool)
+            data[is_occurence] = self.data_reader.occurences_value
             df = pd.DataFrame(data, index=index.astype(int)).sort_index()
             self.data_reader.sample_locs = df
             self.data_reader._update_rough_locs()
@@ -910,12 +1022,14 @@ class Straditizer(LabelSelection):
     def marks_for_samples_sep(self, nrows=3):
         def _new_mark(pos, ax, artists=[]):
             idx_h = all_idx_h[ax]
-            return cm.CrossMarks(
+            ret = cm.CrossMarks(
                 pos, zorder=2, idx_v=idx_v, idx_h=idx_h,
                 xlim=(0, idx_h.max()),
                 alpha=0.5, linewidth=1.5, selectable=['h'],
                 marker='x', connected_artists=artists,
                 ax=ax, select_props={'c': 'r', 'lw': 2.0}, hide_vertical=True)
+            ret._is_occurence = [False]
+            return ret
 
         def new_mark(pos):
             y = np.round(pos[-1])
@@ -942,9 +1056,14 @@ class Straditizer(LabelSelection):
                             marker='+')
                     else:
                         artists = []
+                if val == occ_val:
+                    val = bounds[col].mean()
                 marks.append(_new_mark([val, key], ax, artists))
+            for mark, val in zip(marks, row):
+                mark._is_occurence = [val == occ_val]
             marks.append(_new_mark([full_df.loc[key, 'nextrema'], key],
                                    axes[-1]))
+            marks[-1]._is_occurence = [False]
             marks[0].maintain_y(marks)
             return marks
 
@@ -953,9 +1072,11 @@ class Straditizer(LabelSelection):
         import matplotlib.pyplot as plt
 
         reader = self.data_reader
+        occ_val = reader.occurences_value
         if reader.full_df is None:
             reader.digitize()
         df = reader.sample_locs
+        bounds = reader.all_column_bounds
         full_df = reader._full_df.copy(True)
         full_df['nextrema'] = reader.found_extrema_per_row()
         self.remove_marks()
@@ -1005,6 +1126,10 @@ class Straditizer(LabelSelection):
         index = np.round(index).astype(int)
         data = np.array(np.ceil([mark.x for mark in self.marks])).reshape(
             (len(index), ncols + 1))
+        is_occurence = np.array(
+            [mark._is_occurence[0] for mark in self.marks], bool).reshape(
+                (len(index), ncols + 1))
+        data[is_occurence] = self.data_reader.occurences_value
         df = pd.DataFrame(data[:, :-1], index=index).sort_index()
         self.data_reader.sample_locs = df
         self.data_reader._update_rough_locs()

@@ -20,8 +20,10 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
     def fig(self):
         return self.axes[0].figure
 
-    def __init__(self, marks, columns, mark_factory, mark_removal, axes=None):
+    def __init__(self, marks, columns, mark_factory, mark_removal, axes=None,
+                 occurences_value=-9999):
         super(MultiCrossMarksModel, self).__init__()
+        self.occurences_value = occurences_value
         self.set_marks(marks, columns)
         if axes is None:
             self.axes = [m.ax for m in self.marks[0][1]]
@@ -79,8 +81,12 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             mark = self.get_cell_mark(row, column)
             xa = mark.xa[:]
             i = min(column, len(xa)) - 1
-            xa[i] = float(value)
-            mark.set_pos((xa, mark.ya))
+            if value == self.occurences_value:
+                mark._is_occurence[i] = True
+            else:
+                xa[i] = value
+                mark.set_pos((xa, mark.ya))
+                mark._is_occurence[i] = False
         self.fig.canvas.draw()
         return True
 
@@ -151,6 +157,8 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
                 i = min(column, len(marks)) - 1
                 mark = marks[i]
                 i = min(column, len(mark.xa)) - 1
+                if mark._is_occurence[i]:
+                    return self.get_format() % self.occurences_value
                 return self.get_format() % mark.xa[i]
 
     def rowCount(self, index=QtCore.QModelIndex()):
@@ -296,9 +304,13 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
             self.sort_marks()
         else:
             mark = self.get_cell_mark(row, column)
-            xa = mark.xa[:]
-            xa[column - 1] = float(value) + self._bounds[column - 1, 0]
-            mark.set_pos((xa, mark.ya))
+            if value == self.occurences_value:
+                mark._is_occurence[column-1] = True
+            else:
+                xa = mark.xa[:]
+                xa[column - 1] = value + self._bounds[column - 1, 0]
+                mark._is_occurence[column-1] = False
+                mark.set_pos((xa, mark.ya))
         self.fig.canvas.draw()
         return True
 
@@ -347,6 +359,8 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
             if column == 0:
                 return self.get_format() % (y - self._y0)
             else:
+                if mark._is_occurence[column - 1]:
+                    return self.get_format() % self.occurences_value
                 return self.get_format() % (mark.xa[column - 1] -
                                             self._bounds[column - 1][0])
 
@@ -755,10 +769,12 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
 
     def create_view(self, axes=None):
         stradi = self.straditizer
-        df = getattr(stradi, '_plotted_full_df', stradi.data_reader._full_df)
+        reader = stradi.data_reader
+        df = getattr(stradi, '_plotted_full_df', reader._full_df)
         return MultiCrossMarksView(stradi.marks, df, df.columns,
                                    stradi._new_mark, stradi._remove_mark,
-                                   axes=axes)
+                                   axes=axes,
+                                   occurences_value=reader.occurences_value)
 
     def save_samples(self):
         self.straditizer.update_samples_sep(remove=False)
@@ -859,14 +875,16 @@ class SingleCrossMarksEditor(MultiCrossMarksEditor):
 
     def create_view(self, axes=None):
         stradi = self.straditizer
-        axes = [stradi.data_reader.ax]
-        df = getattr(stradi, '_plotted_full_df', stradi.data_reader._full_df)
+        reader = stradi.data_reader
+        axes = [reader.ax]
+        df = getattr(stradi, '_plotted_full_df', reader._full_df)
         x0 = min(stradi.data_xlim)
         return SingleCrossMarksView(
             stradi.marks, df, df.columns, stradi._new_mark,
             stradi._remove_mark, axes=axes,
-            column_bounds=x0 + stradi.data_reader.all_column_bounds,
-            y0=min(stradi.data_ylim))
+            column_bounds=x0 + reader.all_column_bounds,
+            y0=min(stradi.data_ylim),
+            occurences_value=reader.occurences_value)
 
     def save_samples(self):
         self.straditizer.update_samples(remove=False)

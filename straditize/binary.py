@@ -72,6 +72,45 @@ class DataReader(LabelSelection):
 
     _sample_locs = None
 
+    _occurences = set()
+
+    @property
+    def occurences(self):
+        """A set of tuples marking the position of an occurence
+
+        An occurence, motivated by pollen diagrams, just highlights the
+        existence at a certain point without giving the exact value. In pollen
+        diagrams, these are usually taxa that were found but have a percentage
+        of less than 0.5 %.
+
+        This set of tuples (x, y) contains the coordinates of the occurences.
+        The first value in each tuple is the y-value, the second the x-value.
+
+        See Also
+        --------
+        occurences_dict: A mapping from column number to occurences"""
+        return self.parent._occurences
+
+    @occurences.setter
+    def occurences(self, value):
+        self.parent._occurences = value
+
+    #: The value that is given to the occurences in the measurements
+    occurences_value = -9999
+
+    @property
+    def occurences_dict(self):
+        """A mapping from column number to an numpy array with the indices of
+        an occurence"""
+        def get_col(x):
+            return next(i for i, (s, e) in enumerate(bounds)
+                        if s <= x and e >= x)
+        ret = defaultdict(list)
+        bounds = self.all_column_bounds
+        for x, y in self.occurences:
+            ret[get_col(x)].append(y)
+        return {col: np.unique(indices) for col, indices in ret.items()}
+
     @property
     def sample_locs(self):
         """
@@ -305,6 +344,7 @@ class DataReader(LabelSelection):
             if mode != 'RGBA':
                 image = image.convert('RGBA')
         self.image = image
+        self._occurences = set()
         self.reset_labels()
         self.lines = []
         self.sample_ranges = []
@@ -387,6 +427,7 @@ class DataReader(LabelSelection):
         for child in self.iter_all_readers:
             child._column_starts = child.shifted = child._column_ends = None
             child._full_df = child._sample_locs = child._rough_locs = None
+            child._occurences = set()
         self._columns = []
 
     def reset_samples(self):
@@ -468,6 +509,7 @@ class DataReader(LabelSelection):
              'is_exaggerated': self.is_exaggerated,
              '_xaxis_px_orig': self._xaxis_px_orig,
              'xaxis_data': self.xaxis_data,
+             '_occurences': self._occurences if is_parent else set(),
              }
             )
 
@@ -476,6 +518,11 @@ class DataReader(LabelSelection):
             'dims': ('reader', 'ydata', 'xdata', 'rgba'),
             'long_name': 'RGBA images for data readers',
             'units': 'color'},
+        'occurences': {
+            'dims': ('occurence', 'xy'),
+            'long_name': 'taxa occurences',
+            'comments': ('The locations where the only an occurence of a '
+                         'taxa is highlighted without value')},
         'reader': {
             'dims': 'reader',
             'long_name': 'index of the reader'},
@@ -592,7 +639,7 @@ class DataReader(LabelSelection):
 
         is_parent = self.parent is self
 
-        if self.parent._columns is not None:
+        if self.parent._columns is not None and len(self.parent._columns):
             all_columns = sorted(chain.from_iterable(
                     r.columns for r in self.iter_all_readers))
             if 'col_map' not in ds:
@@ -618,6 +665,9 @@ class DataReader(LabelSelection):
                     self.create_variable(
                         ds, 'rough_locs', self.rough_locs.values.reshape(
                             self.sample_locs.shape + (2, )))
+                if self.occurences:
+                    self.create_variable(ds, 'occurences',
+                                         np.asarray(list(self.occurences)))
 
             for child in self.children:
                 ds = child.to_dataset(ds)
@@ -668,6 +718,8 @@ class DataReader(LabelSelection):
                     ds['rough_locs'].values.reshape((len(index), -1)),
                     index=index, columns=pd.MultiIndex.from_product(
                         [reader.sample_locs.columns, ['vmin', 'vmax']]))
+            if 'occurences' in ds:
+                reader._occurences = set(map(tuple, ds.occurences.values))
         return reader
 
     def set_as_parent(self):
@@ -680,6 +732,8 @@ class DataReader(LabelSelection):
         self._sample_locs = old._sample_locs
         self._full_df = old._full_df
         self.rough_locs = old.rough_locs
+        self._occurences = old._occurences
+        self.occurences_value = old.occurences_value
         self.children = [old] + [c for c in old.children if c is not self]
         for c in [self] + self.children:
             c.parent = self
@@ -1664,6 +1718,14 @@ class DataReader(LabelSelection):
         excluded1.extend(excluded0)
         return included1, sorted(excluded1)
 
+    def get_occurences(self):
+        """Extract the positions of the occurences from the selection"""
+        selected = self.selected_part
+        labeled, num = skim.label(selected, 8, return_num=True)
+        for l in range(1, num + 1):
+            self.occurences.add(tuple(np.round(
+                np.mean(np.where(labeled == l), axis=1)).astype(int))[::-1])
+
     def get_reader_for_col(self, col):
         """Get the reader for a specific column
 
@@ -1704,13 +1766,25 @@ class DataReader(LabelSelection):
             in the returned list is a dictionary whose keys are the column
             indices and whose values are the indices for the corresponding
             column. Otherwise, a list of :class:`_Bar` objects is returned"""
+        def insert_occs(col, indices):
+            if col not in occurences:
+                return indices
+            occs = occurences[col]
+            for i, (s, e) in enumerate(indices):
+                found = occs[(s <= occs) & (e >= occs)]
+                if len(found):
+                    indices.pop(i)
+            indices.extend(zip(occs, occs+1))
+            return indices
+
         min_fract = min_fract or self.min_fract
-        df = self.full_df.copy(True)
+        occurences = self.occurences_dict
+        df = self.parent._full_df
         get_child = self.get_reader_for_col
         bars = list(chain.from_iterable(
-            (_Bar(col, indices)
-             for indices in get_child(col).find_potential_samples(
-                col, *args, **kwargs)[0])
+            (_Bar(col, indices) for indices in insert_occs(
+                 col, get_child(col).find_potential_samples(
+                    col, *args, **kwargs)[0]))
             for col in df.columns))
         for bar in bars:
             bar.get_overlaps(bars, min_fract)
@@ -1807,11 +1881,20 @@ class DataReader(LabelSelection):
         not_duplicated = ~ret_locs.index.duplicated()
         ret_locs = ret_locs[not_duplicated].sort_index()
         ret_rough = ret_rough[not_duplicated].sort_index()
+
         if pixel_tol is not None:
-            return self.merge_close_samples(
+            ret_locs, ret_rough = self.merge_close_samples(
                 ret_locs, ret_rough, pixel_tol)
-        else:
-            return ret_locs, ret_rough
+        # insert *occurences value*
+        occurences = self.occurences_dict
+        for col, occs in occurences.items():
+            vmin, vmax = ret_rough.loc[:, col].T.values
+            occs = occs[:, np.newaxis]
+            ret_locs.iloc[
+                ((vmin[np.newaxis] <= occs) & (vmax > occs)).any(axis=0),
+                col] = self.occurences_value
+
+        return ret_locs, ret_rough
 
     def merge_close_samples(self, locs, rough_locs=None, pixel_tol=5):
         samples = locs.index.values.copy()

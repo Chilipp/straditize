@@ -17,12 +17,18 @@ class EditSamplesTest(bt.StraditizeWidgetsTestCase):
         self.straditizer_widgets.refresh()
         self.assertTrue(self.digitizer.btn_find_samples.isEnabled())
         self.assertTrue(self.digitizer.btn_edit_samples.isEnabled())
+        # add an occurence to the reader
+        df = self.reader.find_samples()[0]
+        self.reader.occurences = {
+            (df.index[2], self.reader.column_starts[1] + df.iloc[2, 1] + 1)}
+
         # first try with empty samples
         QTest.mouseClick(self.digitizer.btn_edit_samples, Qt.LeftButton)
         self.assertFalse(self.straditizer.marks)
         self.assertTrue(hasattr(self.digitizer, '_samples_editor'))
         QTest.mouseClick(self.digitizer.apply_button, Qt.LeftButton)
         self.assertFalse(hasattr(self.digitizer, '_samples_editor'))
+
         # Now try with the found samples
         QTest.mouseClick(self.digitizer.btn_find_samples, Qt.LeftButton)
         QTest.mouseClick(self.digitizer.btn_edit_samples, Qt.LeftButton)
@@ -31,6 +37,7 @@ class EditSamplesTest(bt.StraditizeWidgetsTestCase):
         model = self.digitizer._samples_editor.table.model()
         df = self.reader.sample_locs
         marks = iter(self.straditizer.marks)
+
         # check index
         for i, val in enumerate(df.index.values):
             self.assertEqual(
@@ -39,12 +46,16 @@ class EditSamplesTest(bt.StraditizeWidgetsTestCase):
         # check cells
         for irow, (row, vals) in enumerate(df.iterrows()):
             for col, val in vals.items():
+                if irow == 2 and col == 1:  # the occurence column
+                    val = self.reader.occurences_value
                 self.assertEqual(
                     float(model._get_cell_data(irow, col + 1)), val,
                     msg='Wrong value at row %i (index %1.1f), column %i' % (
                         irow, row, col))
                 if irow and col == 0:
                     next(marks)  # the next mark is for the numbers of extrema
+                if irow == 2 and col == 1:
+                    val = self.reader.all_column_bounds[1].mean()
                 self._test_position(model.get_cell_mark(irow, col + 1).pos,
                                     val, row, col)
 
@@ -101,6 +112,10 @@ class EditSamplesTest(bt.StraditizeWidgetsTestCase):
         df = self.reader.sample_locs
         new_y = np.mean(df.index.values[:2])
         # add new marks
+        print('+' * 80)
+        print(self.straditizer.mark_cids.intersection(
+            self.straditizer.fig.canvas.callbacks.callbacks))
+        print('-' * 80)
         self.add_mark((self.data_xlim[0] + 2, self.data_ylim[0] + new_y))
         # check index
         self.assertEqual(float(model._get_cell_data(1, 0)), new_y)

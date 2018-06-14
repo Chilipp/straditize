@@ -4,18 +4,16 @@ from __future__ import division
 import warnings
 import os
 import six
-import glob
+from functools import partial
 import re
 import numpy as np
 import pandas as pd
-from straditize.widgets import (
-    StraditizerControlBase, read_doc_file, get_doc_file, get_icon)
+from straditize.widgets import StraditizerControlBase, get_icon
 from psyplot_gui.compat.qtcompat import (
     QPushButton, QLineEdit, QComboBox, QLabel, QDoubleValidator,
-    Qt, QHBoxLayout, QVBoxLayout, QWidget, QTreeWidgetItem, QtGui,
-    QTableWidget, QTableWidgetItem, QtCore, QMenu, QAction, with_qt5,
-    QIcon, QIntValidator, QTreeWidget, QToolBar, QGridLayout, QCheckBox,
-    QInputDialog, QFileDialog)
+    Qt, QHBoxLayout, QVBoxLayout, QWidget, QTreeWidgetItem,
+    with_qt5, QIcon, QIntValidator, QTreeWidget, QToolBar, QGridLayout,
+    QCheckBox, QInputDialog, QFileDialog)
 from itertools import chain
 
 if with_qt5:
@@ -329,7 +327,27 @@ class DigitizingControl(StraditizerControlBase):
         self.sp_pixel_tol.setMaximum(10000)
         self.sp_pixel_tol.setValue(5)
         self.sp_pixel_tol.setToolTip(
-            'Minimum distance between two measurements in pixels')
+            'Minimum distance between two samples in pixels')
+
+        self.btn_select_occurences = QPushButton('Select occurences')
+        self.btn_select_occurences.setToolTip(
+            'Select where a measurement was reported but without an '
+            'associated value')
+        self.btn_edit_occurences = QPushButton('Edit occurences')
+        self.btn_select_occurences.setToolTip(
+            'Edit the locations of occurences')
+        self.txt_occurences_value = QLineEdit()
+        self.txt_occurences_value.setText('-9999')
+        self.txt_occurences_value.setToolTip(
+            'Enter the value that shall be used for an occurence in the '
+            'final output data')
+        self.txt_occurences_value.setValidator(QDoubleValidator())
+        self.cb_remove_occurences = QCheckBox('Remove on apply')
+        self.cb_remove_occurences.setChecked(False)
+        self.cb_remove_occurences.setToolTip(
+            'Remove the selected features in the plot when clicking the '
+            '<i>apply</i> button.')
+        self.cb_remove_occurences.setVisible(False)
 
         self.tree_bar_split = BarSplitter(straditizer_widgets)
 
@@ -350,7 +368,10 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_show_small_parts, self.txt_min_size,
             self.btn_align_vertical,
             self.btn_edit_samples, self.btn_find_samples,
-            self.btn_load_samples]
+            self.btn_load_samples,
+            self.btn_select_occurences, self.btn_edit_occurences,
+            self.txt_occurences_value,
+            ]
 
         self.init_reader_kws = {}
 
@@ -398,6 +419,11 @@ class DigitizingControl(StraditizerControlBase):
             self.select_exaggerated_features)
         self.cb_edit_separate.stateChanged.connect(self.toggle_txt_edit_rows)
         self.cb_max_lw.stateChanged.connect(self.toggle_sp_max_lw)
+        self.btn_select_occurences.clicked.connect(
+            self.enable_occurences_selection)
+        self.btn_edit_occurences.clicked.connect(self.edit_occurences)
+        self.txt_occurences_value.textChanged.connect(
+            self.set_occurences_value)
 
         # disable warning if bars cannot be separated
         warnings.filterwarnings('ignore', 'Could not separate bars',
@@ -425,6 +451,8 @@ class DigitizingControl(StraditizerControlBase):
                 reader or self.straditizer.data_reader))
             if reader is not None:
                 self.txt_exag_factor.setText(str(reader.is_exaggerated))
+            self.txt_occurences_value.setText(
+                str(self.straditizer.data_reader.occurences_value))
         self.fill_cb_readers()
 
     def toggle_sp_max_lw(self, state):
@@ -587,6 +615,13 @@ class DigitizingControl(StraditizerControlBase):
         self.maybe_show_btn_reset_samples()
         self.refresh()
 
+    def set_occurences_value(self, value):
+        try:
+            value = float(value)
+        except (ValueError, TypeError):
+            return
+        self.straditizer.data_reader.occurences_value = value
+
     def setup_children(self, item):
 
         self.add_info_button(item, 'straditize_steps.rst')
@@ -690,7 +725,33 @@ class DigitizingControl(StraditizerControlBase):
         w.setLayout(vbox)
         self.tree.setItemWidget(child2, 0, w)
 
-        # 3: parts to remove features from the binary image
+        # 3: occurences
+        self.occurences_child = child = QTreeWidgetItem(0)
+        child.setText(0, 'Occurences')
+        item.addChild(child)
+        child2 = QTreeWidgetItem(0)
+        child.addChild(child2)
+        w = QWidget()
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.btn_select_occurences)
+        hbox.addWidget(self.cb_remove_occurences)
+        w.setLayout(hbox)
+        self.tree.setItemWidget(child2, 0, w)
+
+        child2 = QTreeWidgetItem(0)
+        child.addChild(child2)
+        w = QWidget()
+        hbox = QHBoxLayout()
+        hbox.addWidget(QLabel('Occurence value:'))
+        hbox.addWidget(self.txt_occurences_value)
+        w.setLayout(hbox)
+        self.tree.setItemWidget(child2, 0, w)
+
+        child2 = QTreeWidgetItem(0)
+        child.addChild(child2)
+        self.tree.setItemWidget(child2, 0, self.btn_edit_occurences)
+
+        # 4: parts to remove features from the binary image
         self.remove_child = child = QTreeWidgetItem(0)
         child.setText(0, 'Remove features')
         item.addChild(child)
@@ -803,14 +864,14 @@ class DigitizingControl(StraditizerControlBase):
         highlight_child.addChild(highlight_child2)
         self.tree.setItemWidget(highlight_child2, 0, w)
 
-        # 4: digitize button
+        # 5: digitize button
         self.digitize_item = child = QTreeWidgetItem(0)
         item.addChild(child)
         self.tree.setItemWidget(child, 0, self.btn_digitize)
         self.add_info_button(child, 'digitize.rst',
                              connections=[self.btn_digitize])
 
-        # 5: bar splitter
+        # 6: bar splitter
         self.bar_split_child = QTreeWidgetItem(0)
         self.bar_split_child.setText(0, 'Split too long bars')
         child2 = QTreeWidgetItem(0)
@@ -819,7 +880,7 @@ class DigitizingControl(StraditizerControlBase):
         item.addChild(self.bar_split_child)
         self.bar_split_child.setHidden(not self.tree_bar_split.filled)
 
-        # 6: edit samples button
+        # 7: edit samples button
         self.edit_samples_child = child = QTreeWidgetItem(0)
         child.setText(0, 'Edit samples')
         item.addChild(child)
@@ -1142,6 +1203,28 @@ class DigitizingControl(StraditizerControlBase):
         tb.auto_expand = True
         self.straditizer.draw_figure()
 
+    def enable_occurences_selection(self):
+        """Enable the selection of occurences"""
+        tb = self.selection_toolbar
+        tb.data_obj = 'Reader'
+        reader = tb.data_obj
+        self.apply_button.clicked.connect(self.select_occurences)
+        self.cancel_button.clicked.connect(
+            partial(self.cb_remove_occurences.setVisible, False))
+        tb.start_selection(reader.labels, rgba=reader.image_array(),
+                           remove_on_apply=False)
+        self.cb_remove_occurences.setVisible(True)
+        if not tb.wand_action.isChecked():
+            tb.wand_action.setChecked(True)
+            tb.toggle_selection()
+        self.straditizer.draw_figure()
+
+    def select_occurences(self):
+        self.reader.get_occurences()
+        if self.cb_remove_occurences.isChecked():
+            self.reader.remove_selected_labels(disable=False)
+        self.cb_remove_occurences.setVisible(False)
+
     def show_disconnected_parts(self):
         """Remove disconnected parts"""
         tb = self.selection_toolbar
@@ -1236,6 +1319,15 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.marks_for_data_selection()
         self.straditizer.draw_figure()
         self.connect2apply(self.straditizer.update_data_part,
+                           self.straditizer.draw_figure,
+                           self.straditizer_widgets.refresh)
+        self.connect2cancel(self.straditizer.remove_marks,
+                            self.straditizer.draw_figure)
+
+    def edit_occurences(self):
+        self.straditizer.marks_for_occurences()
+        self.straditizer.draw_figure()
+        self.connect2apply(self.straditizer.update_occurences,
                            self.straditizer.draw_figure,
                            self.straditizer_widgets.refresh)
         self.connect2cancel(self.straditizer.remove_marks,
