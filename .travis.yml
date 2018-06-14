@@ -80,7 +80,7 @@ script:
 
 before_deploy:
     - 'export FINAL_FILE="$(ls straditize-conda-*-${OS_NAME}-*.sh) $(ls straditize-conda-*-${OS_NAME}-*.pkg || :)"'
-    - if [[ $TRAVIS_BRANCH == nightly ]]; then
+    - if [[ $TRAVIS_TAG == "" ]]; then
           conda install conda-build anaconda-client;
           export BUILDS="$(ls $HOME/miniconda/conda-bld/${TRAVIS_OS_NAME}-64/*.tar.bz2)";
       fi
