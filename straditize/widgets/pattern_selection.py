@@ -95,7 +95,8 @@ class PatternSelectionWidget(QWidget, DockMixin):
 
         # cancel and close button
         self.btn_cancel = QPushButton('Cancel')
-        self.btn_close = QPushButton('Close')
+        self.btn_close = QPushButton('Apply')
+        self.btn_close.setEnabled(False)
 
         vbox = QVBoxLayout()
 
@@ -219,6 +220,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
             self._select_cmap = obj._select_cmap
             self._select_norm = obj._select_norm
             self.btn_select.setText('Reset')
+            self.btn_close.setEnabled(True)
             obj.unselect_all_labels()
             self.sl_thresh.setVisible(True)
             self.lbl_thresh.setVisible(True)
@@ -230,6 +232,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
                 obj.select_labels(self._selected_labels)
             del self._orig_selection_arr, self._selected_labels
             self.btn_select.setText('Select pattern')
+            self.btn_close.setEnabled(False)
             self.sl_thresh.setVisible(False)
             self.lbl_thresh.setVisible(False)
             obj.draw_figure()
