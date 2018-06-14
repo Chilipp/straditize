@@ -6,7 +6,7 @@ dependencies:
     - python=3.6
     - psyplot-gui
     - pygments
-    - sphinx
+    - sphinx!=1.7.5
     - psy-simple
     - sphinx-argparse
     - autodocsumm
