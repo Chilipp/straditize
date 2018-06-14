@@ -120,7 +120,7 @@ class ExportDfDialog(QDialog):
                 if self.cb_include_meta.isChecked():
                     for t in meta.iloc[:, 0].items():
                         f.write('# %s: %s\n' % t)
-                self.df.to_csv(f)
+            self.df.to_csv(fname, mode='a')
         self.accept()
 
     @classmethod
