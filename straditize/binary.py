@@ -1769,7 +1769,7 @@ class DataReader(LabelSelection):
         def insert_occs(col, indices):
             if col not in occurences:
                 return indices
-            occs = occurences[col]
+            occs = occurences[col].astype(int)
             for i, (s, e) in enumerate(indices):
                 found = occs[(s <= occs) & (e >= occs)]
                 if len(found):
