@@ -697,6 +697,9 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
                 self._lastCursor = cursors.POINTER
 
     def end_selection(self):
+        if getattr(self, '_pattern_selection', None) is not None:
+            self._pattern_selection.close()
+            del self._pattern_selection
         self._selecting = False
         self._action_clicked = None
         self.toggle_selection()
