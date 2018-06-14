@@ -193,8 +193,10 @@ class CrossMarks(object):
             Any other keyword argument that is passed to the
             :func:`matplotlib.pyplot.plot` function
         """
-        self.xa = np.asarray([pos[0]] if not np.ndim(pos[0]) else pos[0])
-        self.ya = np.asarray([pos[1]] if not np.ndim(pos[1]) else pos[1])
+        self.xa = np.asarray([pos[0]] if not np.ndim(pos[0]) else pos[0],
+                             dtype=float)
+        self.ya = np.asarray([pos[1]] if not np.ndim(pos[1]) else pos[1],
+                             dtype=float)
         self._xa0 = self.xa.copy()
         self._ya0 = self.ya.copy()
         self._constant_dist_x = []
