@@ -25,6 +25,7 @@ requirements:
     - scipy
     - scikit-image
     - openpyxl
+    - sphinx!=1.7.5
 
 test:
   requires:
