@@ -112,10 +112,6 @@ class EditSamplesTest(bt.StraditizeWidgetsTestCase):
         df = self.reader.sample_locs
         new_y = np.mean(df.index.values[:2])
         # add new marks
-        print('+' * 80)
-        print(self.straditizer.mark_cids.intersection(
-            self.straditizer.fig.canvas.callbacks.callbacks))
-        print('-' * 80)
         self.add_mark((self.data_xlim[0] + 2, self.data_ylim[0] + new_y))
         # check index
         self.assertEqual(float(model._get_cell_data(1, 0)), new_y)
