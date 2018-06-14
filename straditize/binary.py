@@ -1227,7 +1227,7 @@ class DataReader(LabelSelection):
         df = self._full_df
         bounds = self.all_column_bounds
         for col, ((start, end), pixel) in enumerate(zip_longest(
-                bounds, pixels, lfillvalue=pixels[-1])):
+                bounds, pixels, fillvalue=pixels[-1])):
             if pixel:  # shift the column upwards
                 arr[:-pixel, start:end] = arr[pixel:, start:end]
                 arr[-pixel:, start:end] = 0
