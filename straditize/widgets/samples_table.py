@@ -219,7 +219,10 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
                 break
         if found:
             for m in self.marks[i][1]:
-                m.moved.disconnect(self.update_after_move)
+                try:
+                    m.moved.disconnect(self.update_after_move)
+                except ValueError:
+                    pass
             del self.marks[i]
             self.beginRemoveRows(QtCore.QModelIndex(), i, i)
             self.endRemoveRows()
@@ -251,7 +254,10 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
 
     def delRow(self, irow):
         for mark in self.marks[irow][1]:
-            mark.moved.disconnect(self.update_after_move)
+            try:
+                mark.moved.disconnect(self.update_after_move)
+            except ValueError:
+                pass
             try:
                 self._remove_mark(mark)
             except ValueError:
@@ -377,6 +383,7 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
         idx = self.marks.index(new)
         self.beginInsertRows(QtCore.QModelIndex(), idx, idx)
         self.endInsertRows()
+        mark.moved.connect(self.update_after_move)
         self.update_lines()
 
     def remove_mark(self, mark):
@@ -386,7 +393,10 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
                 found = True
                 break
         if found:
-            mark.moved.disconnect(self.update_after_move)
+            try:
+                mark.moved.disconnect(self.update_after_move)
+            except ValueError:
+                pass
             del self.marks[i]
             self.beginRemoveRows(QtCore.QModelIndex(), i, i)
             self.endRemoveRows()
@@ -418,7 +428,10 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
 
     def delRow(self, irow):
         mark = self.marks[irow][1]
-        mark.moved.disconnect(self.update_after_move)
+        try:
+            mark.moved.disconnect(self.update_after_move)
+        except ValueError:
+            pass
         try:
             self._remove_mark(mark)
         except ValueError:
