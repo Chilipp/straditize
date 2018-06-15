@@ -184,7 +184,7 @@ class OccurencesTest(bt.StraditizeWidgetsTestCase):
         self.assertEqual(self.reader.occurences, {(11, 6), (17, 14)})
 
     def test_edit_occurences(self):
-        self.test_select_occurences()
+        self.test_01_select_occurences()
         QTest.mouseClick(self.digitizer.btn_edit_occurences, Qt.LeftButton)
         self.move_mark(self.straditizer.marks[0], by=[0, -1])
         QTest.mouseClick(self.straditizer_widgets.apply_button, Qt.LeftButton)
@@ -194,7 +194,7 @@ class OccurencesTest(bt.StraditizeWidgetsTestCase):
 
     def test_samples(self):
         """Test whether the samples are correctly highlighted"""
-        self.test_select_occurences()
+        self.test_01_select_occurences()
         self.reader.digitize()
         self.digitizer.set_occurences_value('')
         self.digitizer.set_occurences_value('900')
