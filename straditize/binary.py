@@ -2015,7 +2015,7 @@ class DataReader(LabelSelection):
         if self._rough_locs is None:
             missing = df.index
         else:
-            missing = df.index[~df.index.isin(self.rough_locs.index)]
+            missing = df.index[~df.index.isin(self._rough_locs.index)]
         # add missing samples
         if len(missing):
             rough = np.tile(missing[:, np.newaxis], (1, len(df.columns) * 2))
@@ -2025,15 +2025,16 @@ class DataReader(LabelSelection):
                 columns=pd.MultiIndex.from_product(
                     [df.columns, ['vmin', 'vmax']]))
             if self._rough_locs is None:
-                self.rough_locs = new
+                self._rough_locs = new
             else:
-                self.rough_locs = new.combine_first(
-                    self.rough_locs).astype(int)
-        rough = self.rough_locs
+                self._rough_locs = new.combine_first(
+                    self._rough_locs).astype(int)
+        rough = self._rough_locs
         # remove sample that are not in df
-        to_remove = rough.index[~rough.index.isin(df.index)]
-        if len(to_remove):
-            rough.drop(to_remove, inplace=True)
+        if rough is not None:
+            to_remove = rough.index[~rough.index.isin(df.index)]
+            if len(to_remove):
+                rough.drop(to_remove, inplace=True)
 
     def _add_samples_from_array(self, samples):
         df = self.sample_locs
