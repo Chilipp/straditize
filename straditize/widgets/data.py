@@ -1327,7 +1327,7 @@ class DigitizingControl(StraditizerControlBase):
     def edit_occurences(self):
         self.straditizer.marks_for_occurences()
         self.straditizer.draw_figure()
-        self.connect2apply(self.straditizer.update_occurences,
+        self.connect2apply(partial(self.straditizer.update_occurences, True),
                            self.straditizer.draw_figure,
                            self.straditizer_widgets.refresh)
         self.connect2cancel(self.straditizer.remove_marks,

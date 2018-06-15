@@ -164,6 +164,46 @@ class RemoverTest(bt.StraditizeWidgetsTestCase):
                 'basic_diagram_cross_col_removed.png'))
 
 
+class OccurencesTest(bt.StraditizeWidgetsTestCase):
+    """A test case for handling occurences"""
+
+    def test_01_select_occurences(self):
+        """Test the selection of occurences"""
+        self.init_reader('basic_diagram_occurences.png')
+        self.reader.column_starts = self.column_starts
+        self.straditizer_widgets.refresh()
+        QTest.mouseClick(self.digitizer.btn_select_occurences, Qt.LeftButton)
+        labels = self.reader.labels
+        self.reader.select_labels(np.array(
+            [labels[5, 11], labels[13, 17]]))
+        self.digitizer.cb_remove_occurences.setChecked(True)
+        QTest.mouseClick(self.straditizer_widgets.apply_button, Qt.LeftButton)
+        # make sure that the occurences have been removed
+        self.assertBinaryImageEquals(
+            self.reader.binary, self.get_fig_path('basic_diagram_binary.png'))
+        self.assertEqual(self.reader.occurences, {(11, 6), (17, 14)})
+
+    def test_edit_occurences(self):
+        self.test_select_occurences()
+        QTest.mouseClick(self.digitizer.btn_edit_occurences, Qt.LeftButton)
+        self.move_mark(self.straditizer.marks[0], by=[0, -1])
+        QTest.mouseClick(self.straditizer_widgets.apply_button, Qt.LeftButton)
+        self.assertEqual(
+            {c: list(v) for c, v in self.reader.occurences_dict.items()},
+            {1: [5], 2: [14]})
+
+    def test_samples(self):
+        """Test whether the samples are correctly highlighted"""
+        self.test_select_occurences()
+        self.reader.digitize()
+        self.digitizer.set_occurences_value('')
+        self.digitizer.set_occurences_value('900')
+        self.digitizer.find_samples()
+        df = self.reader.sample_locs
+        self.assertEqual(df.iloc[1, 1], 900)
+        self.assertEqual(df.iloc[2, 2], 900)
+
+
 class DigitizerTest(bt.StraditizeWidgetsTestCase):
     """A TestCase for testing general features of the digitizer control"""
 
