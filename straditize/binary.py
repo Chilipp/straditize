@@ -2016,6 +2016,7 @@ class DataReader(LabelSelection):
             missing = df.index
         else:
             missing = df.index[~df.index.isin(self.rough_locs.index)]
+        # add missing samples
         if len(missing):
             rough = np.tile(missing[:, np.newaxis], (1, len(df.columns) * 2))
             rough[:, 1::2] += 1
@@ -2028,6 +2029,11 @@ class DataReader(LabelSelection):
             else:
                 self.rough_locs = new.combine_first(
                     self.rough_locs).astype(int)
+        rough = self.rough_locs
+        # remove sample that are not in df
+        to_remove = rough.index[~rough.index.isin(df.index)]
+        if len(to_remove):
+            rough.drop(to_remove, inplace=True)
 
     def _add_samples_from_array(self, samples):
         df = self.sample_locs
