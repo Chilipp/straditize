@@ -17,7 +17,7 @@ from straditize.navigation_slider import (HorizontalNavigationSlider,
                                           VerticalNavigationSlider)
 from psyplot.utils import _temp_bool_prop
 import skimage.morphology as skim
-import xarray as xrL
+import xarray as xr
 
 
 common_attributes = [
