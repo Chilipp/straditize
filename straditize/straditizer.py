@@ -17,12 +17,13 @@ from straditize.navigation_slider import (HorizontalNavigationSlider,
                                           VerticalNavigationSlider)
 from psyplot.utils import _temp_bool_prop
 import skimage.morphology as skim
-import xarray as xr
+import xarray as xrL
 
 
 common_attributes = [
     'Digitized by', 'sitename', 'sigle', 'Lon', 'Lat', 'Archive', 'Country',
-    'Elevation', 'Restricted', 'Reference', 'DOI']
+    'Elevation', 'Restricted', 'Reference', 'DOI', 'Y-axis name',
+    'Data type', 'Is modern']
 
 default_attrs = pd.DataFrame(
     np.zeros((len(common_attributes), 1), dtype=object),
@@ -845,7 +846,7 @@ class Straditizer(LabelSelection):
         """Set the occurences from the given marks"""
         def get_pos(mark):
             pos = mark.pos
-            return (pos[0] - x0, pos[1] - y0)
+            return (int(pos[0] - x0), int(pos[1] - y0))
         x0 = self.data_xlim[0]
         y0 = self.data_ylim[0]
         self.data_reader.occurences = set(map(get_pos, self.marks))
