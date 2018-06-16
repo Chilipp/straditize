@@ -62,12 +62,13 @@ install:
         conda install conda-build constructor
         conda info -a
     - reset_secure
+    - export CONSTRUCTOR_DIR=$HOME/.conda/constructor/$TRAVIS_OS_NAME-64
 script:
     # unset the global SWITCH_DRIVE_PW variable because it is not needed during
     # the tests. This decreases the vulnerability
     - unset_secure
     # install conda
-    - conda build conda-recipe
+    - conda build conda-recipe && mv $HOME/miniconda/pkgs/*.tar.bz2 $CONSTRUCTOR_DIR
     - constructor straditize-conda
     # test the installer
     - DEBUG_STRADITIZE_INSTALLATION=1 NO_STRADITIZE_ALIAS=1 NO_STRADITIZE_APP=1 bash straditize-conda-*-"${OS_NAME}"-*.sh -p $HOME/straditize-conda -b
