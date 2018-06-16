@@ -350,6 +350,8 @@ class DigitizingControl(StraditizerControlBase):
         self.cb_remove_occurences.setVisible(False)
 
         self.tree_bar_split = BarSplitter(straditizer_widgets)
+        self.cb_split_source = QComboBox()
+        self.cb_split_source.addItems(['too long bars', 'all bars'])
 
         self.widgets2disable = [
             self.btn_column_starts, self.btn_column_ends,
@@ -370,7 +372,7 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_edit_samples, self.btn_find_samples,
             self.btn_load_samples,
             self.btn_select_occurences, self.btn_edit_occurences,
-            self.txt_occurences_value,
+            self.txt_occurences_value, self.cb_split_source
             ]
 
         self.init_reader_kws = {}
@@ -424,6 +426,8 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_edit_occurences.clicked.connect(self.edit_occurences)
         self.txt_occurences_value.textChanged.connect(
             self.set_occurences_value)
+        self.cb_split_source.currentIndexChanged.connect(
+            self.toggle_bar_split_source)
 
         # disable warning if bars cannot be separated
         warnings.filterwarnings('ignore', 'Could not separate bars',
@@ -434,9 +438,11 @@ class DigitizingControl(StraditizerControlBase):
         self.tree_bar_split.refresh()
         self.bar_split_child.setHidden(not self.tree_bar_split.filled)
         if self.tree_bar_split.filled:
-            self.bar_split_child.setText(0, 'Split %i too long columns' % (
+            self.cb_split_source.setItemText(0, '%i too long bars' % (
                 sum(map(len, self.straditizer.data_reader._splitted.values())))
                 )
+        else:
+            self.cb_split_source.setItemText(0, 'too long bars')
         self.maybe_show_btn_reset_columns()
         self.maybe_show_btn_reset_samples()
         for w in [self.btn_init_reader, self.btn_digitize]:
@@ -873,7 +879,10 @@ class DigitizingControl(StraditizerControlBase):
 
         # 6: bar splitter
         self.bar_split_child = QTreeWidgetItem(0)
-        self.bar_split_child.setText(0, 'Split too long bars')
+        self.bar_split_child.setText(0, 'Split bars manually')
+        child2 = QTreeWidgetItem(0)
+        self.bar_split_child.addChild(child2)
+        self.tree.setItemWidget(child2, 0, self.cb_split_source)
         child2 = QTreeWidgetItem(0)
         self.bar_split_child.addChild(child2)
         self.tree.setItemWidget(child2, 0, self.tree_bar_split)
@@ -935,6 +944,9 @@ class DigitizingControl(StraditizerControlBase):
         w.setLayout(samples_box)
         edit_child.addChild(edit_child2)
         self.tree.setItemWidget(edit_child2, 0, w)
+
+    def toggle_bar_split_source(self, i):
+        self.tree_bar_split.fill_table('too-long' if i == 0 else 'all')
 
     def init_reader(self):
         """Initialize the reader"""
@@ -1407,20 +1419,29 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         self.filled = False
         self._enable_doubleclick = False
         self.itemDoubleClicked.connect(self.start_splitting)
+        self.source = 'too-long'
         try:
             if self.straditizer.data_reader._splitted:
                 self.fill_table()
         except AttributeError:
             pass
 
-    def fill_table(self):
+    def fill_table(self, source='too-long'):
         """Fill the table with the bars that should be splitted"""
         self.clear()
-        self.filled = False
-        try:
-            items = self.straditizer.data_reader._splitted.items()
-        except AttributeError:
-            return
+        self.filled = self._enable_doubleclick = False
+        self.source = source
+        if source == 'too-long':
+            try:  # use the bars that should be splitted
+                items = self.straditizer.data_reader._splitted.items()
+            except AttributeError:
+                return
+        else:  # use all bars
+            try:
+                items = enumerate(self.straditizer.data_reader._all_indices)
+            except AttributeError:
+                return
+        self.filled = True
         for col, lists in sorted(items):
             if not lists:
                 continue
@@ -1431,12 +1452,18 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                 child.setText(0, ', '.join(map(str, range(*indices))))
                 top.addChild(child)
             self.addTopLevelItem(top)
-            self.filled = True
             self._enable_doubleclick = True
 
     def refresh(self):
         """Reimplemented to use the :meth:`fill_table` method"""
-        self.fill_table()
+        currently_expanded = [
+            self._get_col(item)
+            for item in map(self.topLevelItem, range(self.topLevelItemCount()))
+            if item.isExpanded()]
+        self.fill_table(self.source)
+        for item in map(self.topLevelItem, range(self.topLevelItemCount())):
+            if self._get_col(item) in currently_expanded:
+                item.setExpanded(True)
 
     def start_splitting(self, item, *args, **kwargs):
         parent = item.parent()
@@ -1483,7 +1510,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         if self.prev_action is None:
             self.add_toolbar_widgets()
         if self._enable_doubleclick:
-            self.connect2apply(self.split_cols, self.remove_lines,
+            self.connect2apply(self.split_bars, self.remove_lines,
                                self.disconnect, self.remove_actions,
                                reader.draw_figure,
                                self.straditizer_widgets.digitizer.refresh)
@@ -1588,8 +1615,12 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                     self.straditizer.data_reader.draw_figure()
                     break
 
-    def split_cols(self):
-        """Split the columns after they have been separated manually"""
+    def _get_col(self, item):
+        """Convenience method for getting the column of a toplevel item"""
+        return int(item.text(0).split()[1])
+
+    def split_bars(self):
+        """Split the bars after they have been separated manually"""
 
         def reset_values(col, indices):
             reader._full_df.loc[indices, col] = reader._full_df_orig.loc[
@@ -1597,7 +1628,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
 
         reader = self.straditizer.data_reader
         for item in map(self.topLevelItem, range(self.topLevelItemCount())):
-            col = int(item.text(0).split()[1])
+            col = self._get_col(item)
             for child in map(item.child, range(item.childCount())):
                 nchildren = child.childCount()
                 if not nchildren:
@@ -1617,7 +1648,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                                 i, [indices[0], indices[-1] + 1])
                             reset_values(col, indices)
                         break
-                for i, l in enumerate(reader._splitted[col]):
+                for i, l in enumerate(reader._splitted.get(col, [])):
                     if l[0] == all_indices[0]:
                         del reader._splitted[col][i]
                         break
