@@ -63,6 +63,7 @@ install:
         conda info -a
     - reset_secure
     - export CONSTRUCTOR_DIR=$HOME/.conda/constructor/$TRAVIS_OS_NAME-64
+    - mkdir -p $CONSTRUCTOR_DIR
 script:
     # unset the global SWITCH_DRIVE_PW variable because it is not needed during
     # the tests. This decreases the vulnerability
