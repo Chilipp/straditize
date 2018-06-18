@@ -1011,7 +1011,7 @@ class Straditizer(LabelSelection):
                 [mark._is_occurence for mark in self.marks], bool)
             data[is_occurence] = self.data_reader.occurences_value
             df = pd.DataFrame(data, index=index.astype(int)).sort_index()
-            self.data_reader.sample_locs = df
+            self.data_reader.sample_locs = df.drop_duplicates()
             self.data_reader._update_rough_locs()
         if remove:
             self.remove_marks()
@@ -1132,7 +1132,7 @@ class Straditizer(LabelSelection):
                 (len(index), ncols + 1))
         data[is_occurence] = self.data_reader.occurences_value
         df = pd.DataFrame(data[:, :-1], index=index).sort_index()
-        self.data_reader.sample_locs = df
+        self.data_reader.sample_locs = df.drop_duplicates()
         self.data_reader._update_rough_locs()
         if remove:
             self.remove_marks()
