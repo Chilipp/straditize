@@ -1,6 +1,4 @@
 environment:
-    STRADITIZE_PYTHON: "C:\\straditize-conda-installation"
-
     matrix:
         - PYTHON: "C:\\Miniconda36-x64"
           PYTHON_ARCH: "64"
