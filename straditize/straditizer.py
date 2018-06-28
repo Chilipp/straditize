@@ -43,7 +43,7 @@ def format_coord_func(ax, ref):
     ax: matplotlib.axes.Axes
         The axes instance
     ref: weakref.weakref
-        The reference to the :class:`~psyplot.plotter.Formatoption` instance
+        The reference to the :class:`Straditizer` instance
 
     Returns
     -------
@@ -54,14 +54,23 @@ def format_coord_func(ax, ref):
 
     def func(x, y):
         orig_s = orig_format_coord(x, y)
-        fmto = ref()
-        if fmto is None:
+        stradi = ref()
+        if stradi is None or stradi.data_reader is None:
             return orig_s
-        try:
-            orig_s += fmto.add2format_coord(x, y)
-        except Exception:
-            fmto.logger.debug(
-                'Failed to get plot informations for status bar!', exc_info=1)
+        data_x = x - stradi.data_xlim[0]
+        data_y = y - stradi.data_ylim[0]
+        orig_s += 'DataReader: x=%s y=%s' % (ax.format_xdata(data_x),
+                                             ax.format_ydata(data_y))
+        if (stradi.data_reader._column_starts is not None and
+                x > stradi.data_xlim[0] and x < stradi.data_xlim[1]):
+            col = next(
+                (i for i, (s, e) in enumerate(
+                    stradi.data_reader.all_column_bounds)
+                 if data_x >= s and data_x <= e),
+                None)
+            if col is not None:
+                col_x = data_x - stradi.data_reader.all_column_starts[col]
+                orig_s += 'Column %i x=%s' % (col, ax.format_xdata(col_x))
         return orig_s
 
     return func
@@ -301,9 +310,8 @@ class Straditizer(LabelSelection):
             self._horizontal_slider = HorizontalNavigationSlider(ax)
             self._vertical_slider = VerticalNavigationSlider(ax)
         if self._orig_format_coord is None:
-            ax.format_coord = format_coord_func(
-                ax, weakref.ref(self.format_coord))
             self._orig_format_coord = ax.format_coord
+            ax.format_coord = format_coord_func(ax, weakref.ref(self))
 
     def set_attr(self, key, value):
         """Update an attribute in the :attr:`attrs`"""
@@ -565,40 +573,6 @@ class Straditizer(LabelSelection):
                 self.magni_colnames_box.remove()
             except ValueError:
                 pass
-
-    def format_coord(self, x, y):
-        """Format x and y to include the :attr:`data_reader` attribute
-
-        Parameters
-        ----------
-        x: float
-            The x-coordinate in the axes
-        y: float
-            The y-coordinate in the axes
-
-        Returns
-        -------
-        function
-            The function that can be used to replace `ax.format_coord`
-        """
-        orig_s = self._orig_format_coord(x, y)
-        ax = self.ax
-        if self.data_reader is not None:
-            data_x = x - self.data_xlim[0]
-            data_y = y - self.data_ylim[0]
-            orig_s += 'DataReader: x=%s y=%s' % (ax.format_xdata(data_x),
-                                                 ax.format_ydata(data_y))
-            if (self.data_reader._column_starts is not None and
-                    x > self.data_xlim[0] and x < self.data_xlim[1]):
-                col = next(
-                    (i for i, (s, e) in enumerate(
-                        self.data_reader.all_column_bounds)
-                     if data_x >= s and data_x <= e),
-                    None)
-                if col is not None:
-                    col_x = data_x - self.data_reader.all_column_starts[col]
-                    orig_s += 'Column %i x=%s' % (col, ax.format_xdata(col_x))
-        return orig_s
 
     def marks_for_x_values(self, at_col_start=True):
         """Create two marks for selecting the x-values
