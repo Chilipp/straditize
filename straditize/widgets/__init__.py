@@ -234,10 +234,12 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     def disable_apply_button(self):
         """Method that is called when the :attr:`cancel_button` is clicked"""
-        self.apply_button.clicked.disconnect()
-        self.cancel_button.clicked.disconnect()
-        self.apply_button.setEnabled(False)
-        self.cancel_button.setEnabled(False)
+        for w in [self.apply_button, self.cancel_button]:
+            try:
+                w.clicked.disconnect()
+            except TypeError:
+                pass
+            w.setEnabled(False)
         self.apply_button.setText('Apply')
         self.cancel_button.setText('Cancel')
         self.refresh_button.setEnabled(True)
@@ -265,6 +267,11 @@ class StraditizerWidgets(QWidget, DockMixin):
             self.dock.toggleViewAction().triggered.connect(
                 self.show_or_hide_toolbar)
             self.menu_actions.setup_menu_actions(main)
+            try:
+                main.open_file_options['Straditize project'] = \
+                    self.create_straditizer_from_args
+            except AttributeError:  # psyplot-gui <= 1.1.0
+                pass
         return ret
 
     def show_or_hide_toolbar(self):
@@ -275,8 +282,9 @@ class StraditizerWidgets(QWidget, DockMixin):
         receives a 'straditize' callback"""
         self.create_straditizer_from_args(*args)
 
-    def create_straditizer_from_args(self, fnames, project, xlim, ylim,
-                                     full, reader_type):
+    def create_straditizer_from_args(
+                self, fnames, project=None, xlim=None, ylim=None, full=False,
+                reader_type='area'):
             fname = fnames[0]
             if fname is not None:
                 self.menu_actions.open_straditizer(fname)
@@ -297,6 +305,7 @@ class StraditizerWidgets(QWidget, DockMixin):
                 self.refresh()
             if not self.is_shown:
                 self.switch_to_straditizer_layout()
+            return fname is not None
 
     def start_tutorial(self, state):
         from straditize.widgets.tutorial import Tutorial
@@ -392,6 +401,8 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     def _close_stradi(self, stradi):
         is_current = stradi is self.straditizer
+        if is_current:
+            self.selection_toolbar.disconnect()
         stradi.close()
         try:
             i = self._straditizers.index(stradi)
@@ -405,15 +416,23 @@ class StraditizerWidgets(QWidget, DockMixin):
         elif not self._straditizers:
             self.straditizer = None
             self.refresh()
+        self.digitizer.digitize_item.takeChildren()
+        self.digitizer.btn_digitize.setChecked(False)
+        self.digitizer.btn_digitize.setCheckable(False)
 
     def close_straditizer(self):
         self._close_stradi(self.straditizer)
 
     def close_all_straditizers(self):
+        self.selection_toolbar.disconnect()
         for stradi in self._straditizers:
             stradi.close()
         self._straditizers.clear()
+        self.straditizer = None
         self.stradi_combo.clear()
+        self.digitizer.digitize_item.takeChildren()
+        self.digitizer.btn_digitize.setChecked(False)
+        self.digitizer.btn_digitize.setCheckable(False)
         self.refresh()
 
     def add_straditizer(self, stradi):
@@ -421,6 +440,21 @@ class StraditizerWidgets(QWidget, DockMixin):
             self._straditizers.append(stradi)
             self.stradi_combo.addItem(' ')
             self.set_current_stradi(len(self._straditizers) - 1)
+
+    def reset_control(self):
+        if getattr(self.selection_toolbar, '_pattern_selection', None):
+            self.selection_toolbar._pattern_selection.dock.close()
+            del self.selection_toolbar._pattern_selection
+        if getattr(self.digitizer, '_samples_editor', None):
+            self.digitizer._close_samples_fig()
+        tb = self.selection_toolbar
+        tb.set_label_wand_mode()
+        tb.set_rect_select_mode()
+        tb.new_select_action.setChecked(True)
+        tb.select_action.setChecked(False)
+        tb.wand_action.setChecked(False)
+        self.disable_apply_button()
+        self.close_all_straditizers()
 
 
 class StraditizerControlBase(object):

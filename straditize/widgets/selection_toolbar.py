@@ -606,19 +606,23 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self.pattern_type = 'grey'
         self.select_pattern_action.setIcon(QIcon(get_icon('pattern_grey.png')))
 
-    def toggle_selection(self):
-        """Activate selection mode"""
-        if self.canvas is None:
-            return
+    def disconnect(self):
         if self.set_cursor_id is not None:
-            self.canvas.mpl_disconnect(self.set_cursor_id)
-            self.canvas.mpl_disconnect(self.reset_cursor_id)
+            if self.canvas is None:
+                self.canvas.mpl_disconnect(self.set_cursor_id)
+                self.canvas.mpl_disconnect(self.reset_cursor_id)
             self.set_cursor_id = None
             self.reset_cursor_id = None
 
         if self.selector is not None:
             self.selector.disconnect_events()
             self.selector = None
+
+    def toggle_selection(self):
+        """Activate selection mode"""
+        if self.canvas is None:
+            return
+        self.disconnect()
 
         key = next((key for key, a in self._actions.items() if a.isChecked()),
                    None)
@@ -878,15 +882,15 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             arr[mask & data_mask] = arr.max() + 1
         return arr
 
+    def _remove_selected_labels(self):
+        self.data_obj.remove_selected_labels(disable=True)
+
+    def _disable_selection(self):
+            return self.data_obj.disable_label_selection()
+
     def start_selection(self, arr=None, rgba=None,
                         rect_callbacks=None, poly_callbacks=None,
                         apply_funcs=(), cancel_funcs=(), remove_on_apply=True):
-        def disable():
-            return obj.disable_label_selection()
-
-        def remove():
-            obj.remove_selected_labels(disable=True)
-
         obj = self.data_obj
         if arr is not None:
             obj.enable_label_selection(
@@ -900,11 +904,12 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             self._wand_actions['color_select'].setEnabled(False)
         else:
             self._wand_actions['color_select'].setEnabled(True)
-        self.connect2apply(remove if remove_on_apply else disable,
-                           obj.remove_small_selection_ellipses,
-                           obj.draw_figure,
-                           self.end_selection, *apply_funcs)
-        self.connect2cancel(disable,
+        self.connect2apply(
+            (self._remove_selected_labels if remove_on_apply else
+             self._disable_selection),
+            obj.remove_small_selection_ellipses, obj.draw_figure,
+            self.end_selection, *apply_funcs)
+        self.connect2cancel(self._disable_selection,
                             obj.remove_small_selection_ellipses,
                             obj.draw_figure,
                             self.end_selection, *cancel_funcs)
@@ -919,3 +924,4 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             self._rect_callbacks = rect_callbacks[:]
         if poly_callbacks is not None:
             self._poly_callbacks = poly_callbacks[:]
+        del obj

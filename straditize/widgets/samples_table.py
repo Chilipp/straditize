@@ -1,5 +1,6 @@
 """A table for manipulating samples"""
 from __future__ import division
+import weakref
 import six
 import numpy as np
 import pandas as pd
@@ -20,7 +21,15 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
     def fig(self):
         return self.axes[0].figure
 
-    def __init__(self, marks, columns, mark_factory, mark_removal, axes=None,
+    @property
+    def _new_mark(self):
+        return self.straditizer()._new_mark
+
+    @property
+    def _remove_mark(self):
+        return self.straditizer()._remove_mark
+
+    def __init__(self, marks, columns, straditizer, axes=None,
                  occurences_value=-9999):
         super(MultiCrossMarksModel, self).__init__()
         self.occurences_value = occurences_value
@@ -29,8 +38,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             self.axes = [m.ax for m in self.marks[0][1]]
         else:
             self.axes = axes
-        self._new_mark = mark_factory
-        self._remove_mark = mark_removal
+        self.straditizer = straditizer
         self._marks_moved = 0
         self._new_marks = []
         self.lines = []
@@ -699,6 +707,7 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
     def __init__(self, straditizer, axes=None, *args, **kwargs):
         super(MultiCrossMarksEditor, self).__init__(*args, **kwargs)
         self.straditizer = straditizer
+        straditizer = straditizer()
         self.error_msg = PyErrorMessage(self)
 
         #: Plot the reconstructed data
@@ -760,8 +769,8 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
         self.format_editor.textChanged.connect(self.toggle_fmt_button)
         self.btn_change_format.clicked.connect(self.update_format)
         self.btn_save.clicked.connect(self.save_samples)
-        self.straditizer.mark_added.connect(self.table.model().load_new_marks)
-        self.straditizer.mark_removed.connect(self.table.model().remove_mark)
+        straditizer.mark_added.connect(self.table.model().load_new_marks)
+        straditizer.mark_removed.connect(self.table.model().remove_mark)
         self.table.selectionModel().selectionChanged.connect(
             self.maybe_zoom_to_selection)
         self.table.frozen_table_view.selectionModel().selectionChanged.connect(
@@ -781,16 +790,15 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
         self.toggle_plot_lines()
 
     def create_view(self, axes=None):
-        stradi = self.straditizer
+        stradi = self.straditizer()
         reader = stradi.data_reader
         df = getattr(stradi, '_plotted_full_df', reader._full_df)
         return MultiCrossMarksView(stradi.marks, df, df.columns,
-                                   stradi._new_mark, stradi._remove_mark,
-                                   axes=axes,
+                                   self.straditizer, axes=axes,
                                    occurences_value=reader.occurences_value)
 
     def save_samples(self):
-        self.straditizer.update_samples_sep(remove=False)
+        self.straditizer().update_samples_sep(remove=False)
 
     def maybe_zoom_to_selection(self):
         if self.cb_zoom_to_selection.isChecked():
@@ -887,20 +895,19 @@ class SingleCrossMarksEditor(MultiCrossMarksEditor):
     """The editor for cross marks on a single axes"""
 
     def create_view(self, axes=None):
-        stradi = self.straditizer
+        stradi = self.straditizer()
         reader = stradi.data_reader
         axes = [reader.ax]
         df = getattr(stradi, '_plotted_full_df', reader._full_df)
         x0 = min(stradi.data_xlim)
         return SingleCrossMarksView(
-            stradi.marks, df, df.columns, stradi._new_mark,
-            stradi._remove_mark, axes=axes,
+            stradi.marks, df, df.columns, self.straditizer, axes=axes,
             column_bounds=x0 + reader.all_column_bounds,
             y0=min(stradi.data_ylim),
             occurences_value=reader.occurences_value)
 
     def save_samples(self):
-        self.straditizer.update_samples(remove=False)
+        self.straditizer().update_samples(remove=False)
 
     def _fit2selection(self, event):
         model = self.table.model()

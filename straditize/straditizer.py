@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Core module of the Straditizer class"""
 import six
+import gc
+import weakref
 from copy import copy
 from collections import OrderedDict
 from itertools import chain
@@ -30,6 +32,85 @@ default_attrs = pd.DataFrame(
     columns=[0], index=common_attributes)
 
 default_attrs.loc[:, :] = ''
+
+
+def format_coord_func(ax, ref):
+    """Create a function that can replace the
+    :func:`matplotlib.axes.Axes.format_coord`
+
+    Parameters
+    ----------
+    ax: matplotlib.axes.Axes
+        The axes instance
+    ref: weakref.weakref
+        The reference to the :class:`~psyplot.plotter.Formatoption` instance
+
+    Returns
+    -------
+    function
+        The function that can be used to replace `ax.format_coord`
+    """
+    orig_format_coord = ax.format_coord
+
+    def func(x, y):
+        orig_s = orig_format_coord(x, y)
+        fmto = ref()
+        if fmto is None:
+            return orig_s
+        try:
+            orig_s += fmto.add2format_coord(x, y)
+        except Exception:
+            fmto.logger.debug(
+                'Failed to get plot informations for status bar!', exc_info=1)
+        return orig_s
+
+    return func
+
+
+def _create_magni_marks(magni, marks):
+    """Copy the created marks to the magnifiers axes"""
+    magni_marks = []
+    if magni is not None:
+        ax = magni.ax
+        for m in marks:
+            m2 = copy(m)
+            m2.ax = ax
+            m2.draw_lines()
+            m2._animated = False
+            m2.connect()
+            m.maintain_x([m, m2])
+            m.maintain_y([m, m2])
+        magni.ax.figure.canvas.draw()
+    return magni_marks
+
+
+def _new_mark_factory(marks, mark_added, func, fignum, magnifier=None,
+                      magni_marks=None):
+    def ret(event):
+        import matplotlib.pyplot as plt
+        fig = plt.figure(fignum)
+        axes = fig.axes
+        if (event.key != 'shift' or event.button != 1 or
+                event.inaxes not in axes or
+                fig.canvas.manager.toolbar.mode != ''):
+            return
+        new_marks = _new_mark(event.xdata, event.ydata)
+        for m in new_marks:
+            mark_added.emit(m)
+
+    def _new_mark(x, y, **kwargs):
+        new_marks = func((x, y), **kwargs)
+        if new_marks:
+            try:
+                marks.extend(new_marks)
+            except TypeError:
+                new_marks = [new_marks]
+                marks.extend(new_marks)
+            if magnifier is not None:
+                magni_marks.extend(_create_magni_marks(magnifier, new_marks))
+        marks[0].ax.figure.canvas.draw_idle()
+        return new_marks
+    return ret, _new_mark
 
 
 class Straditizer(LabelSelection):
@@ -99,7 +180,6 @@ class Straditizer(LabelSelection):
     colnames_xlim = None
 
     colnames_ylim = None
-
 
     _orig_format_coord = None
 
@@ -221,8 +301,9 @@ class Straditizer(LabelSelection):
             self._horizontal_slider = HorizontalNavigationSlider(ax)
             self._vertical_slider = VerticalNavigationSlider(ax)
         if self._orig_format_coord is None:
+            ax.format_coord = format_coord_func(
+                ax, weakref.ref(self.format_coord))
             self._orig_format_coord = ax.format_coord
-            ax.format_coord = self.format_coord
 
     def set_attr(self, key, value):
         """Update an attribute in the :attr:`attrs`"""
@@ -685,10 +766,17 @@ class Straditizer(LabelSelection):
                 m.remove()
             self.marks = None
         self.magni_marks.clear()
-        fig = self.fig
+        if hasattr(self, '_mark_fig_num'):
+            import matplotlib.pyplot as plt
+            fig = plt.figure(self._mark_fig_num)
+            del self._mark_fig_num
+        else:
+            fig = self.fig
         for cid in self.mark_cids:
             fig.canvas.mpl_disconnect(cid)
         self.mark_cids.clear()
+        if hasattr(self, '_new_mark'):
+            del self._new_mark
 
     def init_colnames_reader(self, ax=None, **kwargs):
         from straditize.ocr import ColNamesReader
@@ -909,30 +997,13 @@ class Straditizer(LabelSelection):
         function
             The function that can be connected via button_press_event
         """
-        def ret(event):
-            if (event.key != 'shift' or event.button != 1 or
-                    event.inaxes not in (axes if axes else [self.ax]) or
-                    self.fig.canvas.manager.toolbar.mode != ''):
-                return
-            new_marks = self._new_mark(event.xdata, event.ydata)
-            for m in new_marks:
-                self.mark_added.emit(m)
-
-        def _new_mark(x, y, **kwargs):
-            new_marks = func((x, y), **kwargs)
-            if new_marks:
-                try:
-                    self.marks.extend(new_marks)
-                except TypeError:
-                    new_marks = [new_marks]
-                    self.marks.extend(new_marks)
-                    self.create_magni_marks(new_marks)
-                else:
-                    if magnifier:
-                        self.create_magni_marks(new_marks)
-            self.marks[0].ax.figure.canvas.draw_idle()
-            return new_marks
-        self._new_mark = _new_mark
+        if axes is None:
+            axes = [self.ax]
+        else:
+            axes = list(axes)
+        ret, self._new_mark = _new_mark_factory(
+            self.marks, self.mark_added, func, axes[0].figure.number,
+            self.magni, self.magni_marks)
         return ret
 
     def marks_for_samples(self):
@@ -1074,16 +1145,15 @@ class Straditizer(LabelSelection):
 
         reader = self.data_reader
         occ_val = reader.occurences_value
-        if reader.full_df is None:
+        if reader._full_df is None:
             reader.digitize()
         df = reader.sample_locs
         bounds = reader.all_column_bounds
         full_df = reader._full_df.copy(True)
         full_df['nextrema'] = reader.found_extrema_per_row()
         self.remove_marks()
-        fig, axes = plt.subplots(nrows,
-                                 int(np.ceil((df.shape[1] + 1) / nrows)),
-                                 sharey=True)
+        fig, axes = plt.subplots(
+            nrows, int(np.ceil((df.shape[1] + 1) / nrows)), sharey=True)
         for ax in axes.ravel()[len(df.columns) + 1:]:
             fig.delaxes(ax)
         axes = axes.ravel()[:len(df.columns) + 1]
@@ -1119,6 +1189,7 @@ class Straditizer(LabelSelection):
         self.mark_cids.add(fig.canvas.mpl_connect(
             'button_press_event', self._remove_mark_event))
         self._plotted_full_df = full_df
+        self._mark_fig_num = fig.number
         return fig, axes
 
     def update_samples_sep(self, remove=True):
@@ -1169,15 +1240,28 @@ class Straditizer(LabelSelection):
         plt.close(self.ax.figure)
         if self.magni is not None:
             plt.close(self.magni.ax.figure)
-            del self.magni
+            del self.magni.plot_image, self.magni.ax, self.magni
         self.image.close()
-        if getattr(self, 'data_reader', None) is not None:
-            self.data_reader.image.close()
-        for attr in ['ax', 'image', 'plot_im', 'data_reader']:
+        # close signals
+        self.mark_added.disconnect()
+        self.mark_removed.disconnect()
+        for sig in [self.mark_added, self.mark_removed]:
             try:
-                delattr(self, attr)
+                del sig.instance
             except AttributeError:
                 pass
+        # close reader
+        if getattr(self, 'data_reader', None) is not None:
+            self.data_reader.image.close()
+            self.data_reader.remove_callbacks.clear()
+        # remove data intensive attributes
+        for obj in [self.data_reader, self]:
+            for attr in ['ax', 'image', 'plot_im', 'data_reader',
+                         'remove_callbacks']:
+                try:
+                    delattr(obj, attr)
+                except AttributeError:
+                    pass
 
     def save(self, fname):
         """Dump the :class:`Straditizer` instance to a file

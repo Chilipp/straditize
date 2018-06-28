@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module defining the base class for the gui test"""
+import gc
 import numpy as np
 from PIL import Image
 import os
@@ -66,31 +67,31 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
     def digitizer(self):
         return self.straditizer_widgets.digitizer
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         import psyplot_gui.main as main
         from straditize.widgets import get_straditizer_widgets
         if not running_in_gui:
-            self.window = main.MainWindow.run(show=False)
+            cls.window = main.MainWindow.run(show=False)
         else:
-            self.window = main.mainwindow
+            cls.window = main.mainwindow
+        cls.straditizer_widgets = get_straditizer_widgets(cls.window)
+        cls.straditizer_widgets.switch_to_straditizer_layout()
+
+    def setUp(self):
         self.created_files = set()
-        self.straditizer_widgets = get_straditizer_widgets(self.window)
-        self.straditizer_widgets.switch_to_straditizer_layout()
         self.digitizer.sp_pixel_tol.setValue(2)
 
     def tearDown(self):
         import matplotlib.pyplot as plt
+        from straditize.straditizer import Straditizer
+        from straditize.binary import DataReader
+        from psyplot.data import Signal
         if hasattr(self, 'straditizer_widgets'):
-            if not running_in_gui:
-                import psyplot_gui.main as main
-                self.window.close()
-                rcParams.update_from_defaultParams()
-                psy_rcParams.update_from_defaultParams()
-                rcParams.disconnect()
-                psy_rcParams.disconnect()
-                main._set_mainwindow(None)
-            self.straditizer_widgets.close_all_straditizers()
-            del self.window, self.straditizer_widgets
+            self.straditizer_widgets.reset_control()
+        for obj in gc.get_objects():
+            if isinstance(obj, Signal):
+                obj.disconnect()
         plt.close('all')
         for f in self.created_files:
             if osp.exists(f):
@@ -98,6 +99,38 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
                     os.remove(f)
                 except Exception:
                     pass
+
+        # ------- Tracking down memory leaks ---------
+        # Now we check, that the straditizers are correctly garbage collected
+        gc.collect()
+        straditizers = [obj for obj in gc.get_objects()
+                        if isinstance(obj, Straditizer)]
+#        print('Straditizers:', straditizers)
+#        if len(straditizers) >= 5:
+#            print(gc.get_referrers(straditizers[0]))
+        self.assertLess(len(straditizers), 5,
+                        msg='Straditizers have not been garbage collected!')
+
+        # And we check, for readers
+        readers = [obj for obj in gc.get_objects()
+                   if isinstance(obj, DataReader)]
+#        print('Readers:', readers)
+#        if len(readers) >= 5:
+#            print(gc.get_referrers(readers[0]))
+        self.assertLess(len(readers), 5,
+                        msg='DataReaders have not been garbage collected!')
+
+    @classmethod
+    def tearDownClass(cls):
+        if not running_in_gui:
+            import psyplot_gui.main as main
+            cls.window.close()
+            rcParams.update_from_defaultParams()
+            psy_rcParams.update_from_defaultParams()
+            rcParams.disconnect()
+            psy_rcParams.disconnect()
+            main._set_mainwindow(None)
+            del cls.window, cls.straditizer_widgets
 
     # ------ New test methods -------------------------------------------------
 
@@ -332,7 +365,8 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         canvas.key_press_event('shift')
         canvas.button_press_event(x0, y0, 1)
         canvas.button_release_event(x0, y0, 1)
-        self.assertGreater(len(marks), n, msg='No new marks added!')
+        self.assertGreater(len(self.straditizer.marks), n,
+                           msg='No new marks added!')
 
     def remove_mark(self, mark):
         """Add a new mark at the given position"""

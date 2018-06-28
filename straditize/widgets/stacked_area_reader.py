@@ -1,11 +1,13 @@
 """DataReader for stacked area plots"""
 from itertools import chain
 import numpy as np
+from functools import partial
 from straditize.binary import DataReader, readers
 from straditize.widgets import StraditizerControlBase, get_straditizer_widgets
 import skimage.morphology as skim
 from psyplot_gui.compat.qtcompat import (
     QTreeWidgetItem, QPushButton, QWidget, QHBoxLayout, QLabel, QVBoxLayout)
+import gc
 
 
 class StackedReader(DataReader, StraditizerControlBase):
@@ -30,7 +32,7 @@ class StackedReader(DataReader, StraditizerControlBase):
             # start digitization
             digitizer.btn_digitize.setCheckable(True)
             digitizer.btn_digitize.setChecked(True)
-            self._init_digitize_child(digitizer)
+            self._init_digitize_child()
             # Disable the changing of readers
             digitizer.cb_readers.setEnabled(False)
             digitizer.tree.expandItem(digitizer.digitize_item)
@@ -45,35 +47,36 @@ class StackedReader(DataReader, StraditizerControlBase):
                 digitizer.should_be_enabled(digitizer.cb_readers))
             del self.straditizer_widgets
 
-    def _init_digitize_child(self, digitizer):
-            self.lbl_col = QLabel('')
-            self.btn_prev = QPushButton('<')
-            self.btn_next = QPushButton('>')
-            self.btn_edit = QPushButton('Edit')
-            self.btn_add = QPushButton('+')
-            self.reset_lbl_col()
-            w = QWidget()
-            vbox = QVBoxLayout()
-            vbox.addWidget(self.lbl_col)
-            hbox = QHBoxLayout()
-            hbox.addWidget(self.btn_prev)
-            hbox.addWidget(self.btn_next)
-            hbox.addWidget(self.btn_edit)
-            hbox.addWidget(self.btn_add)
-            vbox.addLayout(hbox)
-            w.setLayout(vbox)
+    def _init_digitize_child(self):
+        self.lbl_col = QLabel('')
+        self.btn_prev = QPushButton('<')
+        self.btn_next = QPushButton('>')
+        self.btn_edit = QPushButton('Edit')
+        self.btn_add = QPushButton('+')
+        self.reset_lbl_col()
+        self.btn_box = w = QWidget()
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.lbl_col)
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.btn_prev)
+        hbox.addWidget(self.btn_next)
+        hbox.addWidget(self.btn_edit)
+        hbox.addWidget(self.btn_add)
+        vbox.addLayout(hbox)
+        w.setLayout(vbox)
 
-            self.digitize_child = QTreeWidgetItem(0)
-            digitizer.digitize_item.addChild(self.digitize_child)
-            digitizer.tree.setItemWidget(self.digitize_child, 0, w)
-            self.widgets2disable = [self.btn_prev, self.btn_next,
-                                    self.btn_edit, self.btn_add]
+        self.digitize_child = QTreeWidgetItem(0)
+        self.straditizer_widgets.digitizer.digitize_item.addChild(
+            self.digitize_child)
+        self.straditizer_widgets.digitizer.tree.setItemWidget(
+            self.digitize_child, 0, w)
+        self.widgets2disable = [self.btn_prev, self.btn_next,
+                                self.btn_edit, self.btn_add]
 
-            self.btn_next.clicked.connect(self.increase_current_col)
-            self.btn_prev.clicked.connect(self.decrease_current_col)
-            self.btn_edit.clicked.connect(lambda: self.select_current_column())
-            self.btn_add.clicked.connect(lambda: self.select_current_column(
-                True))
+        self.btn_next.clicked.connect(self.increase_current_col)
+        self.btn_prev.clicked.connect(self.decrease_current_col)
+        self.btn_edit.clicked.connect(self.select_current_column)
+        self.btn_add.clicked.connect(self.select_and_add_current_column)
 
     def reset_lbl_col(self):
         self.lbl_col.setText('Part %i of %i' % (
@@ -95,7 +98,10 @@ class StackedReader(DataReader, StraditizerControlBase):
                 self.digitize_child))
         digitizer.btn_digitize.setChecked(False)
         digitizer.btn_digitize.setCheckable(False)
-        del self.digitize_child, self.btn_prev, self.btn_next, self.btn_add
+        for btn in self.widgets2disable:
+            btn.clicked.disconnect()
+        del (self.digitize_child, self.btn_prev, self.btn_next, self.btn_add,
+             self.btn_edit, self.lbl_col, self.btn_box)
         self.widgets2disable.clear()
 
     def enable_or_disable_navigation_buttons(self):
@@ -105,7 +111,13 @@ class StackedReader(DataReader, StraditizerControlBase):
         self.btn_next.setEnabled(not disable_all and
                                  self._current_col != self.columns[-1])
 
-    def select_current_column(self, add_on_apply=False):
+    def select_and_add_current_column(self):
+        return self._select_current_column(True)
+
+    def select_current_column(self):
+        return self._select_current_column()
+
+    def _select_current_column(self, add_on_apply=False):
         image = self.to_grey_pil(self.image.convert('L')).astype(int) + 1
         start = self.start_of_current_col
         end = start + self.full_df[self._current_col].values

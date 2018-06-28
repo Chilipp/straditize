@@ -27,6 +27,7 @@ class Magnifier(object):
     cid_enter = None
     cid_motion = None
     cid_leave = None
+    ax = None
 
     def __init__(self, ax_src, ax=None, *args, **kwargs):
         self.ax_src = ax_src
@@ -68,7 +69,7 @@ class Magnifier(object):
         self.plot_image = self.ax.imshow(image, *args, **kwargs)
 
     def onmotion(self, event):
-        if event.inaxes != self.ax_src:
+        if event.inaxes != self.ax_src or self.ax is None:
             return
         x, y = event.xdata, event.ydata
         dx = self.dx
@@ -84,7 +85,7 @@ class Magnifier(object):
         ax.figure.canvas.draw()
 
     def onenter(self, event):
-        if event.inaxes != self.ax_src:
+        if event.inaxes != self.ax_src or self.ax is None:
             return
         canvas = self.ax_src.figure.canvas
         canvas.mpl_disconnect(self.cid_enter)
@@ -98,7 +99,8 @@ class Magnifier(object):
         canvas.mpl_disconnect(self.cid_motion)
         self.enable_zoom()
         self.point.set_visible(False)
-        self.ax.figure.canvas.draw()
+        if self.ax is not None:
+            self.ax.figure.canvas.draw()
 
     def enable_zoom(self):
         self.cid_enter = self.ax_src.figure.canvas.mpl_connect(
@@ -109,8 +111,3 @@ class Magnifier(object):
         for cid in [self.cid_enter, self.cid_leave, self.cid_motion]:
             if cid is not None:
                 canvas.mpl_disconnect(cid)
-
-    def draw_figure(self):
-        self.ax.figure.canvas.draw()
-        if self.magni is not None:
-            self.magni.ax.figure.canvas.draw()

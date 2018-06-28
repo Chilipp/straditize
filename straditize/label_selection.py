@@ -30,7 +30,7 @@ class LabelSelection(object):
     #: must be the attributes in the :attr:`label_attrs` list, values must be
     #: list of function that accept too arguments, the array and the boolean
     #: mask highlighting the cells that will be set to 0
-    remove_callbacks = {}
+    remove_callbacks = None
 
     _remove = True
 

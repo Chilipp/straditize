@@ -14,6 +14,12 @@ class StackedAreaReaderTest(bt.StraditizeWidgetsTestCase):
     def toolbar(self):
         return self.straditizer_widgets.selection_toolbar
 
+    def tearDown(self):
+        if hasattr(self.reader, 'btn_prev'):
+            self.reader._remove_digitze_child(self.digitizer)
+            del self.reader.straditizer_widgets
+        super().tearDown()
+
     def select_rectangle(self, x0, x1, y0, y1):
         tb = self.toolbar
         slx, sly = tb.get_xy_slice(x0, y0, x1, y1)
@@ -40,7 +46,7 @@ class StackedAreaReaderTest(bt.StraditizeWidgetsTestCase):
         tb = self.toolbar
 
         # select the first column
-        self.reader.select_current_column(True)
+        self.reader.select_and_add_current_column()
         tb.set_color_wand_mode()
         tb.wand_action.setChecked(True)
         tb.toggle_selection()
@@ -50,7 +56,7 @@ class StackedAreaReaderTest(bt.StraditizeWidgetsTestCase):
 
         # now select the second column
         self.reader.increase_current_col()
-        self.reader.select_current_column(True)
+        self.reader.select_and_add_current_column()
         tb.set_color_wand_mode()
         tb.wand_action.setChecked(True)
         tb.toggle_selection()

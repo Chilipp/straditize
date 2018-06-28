@@ -123,6 +123,14 @@ class ExportDfDialog(QDialog):
             self.df.to_csv(fname, mode='a')
         self.accept()
 
+    def cancel(self):
+        del self.stradi, self.df
+        super().cancel()
+
+    def accept(self):
+        del self.stradi, self.df
+        super().accept()
+
     @classmethod
     def export_df(cls, parent, df, straditizer, fname=None, exec_=True):
         """Open a dialog for exporting a DataFrame"""

@@ -2,6 +2,7 @@
 """
 from __future__ import division
 import warnings
+import weakref
 import os
 import six
 from functools import partial
@@ -1097,11 +1098,11 @@ class DigitizingControl(StraditizerControlBase):
         from straditize.widgets.samples_table import (
             MultiCrossMarksEditor, SingleCrossMarksEditor)
         draw_sep = self.cb_edit_separate.isChecked()
+        ref = weakref.ref(self.straditizer)
         if draw_sep:
             fig, axes = self.straditizer.marks_for_samples_sep()
-            self._samples_fig = fig
             if mainwindow.figures:  # using psyplot backend
-                fig_dock = self._samples_fig.canvas.manager.window
+                fig_dock = fig.canvas.manager.window
                 stradi_dock = self.straditizer.ax.figure.canvas.manager.window
                 mainwindow.tabifyDockWidget(stradi_dock, fig_dock)
                 a = fig_dock.toggleViewAction()
@@ -1109,12 +1110,11 @@ class DigitizingControl(StraditizerControlBase):
                     a.trigger()
                 fig_dock.raise_()
             self._samples_editor = editor = MultiCrossMarksEditor(
-                self.straditizer, axes=axes)
+                ref, axes=axes)
         else:
             self.straditizer.marks_for_samples()
-            self._samples_editor = editor = SingleCrossMarksEditor(
-                self.straditizer)
-        dock = editor.to_dock(
+            self._samples_editor = editor = SingleCrossMarksEditor(ref)
+        editor.to_dock(
             mainwindow, title='Samples editor')
         editor.show_plugin()
         editor.maybe_tabify()
@@ -1126,17 +1126,19 @@ class DigitizingControl(StraditizerControlBase):
             editor.table.zoom_to_cells(
                 chain.from_iterable([i] * ncols for i in range(nrows)),
                 list(range(ncols)) * nrows)
-        args = (self.straditizer.draw_figure, ) if not draw_sep else ()
-        update = self.straditizer.update_samples_sep if draw_sep else \
-            self.straditizer.update_samples
-        self.connect2apply(lambda: update(),
-                           self._close_samples_fig,
-                           dock.close,
-                           self.straditizer_widgets.refresh, *args)
-        self.connect2cancel(self.straditizer.remove_marks,
-                            self._close_samples_fig,
-                            dock.close, *args)
+        self._draw_sep = draw_sep
+        self.connect2apply(
+            self._update_samples,
+            self._close_samples_fig, self.straditizer_widgets.refresh)
+        self.connect2cancel(
+            self.straditizer.remove_marks, self._close_samples_fig)
         self.maybe_show_btn_reset_samples()
+
+    def _update_samples(self):
+        if self._draw_sep:
+            self.straditizer.update_samples_sep()
+        else:
+            self.straditizer.update_samples()
 
     def _close_samples_fig(self):
         import matplotlib.pyplot as plt
@@ -1146,11 +1148,24 @@ class DigitizingControl(StraditizerControlBase):
             except ValueError:
                 pass
         try:
-            plt.close(self._samples_fig)
-        except AttributeError:
-            pass
+            fig = self._samples_fig()
+        except (AttributeError, RuntimeError):
+            self.straditizer.draw_figure()
         else:
-            del self._samples_fig
+            if fig is not None:
+                plt.close(fig.number)
+                del self._samples_fig
+        self._samples_editor.dock.close()
+        try:
+            self.straditizer.mark_added.disconnect(
+                self._samples_editor.table.model().load_new_marks)
+        except ValueError:
+            pass
+        try:
+            self.straditizer.mark_removed.disconnect(
+                self._samples_editor.table.model().remove_mark)
+        except ValueError:
+            pass
         del self._samples_editor
         try:
             del self.straditizer._plotted_full_df
@@ -1339,7 +1354,7 @@ class DigitizingControl(StraditizerControlBase):
     def edit_occurences(self):
         self.straditizer.marks_for_occurences()
         self.straditizer.draw_figure()
-        self.connect2apply(partial(self.straditizer.update_occurences, True),
+        self.connect2apply(lambda: self.straditizer.update_occurences(True),
                            self.straditizer.draw_figure,
                            self.straditizer_widgets.refresh)
         self.connect2cancel(self.straditizer.remove_marks,
