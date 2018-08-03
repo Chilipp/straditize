@@ -810,7 +810,7 @@ class Straditizer(LabelSelection):
         current_starts = x0 + starts
         self.remove_marks()
         ax = self.ax
-        idx_h = self.indexes['x']
+        idx_h = self.indexes['x'][slice(*map(int, self.data_xlim))]
         ylim = self.data_ylim
         self.marks = marks = [
             new_mark((x, 0)) for i, x in enumerate(current_starts)]
