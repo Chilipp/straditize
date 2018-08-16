@@ -158,6 +158,10 @@ class TutorialPage(object):
 
     src_file = osp.join(src_dir, src_base)
 
+    #: str. The tooltip that has been shown. This attribute is mainly for
+    #: testing purposes
+    _last_tooltip_shown = None
+
     def __init__(self, filename, tutorial):
         self.filename = filename
         self.tutorial = tutorial
@@ -223,6 +227,7 @@ class TutorialPage(object):
             The widget that should be close to the tooltip
         timeout: int
             The time that the tool tip shall be displayed, in milliseconds"""
+        self._last_tooltip_shown = tooltip
         QtWidgets.QToolTip.showText(
             widget.parent().mapToGlobal(widget.pos()), tooltip, widget,
             self.straditizer_widgets.rect(), timeout)
@@ -245,6 +250,7 @@ class TutorialPage(object):
             The matplotlib transformation to use. If None, the
             :attr:`self.stradi.ax.transData` transformation is used and
             `x` and `y` are expected to be in data coordinates"""
+        self._last_tooltip_shown = tooltip
         stradi = self.straditizer_widgets.straditizer
         fig = stradi.ax.figure
         canvas = fig.canvas
@@ -493,6 +499,8 @@ class SelectDataPart(TutorialPage):
 
     def skip(self):
         stradi = self.straditizer_widgets.straditizer
+        if self.straditizer_widgets.cancel_button.isEnabled():
+            self.straditizer_widgets.cancel_button.click()
         stradi.data_xlim, stradi.data_ylim = self.ref_lims
         self.straditizer_widgets.refresh()
         self.clicked_correct_button()
@@ -653,8 +661,9 @@ class SeparateColumns(TutorialPage):
                     stradi.data_xlim.mean(), stradi.data_ylim.mean())
             else:
                 self.show_tooltip_at_widget(
-                    "The diagram has 28 columns, not %i. Hit the <i>Reset</i> "
-                    "button or modify the column starts.",
+                    "The diagram has 28 columns, not %i. Hit the <i>%s</i> "
+                    "button or modify the column starts." % (
+                        len(starts), sw.digitizer.btn_reset_columns.text()),
                     sw.digitizer.btn_reset_columns)
         elif self.is_selecting:  # currently creating marks
             self.show_tooltip_at_widget(
@@ -892,7 +901,7 @@ class TranslateYAxis(TutorialPage):
                     "Click the <i>%s</i> button to start." % btn.text(), btn)
         elif len(marks) < 2:
             self.show_tooltip_in_plot(
-                "<pre>Shift+Leftclick</pre> on a point on the vertical axes "
+                "<pre>Shift+Leftclick</pre> on a point on the vertical axis "
                 "to enter %s y-value" % (
                     "another" if len(marks) else "the corresponding"),
                 300, 384)
@@ -1005,24 +1014,32 @@ class TranslateXAxis(TutorialPage):
                     self.show_tooltip_at_widget(
                         "Select the reader for column %i" % col,
                         sw.digitizer.cb_readers)
-            else:
+            else:  # (re-)start the child reader initialization
                 if self.is_selecting:
-                    cols = sorted(reader._selected_cols)
-                    if cols == [col]:
+                    if col not in self.add_reader_button_clicked:
                         self.show_tooltip_at_widget(
-                            "Click the <i>%s</i> button to continue." % (
-                                sw.apply_button.text()), sw.apply_button)
-                    elif not cols:
-                        self.show_tooltip_in_plot(
-                            "Select column %i by clicking on the plot" % col,
-                            reader.all_column_bounds[col].mean(),
-                            stradi.data_ylim.mean())
-                    else:  # wrong column selected
-                        self.show_tooltip_in_plot(
-                            "Wrong column selected! Deselect the current "
-                            "column and select column %i." % col,
-                            reader.all_column_bounds[col].mean(),
-                            stradi.data_ylim.mean())
+                            "Wrong button clicked! Click cancel and initialize"
+                            " a new reader for column %i by clicking the "
+                            "<i>%s</i> button." % (col, btn_add.text()),
+                            sw.cancel_button)
+                    else:
+                        cols = sorted(reader._selected_cols)
+                        if cols == [col]:
+                            self.show_tooltip_at_widget(
+                                "Click the <i>%s</i> button to continue." % (
+                                    sw.apply_button.text()), sw.apply_button)
+                        elif not cols:
+                            self.show_tooltip_in_plot(
+                                "Select column %i by clicking on the plot" % (
+                                    col, ),
+                                reader.all_column_bounds[col].mean(),
+                                stradi.data_ylim.mean())
+                        else:  # wrong column selected
+                            self.show_tooltip_in_plot(
+                                "Wrong column selected! Deselect the current "
+                                "column and select column %i." % col,
+                                reader.all_column_bounds[col].mean(),
+                                stradi.data_ylim.mean())
                 else:
                     self.show_tooltip_at_widget(
                         "Click the <i>%s</i> button to select a column for "
@@ -1092,7 +1109,7 @@ class EditMeta(TutorialPage):
             self.show_tooltip_at_widget(
                 "Click the <i>%s</i> button to edit the meta data" % (
                     btn.text()), btn)
-        elif not self.is_finished():
+        elif not self.is_finished:
             # Check if the editor is visible
             if editor.visibleRegion().isEmpty():
                 dock = next(
