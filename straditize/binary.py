@@ -889,27 +889,33 @@ class DataReader(LabelSelection):
             self.image = Image.fromarray(
                 np.where(mask3d, non_exag_image, exag_image), self.image.mode)
 
-    def _select_column(self, event):
+    def _select_column(self, event=None, x=None, y=None, col=None):
         import matplotlib.patches as mpatch
-        if event.inaxes is not self.ax:
+        if event is None and x is None and y is None and col is None:
+            raise ValueError("Either event, x and y, or col must be given!")
+        if event is not None and event.inaxes is not self.ax:
             return
-        x, y = event.xdata, event.ydata
+        elif event is not None:
+            x, y = event.xdata, event.ydata
         if self.extent is None:
             xlim = [0, self.binary.shape[1]]
             ylim = [0, self.binary.shape[0]]
         else:
             xlim = sorted(self.extent[:2])
             ylim = sorted(self.extent[2:])
-        if x <= xlim[0] or x >= xlim[1] or y <= ylim[0] or y >= ylim[1]:
-            return
-        x -= xlim[0]
         if self._use_all_cols:
             bounds = self.all_column_bounds
         else:
             bounds = self.column_bounds
-        col, (xmin, xmax) = next(
-            (col, l) for col, l in enumerate(bounds)
-            if x >= l[0] and x <= l[1])
+        if x is not None:
+            if x <= xlim[0] or x >= xlim[1] or y <= ylim[0] or y >= ylim[1]:
+                return
+            x -= xlim[0]
+            col, (xmin, xmax) = next(
+                (col, l) for col, l in enumerate(bounds)
+                if x >= l[0] and x <= l[1])
+        else:
+            xmin, xmax = bounds[col]
         if not self._use_all_cols:
             col = self.columns[col]
         if col in self._selected_cols:
