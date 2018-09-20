@@ -3,12 +3,13 @@
 This module contains widgets to digitize the straditizer diagrams through a GUI
 """
 import six
+from copy import deepcopy
 from functools import partial
 import os.path as osp
 from psyplot_gui.compat.qtcompat import (
     QWidget, QtCore, QPushButton, QTreeWidget, QTreeWidgetItem,
     QVBoxLayout, QHBoxLayout, Qt, QToolButton, QIcon, with_qt5,
-    QComboBox, QLabel)
+    QComboBox, QLabel, QMessageBox)
 from psyplot_gui.common import (
     DockMixin, get_icon as get_psy_icon, PyErrorMessage)
 import numpy as np
@@ -91,6 +92,9 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     dock_position = Qt.LeftDockWidgetArea
 
+    #: Auto-saved straditizers
+    autosaved = []
+
     hidden = True
 
     title = 'Stratigraphic diagram digitization'
@@ -125,6 +129,9 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.btn_open_stradi.setIcon(QIcon(get_psy_icon('run_arrow.png')))
         self.btn_close_stradi = QToolButton()
         self.btn_close_stradi.setIcon(QIcon(get_psy_icon('invalid.png')))
+        self.btn_reload_autosaved = QPushButton("Reload")
+        self.btn_reload_autosaved.setToolTip(
+            "Close the straditizer and reload the last autosaved project")
 
         # ---------------------------------------------------------------------
         # --------------------------- Tree widgets ----------------------------
@@ -203,11 +210,16 @@ class StraditizerWidgets(QWidget, DockMixin):
         btn_box.addWidget(self.apply_button)
         btn_box.addWidget(self.cancel_button)
 
+        reload_box = QHBoxLayout()
+        reload_box.addWidget(self.btn_reload_autosaved)
+        reload_box.addStretch(0)
+
         vbox = QVBoxLayout()
         vbox.addLayout(stradi_box)
         vbox.addWidget(self.tree)
         vbox.addLayout(attrs_box)
         vbox.addLayout(btn_box)
+        vbox.addLayout(reload_box)
 
         self.setLayout(vbox)
 
@@ -226,6 +238,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.btn_open_stradi.clicked.connect(
             self.menu_actions.open_straditizer)
         self.btn_close_stradi.clicked.connect(self.close_straditizer)
+        self.btn_reload_autosaved.clicked.connect(self.reload_autosaved)
 
         self.refresh()
         header = self.tree.header()
@@ -361,6 +374,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.axes_translations.refresh()
         if self.tutorial is not None:
             self.tutorial.refresh()
+        self.btn_reload_autosaved.setEnabled(bool(self.autosaved))
 
     def get_attr(self, stradi, attr):
         try:
@@ -398,6 +412,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.stradi_combo.blockSignals(block)
         self.raise_figures()
         self.refresh()
+        self.autosaved.clear()
 
     def _close_stradi(self, stradi):
         is_current = stradi is self.straditizer
@@ -455,6 +470,22 @@ class StraditizerWidgets(QWidget, DockMixin):
         tb.wand_action.setChecked(False)
         self.disable_apply_button()
         self.close_all_straditizers()
+
+    def autosave(self):
+        self.autosaved = [deepcopy(self.straditizer)] + self.autosaved[:4]
+
+    def reload_autosaved(self):
+        if not self.autosaved:
+            return
+        answer = QMessageBox.question(
+            self, 'Reload autosave',
+            'Shall I reload the last autosaved stage? This will close the '
+            'current figures.')
+        if answer == QMessageBox.Yes:
+            self.close_straditizer()
+            stradi = self.autosaved.pop(0)
+            stradi.plot_image()
+            self.menu_actions.finish_loading(stradi)
 
 
 class StraditizerControlBase(object):
@@ -523,6 +554,7 @@ class StraditizerControlBase(object):
 
     def connect2apply(self, *funcs):
         btn = self.apply_button
+        btn.clicked.connect(self.straditizer_widgets.autosave)
         for func in funcs:
             btn.clicked.connect(func)
         btn.clicked.connect(self.straditizer_widgets.disable_apply_button)
