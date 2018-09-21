@@ -472,9 +472,11 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.close_all_straditizers()
 
     def autosave(self):
-        self.autosaved = [deepcopy(self.straditizer)] + self.autosaved[:4]
+        self.autosaved = [self.straditizer.to_dataset().copy(True)] + \
+            self.autosaved[:4]
 
     def reload_autosaved(self):
+        from straditize.straditizer import Straditizer
         if not self.autosaved:
             return
         answer = QMessageBox.question(
@@ -483,8 +485,7 @@ class StraditizerWidgets(QWidget, DockMixin):
             'current figures.')
         if answer == QMessageBox.Yes:
             self.close_straditizer()
-            stradi = self.autosaved.pop(0)
-            stradi.plot_image()
+            stradi = Straditizer.from_dataset(self.autosaved.pop(0))
             self.menu_actions.finish_loading(stradi)
 
 

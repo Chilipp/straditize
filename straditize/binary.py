@@ -640,8 +640,8 @@ class DataReader(LabelSelection):
         is_parent = self.parent is self
 
         if self.parent._columns is not None and len(self.parent._columns):
-            all_columns = sorted(chain.from_iterable(
-                    r.columns for r in self.iter_all_readers))
+            all_columns = sorted(set(chain.from_iterable(
+                    r.columns for r in self.iter_all_readers)))
             if 'col_map' not in ds:
                 self.create_variable(ds, 'col_map', np.zeros_like(all_columns))
             self.create_variable(ds, 'col_map', ireader, column=self.columns)
@@ -657,7 +657,7 @@ class DataReader(LabelSelection):
                     self.create_variable(ds, 'vline', self.vline_locs)
                 if self.shifted is not None:
                     self.create_variable(ds, 'shifted', self.shifted)
-                if self._sample_locs is not None:
+                if self._sample_locs is not None and len(self._sample_locs):
                     samples = self.sample_locs.drop_duplicates()
                     self.create_variable(
                         ds, 'sample', samples.index)
@@ -671,8 +671,8 @@ class DataReader(LabelSelection):
                     self.create_variable(ds, 'occurences',
                                          np.asarray(list(self.occurences)))
 
-            for child in self.children:
-                ds = child.to_dataset(ds)
+                for child in self.children:
+                    ds = child.to_dataset(ds)
 
         return ds
 
