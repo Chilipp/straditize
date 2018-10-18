@@ -61,7 +61,7 @@ install:
 script:
     - unset_secure
     # install conda
-    - conda build conda-recipe
+    - conda build conda-recipe --python $PYTHON_VERSION
     # export the pw to make it available for the deploy
     - reset_secure
 
