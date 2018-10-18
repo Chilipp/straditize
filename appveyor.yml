@@ -20,4 +20,4 @@ install:
 build: false
 
 test_script:
-    - conda build conda-recipe
+    - PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245' conda build conda-recipe
