@@ -1400,9 +1400,10 @@ class DataReader(LabelSelection):
         indices = np.searchsorted(starts, ret) - 1
         if ret[0] in starts:
             indices[0] += 1
-        if len(np.unique(indices)) > 1:
+        col_starts = starts[indices]
+        if len(np.unique(col_starts)) > 1:
             raise ValueError("X-values have been used from different columns! "
-                             "Columns %s" % list(indices))
+                             "Columns %s" % (self.columns[indices]))
         return ret - starts[indices[0]]
 
     @xaxis_px.setter

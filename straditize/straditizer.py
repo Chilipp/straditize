@@ -1016,7 +1016,7 @@ class Straditizer(LabelSelection):
 
         reader = self.data_reader
         occ_val = reader.occurences_value
-        means = reader.column_bounds.mean(axis=1)
+        means = reader.all_column_bounds.mean(axis=1)
         if reader.full_df is None:
             reader.digitize()
         df = reader.sample_locs

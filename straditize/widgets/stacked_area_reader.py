@@ -118,7 +118,7 @@ class StackedReader(DataReader, StraditizerControlBase):
         return self._select_current_column()
 
     def _select_current_column(self, add_on_apply=False):
-        image = self.to_grey_pil(self.image.convert('L')).astype(int) + 1
+        image = self.to_grey_pil(self.image).astype(int) + 1
         start = self.start_of_current_col
         end = start + self.full_df[self._current_col].values
         all_end = start + self.full_df.loc[:, self._current_col:].values.sum(
