@@ -385,7 +385,11 @@ class StraditizerMenuActions(StraditizerControlBase):
             self.straditizer.save(fname)
         else:
             ds = self.straditizer.to_dataset()
-            ds.to_netcdf(fname)
+            # -- Compression with a level of 4. Requires netcdf4 engine
+            comp = dict(zlib=True, complevel=4)
+            encoding = {var: comp for var in ds.data_vars}
+
+            ds.to_netcdf(fname, encoding=encoding, engine='netcdf4')
 
     def save_text_image(self, fname=None):
         self._save_image(self.straditizer.text_reader.image, fname)
