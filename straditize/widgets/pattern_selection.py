@@ -366,6 +366,10 @@ class PatternSelectionWidget(QWidget, DockMixin):
                     pass
             self.data_obj.draw_figure()
             del self.selector
-        del self.data_obj, self.arr, self.template
+        for attr in ['data_obj', 'arr', 'template']:
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
         mainwindow.removeDockWidget(self.dock)
         return super(PatternSelectionWidget, self).close()
