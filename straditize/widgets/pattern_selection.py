@@ -230,6 +230,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
                 obj._selection_arr[:] = self._orig_selection_arr
                 obj._select_img.set_array(self._orig_selection_arr)
                 obj.select_labels(self._selected_labels)
+                obj._update_magni_img()
             del self._orig_selection_arr, self._selected_labels
             self.btn_select.setText('Select pattern')
             self.btn_close.setEnabled(False)
@@ -252,6 +253,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
             obj._selection_arr[:] = self._orig_selection_arr.copy()
             obj._selection_arr[self._correlation >= val] = -1
         obj._select_img.set_array(obj._selection_arr)
+        obj._update_magni_img()
         obj.draw_figure()
 
     def correlate_template(self, arr, template, fraction=False, increment=1,

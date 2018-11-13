@@ -502,6 +502,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         max_label = reader._orig_selection_arr.max()
         reader._selection_arr[new_select] = max_label + 1
         reader._select_img.set_array(reader._selection_arr)
+        reader._update_magni_img()
         self.canvas.draw()
 
     def start_pattern_selection(self):
