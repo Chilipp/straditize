@@ -59,8 +59,8 @@ The `Pollen Concentration` column
 
    .. image:: pollen-concentration-column.png
 
-4. Click the :guilabel:`Apply` button and select the `line` (or `area`) reader
-   in the appearing dialog (they are both equivalent in their algorithms).
+4. Click the :guilabel:`Apply` button and select the `line` reader
+   in the appearing dialog.
 5. In the dropdown menu in the `Current reader` tab, select the reader for
    *Column 27* to make it the current reader.
 

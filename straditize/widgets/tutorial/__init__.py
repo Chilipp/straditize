@@ -837,7 +837,7 @@ class SamplesPage(TutorialPage):
             self.show_tooltip_at_widget(
                 "Expand the <i>%s</i> item by clicking on the arrow to it's "
                 "left" % esc.text(0), sw.tree.itemWidget(esc, 1))
-        elif reader._sample_locs is None:
+        elif reader._sample_locs is None or not len(reader._sample_locs):
             self.show_tooltip_at_widget(
                 "Click the <i>%s</i> button to automatically find the "
                 "samples." % btn_find.text(), btn_find)
@@ -925,6 +925,7 @@ class TranslateXAxis(TutorialPage):
         return True
 
     def skip(self):
+        from straditize.binary import readers
         self.clicked_add_reader_button()
         self.clicked_translations_button()
         reader = self.straditizer_widgets.straditizer.data_reader
@@ -932,14 +933,14 @@ class TranslateXAxis(TutorialPage):
         # charcoal
         reader = reader.get_reader_for_col(0)
         if len(reader.columns) > 1:
-            reader = reader.new_child_for_cols([0], reader.__class__)
+            reader = reader.new_child_for_cols([0], readers['area'])
         reader._xaxis_px_orig = np.array([321, 427])
         reader.xaxis_data = np.array([0., 100.])
 
         # pollen concentration
         reader = reader.get_reader_for_col(27)
         if len(reader.columns) > 1:
-            reader = reader.new_child_for_cols([27], reader.__class__)
+            reader = reader.new_child_for_cols([27], readers['line'])
         reader._xaxis_px_orig = np.array([1776, 1855])
         reader.xaxis_data = np.array([0., 30000.])
 
@@ -1095,8 +1096,9 @@ class EditMeta(TutorialPage):
 
     def skip(self):
         for attr, val in zip(
-                ['sitename', 'Archive', 'Country', 'Restricted'],
-                ['Hoya del Castillo', 'Pollen', 'Spain', 'No']):
+                ['sitename', 'Archive', 'Country', 'Restricted',
+                 'Y-axis name'],
+                ['Hoya del Castillo', 'Pollen', 'Spain', 'No', 'Depth (cm)']):
             self.straditizer_widgets.straditizer.set_attr(attr, val)
 
     def hint(self):

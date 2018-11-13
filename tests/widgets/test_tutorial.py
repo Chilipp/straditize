@@ -2,6 +2,7 @@
 import _base_testing as bt
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
+import unittest
 
 
 class TutorialTest(bt.StraditizeWidgetsTestCase):
@@ -343,3 +344,7 @@ class FinishTest(TutorialTest):
         self.assertFalse(self.navigation.btn_hint.isEnabled())
         self.assertFalse(self.navigation.btn_next.isEnabled())
         self.assertFalse(self.navigation.btn_skip.isEnabled())
+
+
+if __name__ == '__main__':
+    unittest.main()
