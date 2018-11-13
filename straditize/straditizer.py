@@ -226,9 +226,9 @@ class Straditizer(LabelSelection):
 
     @property
     def full_df(self):
-        if self.data_reader is None or self.data_reader.full_df is None:
+        if self.data_reader is None or self.data_reader._full_df is None:
             return None
-        return self._finalize_df(self.data_reader.full_df.copy(True))
+        return self._finalize_df(self.data_reader._full_df.copy(True))
 
     @property
     def final_df(self):
@@ -736,10 +736,19 @@ class Straditizer(LabelSelection):
     def remove_marks(self):
         """Remove any drawn marks"""
         if self.marks is not None:
-            for m in self.marks + self.magni_marks:
+            for m in self.marks:
                 m.remove()
             self.marks = None
-        self.magni_marks.clear()
+        for l in self.ax.lines[:]:
+            if (l.get_label() or '').startswith('cross_mark'):
+                l.remove()
+        if self.magni is not None:
+            for m in self.magni_marks:
+                m.remove()
+            self.magni_marks.clear()
+            for l in self.magni.ax.lines[:]:
+                if (l.get_label() or '').startswith('cross_mark'):
+                    l.remove()
         if hasattr(self, '_mark_fig_num'):
             import matplotlib.pyplot as plt
             fig = plt.figure(self._mark_fig_num)
@@ -782,6 +791,7 @@ class Straditizer(LabelSelection):
                     df[col].values)
         except ValueError:
             pass
+        df.index.name = self.get_attr('Y-axis name') or None
         return df
 
     def show_full_image(self):
@@ -898,11 +908,10 @@ class Straditizer(LabelSelection):
         if marks:
             marks[0].connect_marks(marks)
             self.create_magni_marks(marks)
-        if not self.data_reader.children:
-            self.mark_cids.add(self.fig.canvas.mpl_connect(
-                'button_press_event', self._add_mark_event(new_mark)))
-            self.mark_cids.add(self.fig.canvas.mpl_connect(
-                'button_press_event', self._remove_mark_event))
+        self.mark_cids.add(self.fig.canvas.mpl_connect(
+            'button_press_event', self._add_mark_event(new_mark)))
+        self.mark_cids.add(self.fig.canvas.mpl_connect(
+            'button_press_event', self._remove_mark_event))
 
     def update_occurences(self, remove=True):
         """Set the occurences from the given marks"""
