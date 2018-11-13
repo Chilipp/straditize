@@ -104,7 +104,7 @@ class DataReader(LabelSelection):
         an occurence"""
         def get_col(x):
             return next(i for i, (s, e) in enumerate(bounds)
-                        if s <= x and e >= x)
+                        if s <= x and e > x)
         ret = defaultdict(list)
         bounds = self.all_column_bounds
         for x, y in self.occurences:
@@ -1189,6 +1189,7 @@ class DataReader(LabelSelection):
         cols = np.where(selection[0, :])[0]
         self.vline_locs = np.unique(np.r_[self.vline_locs, cols])
         self._shift_column_starts(cols)
+        self._shift_occurences(cols)
 
     def _shift_column_starts(self, locs):
         """Shift the column starts after the removement of vertical lines"""
@@ -1199,6 +1200,17 @@ class DataReader(LabelSelection):
             while mask.any():
                 starts[mask] += 1
                 mask = np.isin(starts, locs)
+
+    def _shift_occurences(self, locs):
+        occurences = self.occurences
+        if occurences:
+            occurences = np.array(list(occurences))
+            locs = np.asarray(locs)
+            mask = np.isin(occurences[:, 0], locs)
+            while mask.any():
+                occurences[np.c_[mask, np.zeros_like(mask)]] += 1
+                mask = np.isin(occurences[:, 0], locs)
+            self.occurences = set(map(tuple, occurences))
 
     def color_labels(self, categorize=1):
         """The labels of the colored array"""
@@ -1732,9 +1744,16 @@ class DataReader(LabelSelection):
         """Extract the positions of the occurences from the selection"""
         selected = self.selected_part
         labeled, num = skim.label(selected, 8, return_num=True)
+        if self._column_starts is None:
+            bounds = []
+        else:
+            bounds = self.all_column_bounds
         for l in range(1, num + 1):
-            self.occurences.add(tuple(np.round(
-                np.mean(np.where(labeled == l), axis=1)).astype(int))[::-1])
+            y, x = np.where(labeled == l)
+            starts = [s for s, e in bounds if ((x >= s) & (x <= e)).any()] or \
+                [x]
+            self.occurences.add(
+                (int(max(starts)), int(np.round(y.mean()))))
 
     def get_reader_for_col(self, col):
         """Get the reader for a specific column
