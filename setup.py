@@ -52,10 +52,12 @@ setup(name='straditize',
       license="GPLv2",
       packages=find_packages(exclude=['docs', 'tests*', 'examples']),
       install_requires=[
-          'psyplot-gui>1.0.1',
+          'psyplot-gui>=1.2.0',
+          'psyplot>=1.2.0',
           'scipy',
           'scikit-image',
           'openpyxl',
+          'netCDF4',
       ],
       package_data={'straditize': [
           osp.join('straditize', 'widgets', 'icons', '*.png'),

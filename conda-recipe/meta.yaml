@@ -21,11 +21,13 @@ requirements:
   run:
     - python
     - psyplot-gui
-    - pyqt >=5.7.0
+    - netcdf4
+    - pyqt >=5.7.0  # [osx]
     - scipy
     - scikit-image
     - openpyxl
     - sphinx !=1.7.5
+    - psy-strat
 
 test:
   requires:
