@@ -141,42 +141,26 @@ class StraditizerWidgets(QWidget, DockMixin):
 
         self.menu_actions = StraditizerMenuActions(self)
 
-        self.digitizer = DigitizingControl(self)
         self.digitizer_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Digitization control')
-        self.tree.addTopLevelItem(item)
-        self.digitizer.setup_children(item)
+        self.digitizer = DigitizingControl(self, item)
 
-        self.axes_translations = AxesTranslations(self)
         self.axes_translations_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Axes translations')
-        self.tree.addTopLevelItem(item)
-        self.axes_translations.setup_children(item)
+        self.axes_translations = AxesTranslations(self, item)
 
-        self.image_rotator = ImageRotator(self)
         self.image_rotator_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Rotate image')
-        child = QTreeWidgetItem(0)
-        item.addChild(child)
-        self.tree.addTopLevelItem(item)
-        self.tree.setItemWidget(child, 0, self.image_rotator)
+        self.image_rotator = ImageRotator(self, item)
 
-        self.plot_control = PlotControl(self)
         self.plot_control_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Plot control')
-        child = QTreeWidgetItem(0)
-        item.addChild(child)
-        self.tree.addTopLevelItem(item)
-        self.tree.setItemWidget(child, 0, self.plot_control)
+        self.plot_control = PlotControl(self, item)
         self.add_info_button(item, 'plot_control.rst')
 
-        self.marker_control = MarkerControl(self)
         self.marker_control_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Marker control')
-        child = QTreeWidgetItem(0)
-        item.addChild(child)
-        self.tree.addTopLevelItem(item)
-        self.tree.setItemWidget(child, 0, self.marker_control)
+        self.marker_control = MarkerControl(self, item)
         self.add_info_button(item, 'marker_control.rst')
 
         # ---------------------------------------------------------------------
@@ -519,9 +503,18 @@ class StraditizerControlBase(object):
     def cancel_button(self):
         return self.straditizer_widgets.cancel_button
 
-    def init_straditizercontrol(self, straditizer_widgets):
+    def init_straditizercontrol(self, straditizer_widgets, item=None):
         self.straditizer_widgets = straditizer_widgets
+        self.control_item = item
+        if item is not None:
+            straditizer_widgets.tree.addTopLevelItem(item)
+            self.setup_children(item)
         self.apply_button.enabled.connect(self.enable_or_disable_widgets)
+
+    def setup_children(self, item):
+        child = QTreeWidgetItem(0)
+        item.addChild(child)
+        self.straditizer_widgets.tree.setItemWidget(child, 0, self)
 
     def enable_or_disable_widgets(self, b):
         if not b:  # use only those widget, that should be enabled

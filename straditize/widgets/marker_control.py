@@ -106,9 +106,9 @@ class MarkerControl(StraditizerControlBase, QWidget):
     def marks(self):
         return chain(self.straditizer.marks, self.straditizer.magni_marks)
 
-    def __init__(self, straditizer_widgets, *args, **kwargs):
+    def __init__(self, straditizer_widgets, item, *args, **kwargs):
         super(MarkerControl, self).__init__(*args, **kwargs)
-        self.init_straditizercontrol(straditizer_widgets)
+        self.init_straditizercontrol(straditizer_widgets, item)
         vbox = QVBoxLayout()
 
         # auto hide button

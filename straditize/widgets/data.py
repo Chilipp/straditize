@@ -122,8 +122,7 @@ class DigitizingControl(StraditizerControlBase):
     def selection_toolbar(self):
         return self.straditizer_widgets.selection_toolbar
 
-    def __init__(self, straditizer_widgets):
-        self.init_straditizercontrol(straditizer_widgets)
+    def __init__(self, straditizer_widgets, item):
 
         # ---------------------------------------------------------------------
         # --------------------------- Buttons ---------------------------------
@@ -377,6 +376,8 @@ class DigitizingControl(StraditizerControlBase):
             ]
 
         self.init_reader_kws = {}
+
+        self.init_straditizercontrol(straditizer_widgets, item)
 
         # ---------------------------------------------------------------------
         # --------------------------- Connections -----------------------------

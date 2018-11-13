@@ -15,9 +15,8 @@ class ImageRotator(StraditizerControlBase, QWidget):
     _ha = False
     _va = False
 
-    def __init__(self, straditizer_widgets, *args, **kwargs):
+    def __init__(self, straditizer_widgets, item, *args, **kwargs):
         super(ImageRotator, self).__init__(*args, **kwargs)
-        self.init_straditizercontrol(straditizer_widgets)
         self.txt_rotate = QLineEdit()
         self.txt_rotate.setValidator(QDoubleValidator())
 
@@ -30,6 +29,8 @@ class ImageRotator(StraditizerControlBase, QWidget):
         self.btn_rotate_vertical.setToolTip(
             'Mark two points that should be on the same vertical level '
             'and rotate the picture to achieve this.')
+
+        self.init_straditizercontrol(straditizer_widgets, item)
 
         # ---------------------------------------------------------------------
         # --------------------------- Layouts ---------------------------------

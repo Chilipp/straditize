@@ -15,8 +15,7 @@ class AxesTranslations(StraditizerControlBase):
     def tree(self):
         return self.straditizer_widgets.tree
 
-    def __init__(self, straditizer_widgets):
-        self.init_straditizercontrol(straditizer_widgets)
+    def __init__(self, straditizer_widgets, item):
         self.btn_marks_for_y = QPushButton('Insert Y-axis values')
         self.btn_marks_for_x = QPushButton('Insert X-axis values')
 
@@ -24,6 +23,8 @@ class AxesTranslations(StraditizerControlBase):
         self.btn_marks_for_x.clicked.connect(partial(self.marks_for_x, True))
 
         self.widgets2disable = [self.btn_marks_for_x, self.btn_marks_for_y]
+
+        self.init_straditizercontrol(straditizer_widgets, item)
 
     def setup_children(self, item):
         self.add_info_button(item, 'axes_translations.rst')
