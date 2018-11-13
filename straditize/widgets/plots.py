@@ -3,7 +3,7 @@ from collections import OrderedDict
 from straditize.widgets import StraditizerControlBase
 from psyplot_gui.compat.qtcompat import (
     QTableWidget, QCheckBox, QToolButton, QIcon, Qt, with_qt5, QtCore, QWidget,
-    QHBoxLayout, QVBoxLayout, QPushButton)
+    QHBoxLayout, QVBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem)
 from psyplot_gui.common import get_icon
 
 if with_qt5:
@@ -439,15 +439,88 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
                             self.rowHeight(0) * self.rowCount() + header)
 
 
+class ResultsPlot(StraditizerControlBase):
+    """A widget for plotting the final results"""
+
+    def __init__(self, straditizer_widgets):
+        self.init_straditizercontrol(straditizer_widgets)
+
+        self.btn_plot = QPushButton("Plot results")
+
+        self.cb_final = QCheckBox("Samples")
+        self.cb_final.setToolTip(
+            "Create the diagram based on the samples only, not on the full "
+            "digized data")
+        self.cb_final.setChecked(True)
+        self.cb_final.setEnabled(False)
+
+        self.cb_transformed = QCheckBox("Translated")
+        self.cb_transformed.setToolTip(
+            "Use the x-axis and y-axis translation")
+        self.cb_transformed.setChecked(True)
+        self.cb_transformed.setEnabled(False)
+
+        self.btn_plot.clicked.connect(self.plot_results)
+
+    def setup_children(self, item):
+        tree = self.straditizer_widgets.tree
+        tree.setItemWidget(item, 0, self.btn_plot)
+
+        child = QTreeWidgetItem(0)
+        item.addChild(child)
+        widget = QWidget()
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.cb_final)
+        vbox.addWidget(self.cb_transformed)
+        widget.setLayout(vbox)
+
+        tree.setItemWidget(child, 0, widget)
+
+    def refresh(self):
+        try:
+            self.straditizer.yaxis_px
+            self.straditizer.data_reader.xaxis_px
+        except (AttributeError, ValueError):
+            self.cb_transformed.setEnabled(False)
+        else:
+            self.cb_transformed.setEnabled(True)
+        try:
+            assert self.straditizer.data_reader.sample_locs is not None
+        except (AssertionError, AttributeError):
+            self.cb_final.setEnabled(False)
+        else:
+            self.cb_final.setEnabled(True)
+        try:
+            self.btn_plot.setEnabled(
+                self.straditizer.data_reader._full_df is not None)
+        except AttributeError:
+            self.btn_plot.setEnabled(False)
+
+    def plot_results(self):
+        transformed = self.cb_transformed.isEnabled() and \
+            self.cb_transformed.isChecked()
+        if self.cb_final.isEnabled() and self.cb_final.isChecked():
+            df = self.straditizer.final_df if transformed else \
+                self.straditizer.data_reader.sample_locs
+        else:
+            df = self.straditizer.full_df if transformed else \
+                self.straditizer.data_reader._full_df
+        return self.straditizer.data_reader.plot_results(
+            df, transformed=transformed)
+
+
 class PlotControl(StraditizerControlBase, QWidget):
     """A widget for controlling the plot"""
 
-    def __init__(self, straditizer_widgets, *args, **kwargs):
+    def __init__(self, straditizer_widgets, item, *args, **kwargs):
         super(PlotControl, self).__init__(*args, **kwargs)
-        self.init_straditizercontrol(straditizer_widgets)
         self.btn_view_global = QPushButton('Zoom out')
         self.btn_view_data = QPushButton('Zoom to data')
         self.table = PlotControlTable(straditizer_widgets)
+
+        self.results_plot = ResultsPlot(straditizer_widgets)
+
+        self.init_straditizercontrol(straditizer_widgets, item)
 
         # ---------------------------------------------------------------------
         # ------------------------------ Layout -------------------------------
@@ -470,6 +543,12 @@ class PlotControl(StraditizerControlBase, QWidget):
         self.btn_view_global.clicked.connect(self.zoom_global)
         self.btn_view_data.clicked.connect(self.zoom_data)
 
+    def setup_children(self, item):
+        super().setup_children(item)
+        child = QTreeWidgetItem(0)
+        item.addChild(child)
+        self.results_plot.setup_children(child)
+
     def zoom_global(self):
         self.straditizer.show_full_image()
         self.straditizer.draw_figure()
@@ -480,6 +559,7 @@ class PlotControl(StraditizerControlBase, QWidget):
 
     def refresh(self):
         self.table.refresh()
+        self.results_plot.refresh()
         if self.straditizer is None:
             self.btn_view_global.setEnabled(False)
             self.btn_view_data.setEnabled(False)

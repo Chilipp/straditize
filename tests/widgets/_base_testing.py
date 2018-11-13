@@ -87,11 +87,13 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         from straditize.straditizer import Straditizer
         from straditize.binary import DataReader
         from psyplot.data import Signal
+        import psyplot.project as psy
         if hasattr(self, 'straditizer_widgets'):
             self.straditizer_widgets.reset_control()
         for obj in gc.get_objects():
             if isinstance(obj, Signal):
                 obj.disconnect()
+        psy.close('all')
         plt.close('all')
         for f in self.created_files:
             if osp.exists(f):

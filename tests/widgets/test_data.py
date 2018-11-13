@@ -262,6 +262,15 @@ class DigitizerTest(bt.StraditizeWidgetsTestCase):
         self.assertFrameEqual(ref, self.reader.sample_locs,
                               check_names=False)
 
+    def test_plot_results(self):
+        """Test the plotting of the results"""
+        sw = self.straditizer_widgets
+        self.assertFalse(sw.plot_control.results_plot.cb_final.isEnabled())
+        self.test_load_samples()
+        sp, groupers = sw.plot_control.results_plot.plot_results()
+        self.assertEqual(
+            len(sp), len(self.straditizer.data_reader._full_df.columns))
+
 
 class ChildReaderFrameworkTest(bt.StraditizeWidgetsTestCase):
     """Test the column specific reader framework"""

@@ -2226,6 +2226,118 @@ class DataReader(LabelSelection):
         if self.magni is not None:
             self.magni.ax.figure.canvas.draw()
 
+    strat_plot_identifier = 'percentages'
+
+    def plot_results(self, df, ax=None, fig=None, transformed=True):
+        """Plot the diagram on the given axes"""
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+        import matplotlib.transforms as mt
+        import psyplot.project as psy
+
+        if ax is None:
+            fig = fig or plt.figure()
+            bbox = mt.Bbox.from_extents(
+                mpl.rcParams['figure.subplot.left'],
+                mpl.rcParams['figure.subplot.bottom'],
+                mpl.rcParams['figure.subplot.right'],
+                mpl.rcParams['figure.subplot.top'])
+        elif isinstance(ax, (mpl.axes.SubplotBase, mpl.axes.Axes)):
+            bbox = ax.get_position()
+            fig = ax.figure
+        else:  # the bbox is given
+            bbox = ax
+            fig = fig or plt.gcf()
+        x0 = bbox.x0
+        y0 = bbox.y0
+        height = bbox.height
+        total_width = bbox.width
+        x1 = x0 + total_width
+        r0 = self.get_reader_for_col(0)
+        breaks = [0]
+        ncols = len(self.all_column_starts)
+        for i in range(1, ncols):
+            if self.get_reader_for_col(i) is not r0:
+                r0 = self.get_reader_for_col(i)
+                breaks.append(i)
+        groupers = []
+        arr_names = []
+        ds = df.to_xarray()
+        ax0 = None
+        with psy.Project.block_signals:
+            for i, j in zip(breaks, breaks[1:] + [ncols]):
+                grouper = self.get_reader_for_col(i).create_grouper(
+                    ds, list(range(i, j)), fig, x0, y0, total_width, height,
+                    ax0=ax0, transformed=transformed)
+                arr_names.extend(
+                    arr.psy.arr_name for arr in grouper.plotter_arrays)
+                groupers.append(grouper)
+                ax0 = ax0 or grouper.axes[0]
+            sp = psy.gcp(True)(arr_name=arr_names)
+            sp[0].psy.update(
+                ylabel='%(name)s',
+                ytickprops={'left': True, 'labelleft': True}, draw=False)
+            for ax, p in sp.axes.items():
+                ax_bbox = ax.get_position()
+                d = {}
+                if ax_bbox.x0 != x0:
+                    d['left'] = ':'
+                if ax_bbox.x1 != x1:
+                    d['right'] = ':'
+                p.update(axislinestyle=d, draw=False)
+        psy.scp(sp.main)
+        psy.scp(sp)
+        if df.index[0] < df.index[-1]:
+            ax0.invert_yaxis()
+        return sp, groupers
+
+    def get_bbox_for_cols(self, columns, x0, y0, width, height):
+        """Get the boundary boxes for the columns of this reader"""
+        import matplotlib.transforms as mt
+        s0 = min(self.all_column_starts)
+        total_width = max(self.all_column_ends) - s0
+        i = min(columns)
+        j = max(columns)
+        col0 = self.all_column_starts[i]
+        orig_width = self.all_column_ends[j] - col0
+        return mt.Bbox.from_bounds(
+            x0 + (col0 - s0) / total_width * width, y0,
+            orig_width / total_width * width, height)
+
+    def create_grouper(self, ds, columns, fig, x0, y0, width, height, ax0=None,
+                       transformed=True, **kwargs):
+        from psy_strat.stratplot import strat_groupers
+        import psyplot.project as psy
+        mp = psy.gcp(True)
+        grouper_cls = strat_groupers[self.strat_plot_identifier]
+
+        box = self.get_bbox_for_cols(columns, x0, y0, width, height)
+        group = 'Columns %i - %i' % (min(columns), max(columns))
+        ds[group] = xr.Variable(
+            tuple(), '', attrs={'identifier': self.strat_plot_identifier})
+        for col in columns:
+            ds.variables[col].attrs['group'] = group
+            ds.variables[col].attrs['maingroup'] = group
+        grouper = grouper_cls.from_dataset(
+            fig, box, ds, columns, ax0=ax0, project=mp,
+            group=group, **kwargs)
+
+        bounds = self.all_column_bounds - self.all_column_starts[:, np.newaxis]
+        bounds = bounds[columns]
+        if transformed:
+            try:
+                bounds = self.px2data_x(bounds)
+            except ValueError:
+                pass
+
+        self.resize_axes(grouper, bounds)
+        return grouper
+
+    def resize_axes(self, grouper, bounds):
+        for plotter, (s, e) in zip(grouper.plotters, bounds):
+            plotter.update(xlim=(s, e))
+        grouper.resize_axes(grouper.axes)
+
     def remove_plots(self):
         """Remove all plotted artists by this reader"""
         for attr in ['plot_im', 'background', 'magni_plot_im',
@@ -2247,6 +2359,8 @@ class LineDataReader(DataReader):
     This class does not have a significantly different behaviour than the
     base :class:`DataReader` class, but might be improved with more specific
     features in the future"""
+
+    strat_plot_identifier = 'default'
 
 
 class BarDataReader(DataReader):
@@ -2352,6 +2466,7 @@ class BarDataReader(DataReader):
         if hasattr(self, '_full_df_orig'):
             self.create_variable(ds, v('full_data_orig'),
                                  self._full_df_orig.values)
+        return ds
 
     to_dataset.__doc__ = DataReader.to_dataset.__doc__
 
@@ -2376,7 +2491,7 @@ class BarDataReader(DataReader):
                 bars = ds[v('splitted')].values.tolist()
                 nbars = np.cumsum(ds[v('nsplit')].values)
                 ret._splitted = {
-                    ret.columns[i]: bars[s:e]
+                    i: bars[s:e]
                     for i, (s, e) in enumerate(zip(chain([0], nbars[:-1]),
                                                    nbars))}
             else:
@@ -2387,7 +2502,7 @@ class BarDataReader(DataReader):
             ret.max_len = ds[v('max_len')].values
         if v('full_data_orig') in ds:
             ret._full_df_orig = pd.DataFrame(
-                ds[v('full_data_orig')].values, columns=ret.columns)
+                ds[v('full_data_orig')].values, columns=ds.column.values)
 
         return ret
 
@@ -2573,6 +2688,11 @@ class BarDataReader(DataReader):
             return True
         col = list(self.columns).index(col)
         return list(filter(do_append, self._all_indices[col])), []
+
+    def create_grouper(self, ds, columns, *args, **kwargs):
+        group = 'Columns %i - %i' % (min(columns), max(columns))
+        return super().create_grouper(ds, columns, *args, use_bars=[group],
+                                      **kwargs)
 
 
 class _Bar(object):

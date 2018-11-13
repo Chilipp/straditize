@@ -16,6 +16,8 @@ class StackedReader(DataReader, StraditizerControlBase):
     #: The QTreeWidgetItem that holds the digitization widgets
     digitize_child = None
 
+    strat_plot_identifier = 'stacked'
+
     _current_col = 0
 
     def digitize(self):
@@ -26,8 +28,9 @@ class StackedReader(DataReader, StraditizerControlBase):
         if digitizing and self.digitize_child is None:
             raise ValueError("Apparently another digitization is in progress!")
         elif not digitizing and self.digitize_child is None:
-            if len(self.columns) == 1:
+            if len(self.columns) == 1 or self._current_col not in self.columns:
                 self._current_col = self.columns[0]
+            if len(self.columns) == 1:
                 super(StackedReader, self).digitize()
             # start digitization
             digitizer.btn_digitize.setCheckable(True)
@@ -285,6 +288,13 @@ class StackedReader(DataReader, StraditizerControlBase):
                     np.where(mask, np.nan, arr)[imin:imax] + x[imin:imax],
                     y[imin:imax], **plot_kws))
             x += arr
+
+    def resize_axes(self, grouper, bounds):
+        """Reimplemented to do nothing"""
+        xmin = bounds.min()
+        xmax = bounds.max()
+        grouper.plotters[0].update(xlim=(xmin, xmax))
+        return
 
 
 readers.setdefault('stacked area', StackedReader)
