@@ -279,6 +279,7 @@ class CrossMarks(object):
         # we plot the first separate line to get the correct color
         line = self.ax.plot(np.r_[[xmin], x, [xmax]],
                             [y] * (len(x) + 2), markevery=slice(1, len(x) + 1),
+                            label='cross_mark_hline',
                             visible=not self.hide_horizontal, **kwargs)[0]
         if 'color' not in kwargs and 'c' not in kwargs:
             kwargs['c'] = line.get_c()
@@ -286,6 +287,7 @@ class CrossMarks(object):
         self.hlines = [line] + [
             self.ax.plot(np.r_[[xmin], x, [xmax]],
                          [y] * (len(x) + 2), markevery=slice(1, len(x) + 1),
+                         label='cross_mark_hline',
                          visible=not self.hide_horizontal, **kwargs)[0]
             for x, y in xy]
         # and the vertical lines
@@ -293,6 +295,7 @@ class CrossMarks(object):
             self.ax.plot([x] * (len(y) + 2),
                          np.r_[[ymin], y, [ymax]],
                          markevery=slice(1, len(y) + 1),
+                         label='cross_mark_vline',
                          visible=not self.hide_vertical, **kwargs)[0]
             for x, y in zip(self.xa, repeat(self.ya))]
         for h, v in zip(self.hlines, self.vlines):
@@ -423,6 +426,7 @@ class CrossMarks(object):
                     for i2, j2 in product(range(len(m.xa)), range(len(m.ya))):
                         m.set_current_point(i2, j2)
                         line = ax.plot([pos[0], m.pos[0]], [pos[1], m.pos[1]],
+                                       label='cross_mark_connection',
                                        **self._unselect_props)[0]
                         if self.auto_hide:
                             line.set_lw(0)
