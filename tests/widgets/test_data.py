@@ -181,7 +181,7 @@ class OccurencesTest(bt.StraditizeWidgetsTestCase):
         # make sure that the occurences have been removed
         self.assertBinaryImageEquals(
             self.reader.binary, self.get_fig_path('basic_diagram_binary.png'))
-        self.assertEqual(self.reader.occurences, {(11, 6), (17, 14)})
+        self.assertEqual(self.reader.occurences, {(10, 6), (17, 14)})
 
     def test_edit_occurences(self):
         self.test_01_select_occurences()

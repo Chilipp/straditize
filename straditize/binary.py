@@ -1750,10 +1750,10 @@ class DataReader(LabelSelection):
             bounds = self.all_column_bounds
         for l in range(1, num + 1):
             y, x = np.where(labeled == l)
-            starts = [s for s, e in bounds if ((x >= s) & (x <= e)).any()] or \
+            means = [(s+e)/2 for s, e in bounds if ((x >= s) & (x <= e)).any()] or \
                 [x]
             self.occurences.add(
-                (int(max(starts)), int(np.round(y.mean()))))
+                (int(max(means)), int(np.round(y.mean()))))
 
     def get_reader_for_col(self, col):
         """Get the reader for a specific column
