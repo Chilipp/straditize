@@ -10,17 +10,18 @@ source:
 
 build:
   number: 0
-  script: python setup.py install --single-version-externally-managed --record record.txt
+  script: python -m pip install . --no-deps --ignore-installed -vvv
   entry_points:
-    - straditize=straditize.__main__:main
+    - straditize = straditize.__main__:main
 
 requirements:
   build:
     - python
-    - setuptools
+    - pip
   run:
     - python
-    - psyplot-gui
+    - psyplot-gui >=1.2.0
+    - psyplot >=1.2.0
     - netcdf4
     - pyqt >=5.7.0  # [osx]
     - scipy
