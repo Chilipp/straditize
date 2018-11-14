@@ -110,7 +110,8 @@ class StraditizerWidgets(QWidget, DockMixin):
         from straditize.widgets.marker_control import MarkerControl
         from straditize.widgets.plots import PlotControl
         from straditize.widgets.axes_translations import AxesTranslations
-        from straditize.widgets.image_correction import ImageRotator
+        from straditize.widgets.image_correction import (
+            ImageRotator, ImageRescaler)
         self._straditizers = []
         super(StraditizerWidgets, self).__init__(*args, **kwargs)
         self.tree = QTreeWidget(parent=self)
@@ -149,9 +150,16 @@ class StraditizerWidgets(QWidget, DockMixin):
         item.setText(0, 'Axes translations')
         self.axes_translations = AxesTranslations(self, item)
 
+        self.image_transform_item = item = QTreeWidgetItem(0)
+        item.setText(0, 'Transform source image')
+
+        self.image_rescaler = ImageRescaler(self, item)
+
         self.image_rotator_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Rotate image')
-        self.image_rotator = ImageRotator(self, item)
+        self.image_rotator = ImageRotator(self)
+        self.image_transform_item.addChild(item)
+        self.image_rotator.setup_children(item)
 
         self.plot_control_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Plot control')
@@ -358,6 +366,8 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.axes_translations.refresh()
         if self.tutorial is not None:
             self.tutorial.refresh()
+        self.image_rotator.refresh()
+        self.image_rescaler.refresh()
         self.btn_reload_autosaved.setEnabled(bool(self.autosaved))
 
     def get_attr(self, stradi, attr):

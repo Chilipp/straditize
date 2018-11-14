@@ -278,7 +278,8 @@ class StraditizerMenuActions(StraditizerControlBase):
 
     def open_straditizer(self, fname=None, *args, **kwargs):
         from straditize.straditizer import Straditizer
-        if fname is None or not isinstance(fname, six.string_types):
+        if fname is None or (not isinstance(fname, six.string_types) and
+                             np.ndim(fname) < 2):
             fname = QFileDialog.getOpenFileName(
                 self.straditizer_widgets, 'Straditizer project',
                 self._dirname_to_use or os.getcwd(),
@@ -300,10 +301,12 @@ class StraditizerMenuActions(StraditizerControlBase):
                 fname = fname[0]
         if not fname:
             return
+        elif np.ndim(fname) >= 2:
+            stradi = Straditizer(fname, *args, **kwargs)
         elif fname.endswith('.nc') or fname.endswith('.nc4'):
             import xarray as xr
             ds = xr.open_dataset(fname)
-            stradi = Straditizer.from_dataset(ds.load())
+            stradi = Straditizer.from_dataset(ds.load(), *args, **kwargs)
             stradi.set_attr('project_file', fname)
             ds.close()
         elif fname.endswith('.pkl'):

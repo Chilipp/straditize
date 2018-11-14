@@ -20,7 +20,7 @@ class ImageRotatorTest(bt.StraditizeWidgetsTestCase):
         self.add_mark((10, 30))
         angle = self.rotator.angle
         self.assertEqual(angle, -90)
-        rotated = self.straditizer.image.rotate(angle)
+        rotated = self.straditizer.image.rotate(angle, expand=True)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
                          Qt.LeftButton)
         self.assertArrayEquals(self.straditizer.image, rotated)
@@ -33,7 +33,7 @@ class ImageRotatorTest(bt.StraditizeWidgetsTestCase):
         self.add_mark((30, 10))
         angle = self.rotator.angle
         self.assertEqual(angle, 90)
-        rotated = self.straditizer.image.rotate(angle)
+        rotated = self.straditizer.image.rotate(angle, expand=True)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
                          Qt.LeftButton)
         self.assertArrayEquals(self.straditizer.image, rotated)
