@@ -1533,10 +1533,11 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
             self.connect2cancel(self.remove_lines, self.disconnect,
                                 self.remove_actions, reader.draw_figure,
                                 self.remove_split_children)
+        xmax = np.shape(self.straditizer.image)[1]
         for i, child in enumerate(map(item.child, range(item.childCount()-1))):
             y = int(child.text(0).split(', ')[-1])
             self.lines.append(reader.ax.hlines(
-                y0 + y + 1, *bounds[idx_col], color='red'))
+                y0 + y + 1, 0, xmax, color='red'))
         reader.draw_figure()
 
     def remove_lines(self):
@@ -1604,7 +1605,8 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                     draw_line = True
         if draw_line:
             self.lines.append(reader.ax.hlines(
-                y0 + y + 1, start, end, color='red'))
+                y0 + y + 1, 0, np.shape(self.straditizer.image)[1],
+                color='red'))
             reader.draw_figure()
 
     def revert_split(self, y, y0):
