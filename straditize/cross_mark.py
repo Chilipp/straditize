@@ -342,7 +342,8 @@ class CrossMarks(object):
             {'_line_kwargs': self._line_kwargs,
              'hide_horizontal': self.hide_horizontal,
              'hide_vertical': self.hide_vertical,
-             '_unselect_props': self._unselect_props}
+             '_unselect_props': self._unselect_props,
+             'xa': self.xa, 'ya': self.ya}
             )
 
     @staticmethod
