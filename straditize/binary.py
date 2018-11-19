@@ -1487,7 +1487,8 @@ class DataReader(LabelSelection):
         if 'lw' not in kwargs and 'linewidth' not in kwargs:
             kwargs['lw'] = 2.0
         for i in range(vals.shape[1]):
-            mask = ~np.isnan(vals[:, i])
+            mask = (~np.isnan(vals[:, i])) & (
+                    vals[:, i] != self.occurences_value)
             x = starts[i] + vals[:, i][mask]
             lines.extend(ax.plot(x, y[mask], *args, **kwargs))
         return lines
@@ -2282,6 +2283,8 @@ class DataReader(LabelSelection):
                 breaks.append(i)
         groupers = []
         arr_names = []
+        df = df.copy()
+        df.columns = list(map(str, df.columns))
         ds = df.to_xarray()
         ax0 = None
         with psy.Project.block_signals:
@@ -2296,6 +2299,7 @@ class DataReader(LabelSelection):
             sp = psy.gcp(True)(arr_name=arr_names)
             sp[0].psy.update(
                 ylabel='%(name)s',
+                maskbetween=[self.occurences_value, self.occurences_value+1],
                 ytickprops={'left': True, 'labelleft': True}, draw=False)
             for ax, p in sp.axes.items():
                 ax_bbox = ax.get_position()
@@ -2335,11 +2339,11 @@ class DataReader(LabelSelection):
         group = 'Columns %i - %i' % (min(columns), max(columns))
         ds[group] = xr.Variable(
             tuple(), '', attrs={'identifier': self.strat_plot_identifier})
-        for col in columns:
+        for col in map(str, columns):
             ds.variables[col].attrs['group'] = group
             ds.variables[col].attrs['maingroup'] = group
         grouper = grouper_cls.from_dataset(
-            fig, box, ds, columns, ax0=ax0, project=mp,
+            fig, box, ds, list(map(str, columns)), ax0=ax0, project=mp,
             group=group, **kwargs)
 
         bounds = self.all_column_bounds - self.all_column_starts[:, np.newaxis]
@@ -2791,7 +2795,7 @@ class _Bar(object):
             return False
         return True
 
-    def get_overlaps(self, bars, min_fract=0.9):
+    def get_overlaps(self, bars, min_fract=0.9, closest=True):
 
         def dist(bar):
             return np.abs(self.loc - bar.loc)
@@ -2807,8 +2811,9 @@ class _Bar(object):
                 d[bar.col].append(bar)
         # if we found multiple bars per column, we take the one that is the
         # closest
-        for col, l in filter(lambda t: len(t[1]) > 1, d.items()):
-            d[col] = [min(l, key=dist)]
+        if closest:
+            for col, l in filter(lambda t: len(t[1]) > 1, d.items()):
+                d[col] = [min(l, key=dist)]
         self.overlaps = list(chain.from_iterable(d.values()))
 
     def get_all_overlaps(self):
