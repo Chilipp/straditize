@@ -1545,6 +1545,14 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
             fig.add_subplot('131', sharey=ax)
             fig.add_subplot('132', sharey=ax)
             fig.add_subplot('133', sharey=ax)
+            for ax in fig.axes:
+                ax.callbacks.connect(
+                    'xlim_changed', self.set_suggestions_fig_titles)
+            from psyplot_gui.main import mainwindow
+            if mainwindow.figures:
+                mainwindow.splitDockWidget(
+                    self.straditizer.fig.canvas.manager.window,
+                    fig.canvas.manager.window, Qt.Vertical)
         else:
             fig = self.suggestions_fig
             for im in self.images:
@@ -1584,6 +1592,14 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
 
         reader.draw_figure()
         self.suggestions_fig.canvas.draw()
+
+    def set_suggestions_fig_titles(self, ax):
+        x = np.mean(ax.get_xlim())
+        col = next(
+                (i for i, (s, e) in enumerate(
+                    self.straditizer.data_reader.all_column_bounds)
+                 if x >= s and x <= e), None)
+        ax.set_title(('Column %i' % col) if col else '')
 
     def suggest_splits(self):
         """Find overlaps for the current selected bar in other columns"""
