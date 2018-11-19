@@ -183,12 +183,29 @@ class Straditizer(LabelSelection):
 
     data_ylim = None
 
-    #: The :class:`straditize.ocr.ColNamesReader` for reading the column names
-    colnames_reader = None
+    @property
+    def colnames_reader(self):
+        """
+        The :class:`straditize.ocr.ColNamesReader` for reading the column names
+        """
+        if self.data_reader is None or self.data_reader._column_starts is None:
+            return None
+        elif self._colnames_reader is None:
+            from straditize.ocr import ColNamesReader
+            self._colnames_reader = ColNamesReader(
+                self.image,
+                self.data_reader.all_column_bounds + self.data_xlim[0])
+        ret = self._colnames_reader
+        # make sure, we use the correct column bounds
+        ret.column_bounds = self.data_reader.all_column_bounds + \
+            self.data_xlim[0]
+        return ret
 
-    colnames_xlim = None
+    @colnames_reader.setter
+    def colnames_reader(self, value):
+        self._colnames_reader = value
 
-    colnames_ylim = None
+    _colnames_reader = None
 
     _orig_format_coord = None
 
@@ -382,6 +399,8 @@ class Straditizer(LabelSelection):
                 np.vstack([self._yaxis_px_orig, self.yaxis_data]))
         if self.data_reader is not None:
             self.data_reader.to_dataset(ds)
+        if self.colnames_reader is not None:
+            self.colnames_reader.to_dataset(ds)
         return ds
 
     def create_variable(self, ds, vname, data, **kwargs):
@@ -429,6 +448,9 @@ class Straditizer(LabelSelection):
                     parent.children.append(reader)
                 else:
                     stradi.data_reader = parent = reader
+        if 'colnames_image' in ds:
+            from straditize.ocr import ColNamesReader
+            stradi.colnames_reader = ColNamesReader.from_dataset(ds)
         return stradi
 
     def draw_figure(self):
@@ -505,23 +527,6 @@ class Straditizer(LabelSelection):
         self.remove_marks()
         self.draw_data_box()
 
-    def update_colnames_part(self):
-        marks = self.marks
-        x = np.unique(np.ceil([m.pos[0] for m in marks]))
-        y = np.unique(np.ceil([m.pos[1] for m in marks]))
-        if len(x) != 2:
-            raise ValueError(
-                "Need exactly two x-values for extracting the data! Got %i" % (
-                    len(x)))
-        if len(y) != 2:
-            raise ValueError(
-                "Need exactly two y-values for extracting the data! Got %i" % (
-                    len(y)))
-        self.colnames_xlim = x
-        self.colnames_ylim = y
-        self.remove_marks()
-        self.draw_colnames_box()
-
     def _draw_box(self, xlim, ylim):
         box = self.ax.bar(xlim[0], np.diff(ylim)[0], np.diff(xlim)[0],
                           ylim[0], edgecolor='r', facecolor='none',
@@ -551,26 +556,6 @@ class Straditizer(LabelSelection):
         if getattr(self, 'magni_data_box', None) is not None:
             try:
                 self.magni_data_box.remove()
-            except ValueError:
-                pass
-
-    def draw_colnames_box(self):
-        # plot a box around the plot
-        self.remove_colnames_box()
-        self.colnames_box, self.magni_colnames_box = self._draw_box(
-            self.colnames_xlim, self.colnames_ylim)
-
-    def remove_colnames_box(self):
-        """Remove the colnames_box"""
-        if getattr(self, 'colnames_box', None) is not None:
-            try:
-                self.colnames_box.remove()
-            except ValueError:
-                pass
-            del self.colnames_box
-        if getattr(self, 'magni_colnames_box', None) is not None:
-            try:
-                self.magni_colnames_box.remove()
             except ValueError:
                 pass
 
@@ -761,15 +746,6 @@ class Straditizer(LabelSelection):
         if hasattr(self, '_new_mark'):
             del self._new_mark
 
-    def init_colnames_reader(self, ax=None, **kwargs):
-        from straditize.ocr import ColNamesReader
-        x0, x1 = map(int, self.colnames_xlim)
-        y0, y1 = map(int, self.colnames_ylim)
-        ax = ax or self.ax
-        self.colnames_reader = ColNamesReader(
-            self.image.crop([x0, y0, x1, y1]), ax=ax, extent=[x0, x1, y1, y0],
-            magni=self.magni, **kwargs)
-
     def init_reader(self, reader_type='area', ax=None, **kwargs):
         x0, x1 = map(int, self.data_xlim)
         y0, y1 = map(int, self.data_ylim)
@@ -792,6 +768,7 @@ class Straditizer(LabelSelection):
         except ValueError:
             pass
         df.index.name = self.get_attr('Y-axis name') or None
+        df.columns = self.colnames_reader.column_names
         return df
 
     def show_full_image(self):
@@ -840,6 +817,8 @@ class Straditizer(LabelSelection):
             reader._column_starts = starts - x0
         if not self.data_reader.children:
             self.data_reader.columns = None
+        self.colnames_reader.column_bounds = \
+            self.data_reader.all_column_bounds + x0
         self.remove_marks()
 
     def marks_for_column_ends(self, threshold=None):
@@ -878,6 +857,7 @@ class Straditizer(LabelSelection):
             reader._column_ends = ends - x0
         if not self.data_reader.children:
             self.data_reader.columns = None
+        self.colnames_reader.column_bounds[:, 1] = ends
         self.remove_marks()
 
     def marks_for_occurences(self):

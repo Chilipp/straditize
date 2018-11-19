@@ -792,7 +792,10 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
     def create_view(self, axes=None):
         stradi = self.straditizer()
         reader = stradi.data_reader
-        df = getattr(stradi, '_plotted_full_df', reader._full_df)
+        df = getattr(stradi, '_plotted_full_df', reader._full_df).copy()
+        df.columns = [
+            str(i) if str(i) == colname else '%s (%i)' % (colname, i)
+            for i, colname in enumerate(stradi.colnames_reader.column_names)]
         return MultiCrossMarksView(stradi.marks, df, df.columns,
                                    self.straditizer, axes=axes,
                                    occurences_value=reader.occurences_value)
@@ -898,7 +901,10 @@ class SingleCrossMarksEditor(MultiCrossMarksEditor):
         stradi = self.straditizer()
         reader = stradi.data_reader
         axes = [reader.ax]
-        df = getattr(stradi, '_plotted_full_df', reader._full_df)
+        df = getattr(stradi, '_plotted_full_df', reader._full_df).copy()
+        df.columns = [
+            str(i) if str(i) == colname else '%s (%i)' % (colname, i)
+            for i, colname in enumerate(stradi.colnames_reader.column_names)]
         x0 = min(stradi.data_xlim)
         return SingleCrossMarksView(
             stradi.marks, df, df.columns, self.straditizer, axes=axes,

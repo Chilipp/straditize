@@ -112,6 +112,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         from straditize.widgets.axes_translations import AxesTranslations
         from straditize.widgets.image_correction import (
             ImageRotator, ImageRescaler)
+        from straditize.widgets.ocr import ColumnNamesManager
         self._straditizers = []
         super(StraditizerWidgets, self).__init__(*args, **kwargs)
         self.tree = QTreeWidget(parent=self)
@@ -145,6 +146,10 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.digitizer_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Digitization control')
         self.digitizer = DigitizingControl(self, item)
+
+        self.col_names_item = item = QTreeWidgetItem(0)
+        item.setText(0, 'Column names')
+        self.colnames_manager = ColumnNamesManager(self, item)
 
         self.axes_translations_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Axes translations')
@@ -368,6 +373,7 @@ class StraditizerWidgets(QWidget, DockMixin):
             self.tutorial.refresh()
         self.image_rotator.refresh()
         self.image_rescaler.refresh()
+        self.colnames_manager.refresh()
         self.btn_reload_autosaved.setEnabled(bool(self.autosaved))
 
     def get_attr(self, stradi, attr):
