@@ -15,7 +15,9 @@ from psyplot_gui.compat.qtcompat import (
     Qt, QHBoxLayout, QVBoxLayout, QWidget, QTreeWidgetItem,
     with_qt5, QIcon, QIntValidator, QTreeWidget, QToolBar, QGridLayout,
     QCheckBox, QInputDialog, QFileDialog)
+from psyplot.utils import unique_everseen
 from itertools import chain
+from collections import defaultdict
 
 if with_qt5:
     from PyQt5.QtWidgets import QGroupBox, QSpinBox
@@ -83,9 +85,6 @@ class DigitizingControl(StraditizerControlBase):
 
     #: Button for selecting the data box
     btn_select_data = None
-
-#    #: Button for selecting colors to ignore
-#    btn_add_bc_colors = None
 
     #: Combobox for selecting the reader type
     cb_reader_type = None
@@ -1399,6 +1398,8 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
 
     prev_action = None
 
+    suggestions_fig = None
+
     @property
     def previous_item(self):
         child = self.selected_child
@@ -1513,8 +1514,9 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         idx_col = reader.columns.index(col)
         ax = reader.ax
         ax.set_xlim(*bounds[idx_col])
-        ax.set_ylim(y0 + max(indices) + len(indices) * 0.5,
-                    y0 + min(indices) - len(indices) * 0.5)
+        ylim = (y0 + max(indices) + len(indices) * 0.5,
+                y0 + min(indices) - len(indices) * 0.5)
+        ax.set_ylim(*ylim)
         self.lines = [ax.plot(
             bounds[idx_col, 0] + reader._full_df_orig.loc[indices, col].values,
             y0 + np.array(indices) + 0.5, marker='+', lw=0)[0]]
@@ -1534,11 +1536,65 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                                 self.remove_actions, reader.draw_figure,
                                 self.remove_split_children)
         xmax = np.shape(self.straditizer.image)[1]
-        for i, child in enumerate(map(item.child, range(item.childCount()-1))):
-            y = int(child.text(0).split(', ')[-1])
-            self.lines.append(reader.ax.hlines(
-                y0 + y + 1, 0, xmax, color='red'))
+        suggestions = self.suggest_splits()
+
+        # plot suggestions
+        if self.suggestions_fig is None:
+            import matplotlib.pyplot as plt
+            self.suggestions_fig = fig = plt.figure()
+            fig.add_subplot('131', sharey=ax)
+            fig.add_subplot('132', sharey=ax)
+            fig.add_subplot('133', sharey=ax)
+        else:
+            fig = self.suggestions_fig
+            for im in self.images:
+                im.remove()
+        plotted_cols = []
+        plot_suggestions = set(chain.from_iterable(suggestions.values()))
+        for col, l in suggestions.items():
+            if plot_suggestions.intersection(l):
+                plotted_cols.append(col)
+                plot_suggestions.difference_update(l)
+        ys_10p = int(len(reader.binary) * 0.1)
+        miny = max(0, indices[0] - ys_10p)
+        maxy = indices[-1] + ys_10p
+        im = reader.binary[miny:maxy]
+        extent = [x0, reader.binary.shape[1] + x0, y0 + miny, y0 + maxy]
+        self.images = [ax.imshow(im, cmap='binary', extent=extent)
+                       for ax in fig.axes]
+        for col, ax in zip(plotted_cols, fig.axes):
+            ax.set_xlim(*bounds[col])
+            ax.set_ylim(*ylim)
+
+        # draw lines
+        if not item.childCount():
+            for y in unique_everseen(
+                    chain.from_iterable(suggestions.values())):
+                self.new_split(y, y0, draw_figure=False)
+        else:
+            axes = [reader.ax] + self.suggestions_fig.axes
+            if reader.magni is not None:
+                axes.append(reader.magni.ax)
+            for i, child in enumerate(map(item.child,
+                                          range(item.childCount()-1))):
+                y = int(child.text(0).split(', ')[-1])
+                for ax in axes:
+                    self.lines.append(ax.hlines(
+                        y0 + y + 1, 0, xmax, color='red'))
+
         reader.draw_figure()
+        self.suggestions_fig.canvas.draw()
+
+    def suggest_splits(self):
+        """Find overlaps for the current selected bar in other columns"""
+        reader = self.straditizer.data_reader
+        imin, imax = np.asarray(self.selected_indices)[[0, -1]]
+        suggestions = {}
+        for col, l in enumerate(map(np.ravel, reader._all_indices)):
+            if col != self.selected_col:
+                l[1::2] -= 1
+                suggestions[col] = l[(l > imin) & (l < imax)]
+        return suggestions
 
     def remove_lines(self):
         for l in self.lines:
@@ -1569,15 +1625,15 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         if y not in indices or y in [indices[0], indices[-1]]:
             return
         if event.button == 1:
-            self.new_split(
-                y, y0, *reader.column_bounds[idx_col] + min(extent[:2]))
+            self.new_split(y, y0)
         elif self.selected_child.childCount():
             self.revert_split(y, y0)
 
-    def new_split(self, y, y0, start, end):
+    def new_split(self, y, y0, draw_figure=True):
         reader = self.straditizer.data_reader
         item = self.selected_child
         draw_line = False
+        x0, x1 = self.straditizer.data_xlim
         if not item.childCount():
             indices = self.selected_indices
             c1 = QTreeWidgetItem(0)
@@ -1604,10 +1660,19 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                         str, indices[indices.index(y) + 1:])))
                     draw_line = True
         if draw_line:
-            self.lines.append(reader.ax.hlines(
-                y0 + y + 1, 0, np.shape(self.straditizer.image)[1],
-                color='red'))
-            reader.draw_figure()
+
+            axes = [reader.ax] + self.suggestions_fig.axes
+            if reader.magni is not None:
+                axes.append(reader.magni.ax)
+            for i, child in enumerate(map(item.child,
+                                          range(item.childCount()-1))):
+                y = int(child.text(0).split(', ')[-1])
+                for ax in axes:
+                    self.lines.append(ax.hlines(
+                        y0 + y + 1, x0, x1, color='red'))
+            if draw_figure:
+                reader.draw_figure()
+                self.suggestions_fig.canvas.draw()
 
     def revert_split(self, y, y0):
         """Revert the split"""
@@ -1714,6 +1779,9 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                 tb.removeAction(self.prev_action)
                 tb.removeAction(self.tb_separator)
             del self.prev_action
+        import matplotlib.pyplot as plt
+        plt.close(self.suggestions_fig)
+        del self.suggestions_fig, self.images
 
     def go_to_next_bar(self):
         self._go_to_item(self.next_item)
