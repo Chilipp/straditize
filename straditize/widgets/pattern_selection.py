@@ -50,6 +50,8 @@ class PatternSelectionWidget(QWidget, DockMixin):
 
     _corr_plot = None
 
+    key_press_cid = None
+
     def __init__(self, arr, data_obj, remove_selection=False, *args, **kwargs):
         super(PatternSelectionWidget, self).__init__(*args, **kwargs)
         self.arr = arr
@@ -156,7 +158,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
             for a in self.selector.artists:
                 a.set_visible(False)
             self.btn_select_template.setText('Select a template')
-        elif self.selector is not None:
+        elif self.selector is not None and self.template_im is not None:
             self.selector.set_active(True)
             for a in self.selector.artists:
                 a.set_visible(True)
@@ -166,6 +168,8 @@ class PatternSelectionWidget(QWidget, DockMixin):
                 self.data_obj.ax, self.update_image, interactive=True)
             if self.template_extents is not None:
                 self.selector.draw_shape(self.template_extents)
+            self.key_press_cid = self.data_obj.ax.figure.canvas.mpl_connect(
+                'key_press_event', self.update_image)
             self.btn_select_template.setText('Cancel')
         self.data_obj.draw_figure()
         if self.template is not None:
@@ -180,20 +184,25 @@ class PatternSelectionWidget(QWidget, DockMixin):
         elif self.axes is None:
             self.axes = self.template_fig.figure.add_subplot(111)
             self.template_fig.figure.subplots_adjust(bottom=0.3)
-        x, y = self.template_extents = np.round(
-            self.selector.extents).astype(int).reshape((2, 2))
-        if getattr(self.data_obj, 'extent', None) is not None:
-            extent = self.data_obj.extent
-            x -= int(min(extent[:2]))
-            y -= int(min(extent[2:]))
-        slx = slice(*sorted(x))
-        sly = slice(*sorted(y))
-        self.template = template = self.arr[sly, slx]
-        if template.ndim == 3:
-            self.template_im = self.axes.imshow(template)
+        if not self.selector.artists[0].get_visible():
+            self.template_extents = None
+            self.template = None
+            self.btn_select_template.setText('Cancel')
         else:
-            self.template_im = self.axes.imshow(template, cmap='binary')
-        self.btn_select_template.setText('Apply')
+            self.template_extents = np.round(self.selector.extents).astype(int)
+            x, y = self.template_extents.reshape((2, 2))
+            if getattr(self.data_obj, 'extent', None) is not None:
+                extent = self.data_obj.extent
+                x -= int(min(extent[:2]))
+                y -= int(min(extent[2:]))
+            slx = slice(*sorted(x))
+            sly = slice(*sorted(y))
+            self.template = template = self.arr[sly, slx]
+            if template.ndim == 3:
+                self.template_im = self.axes.imshow(template)
+            else:
+                self.template_im = self.axes.imshow(template, cmap='binary')
+            self.btn_select_template.setText('Apply')
         self.template_fig.draw()
 
     def start_correlation(self):
@@ -368,7 +377,9 @@ class PatternSelectionWidget(QWidget, DockMixin):
                     pass
             self.data_obj.draw_figure()
             del self.selector
-        for attr in ['data_obj', 'arr', 'template']:
+        if self.key_press_cid is not None:
+            self.data_obj.ax.figure.canvas.mpl_disconnect(self.key_press_cid)
+        for attr in ['data_obj', 'arr', 'template', 'key_press_cid']:
             try:
                 delattr(self, attr)
             except AttributeError:
