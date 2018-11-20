@@ -186,12 +186,13 @@ class Straditizer(LabelSelection):
     @property
     def colnames_reader(self):
         """
-        The :class:`straditize.ocr.ColNamesReader` for reading the column names
+        The :class:`straditize.colnames.ColNamesReader` for reading the column
+        names
         """
         if self.data_reader is None or self.data_reader._column_starts is None:
             return None
         elif self._colnames_reader is None:
-            from straditize.ocr import ColNamesReader
+            from straditize.colnames import ColNamesReader
             self._colnames_reader = ColNamesReader(
                 self.image,
                 self.data_reader.all_column_bounds + self.data_xlim[0])
@@ -449,7 +450,7 @@ class Straditizer(LabelSelection):
                 else:
                     stradi.data_reader = parent = reader
         if 'colnames_image' in ds:
-            from straditize.ocr import ColNamesReader
+            from straditize.colnames import ColNamesReader
             stradi.colnames_reader = ColNamesReader.from_dataset(ds)
         return stradi
 

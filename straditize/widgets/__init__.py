@@ -112,7 +112,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         from straditize.widgets.axes_translations import AxesTranslations
         from straditize.widgets.image_correction import (
             ImageRotator, ImageRescaler)
-        from straditize.widgets.ocr import ColumnNamesManager
+        from straditize.widgets.colnames import ColumnNamesManager
         self._straditizers = []
         super(StraditizerWidgets, self).__init__(*args, **kwargs)
         self.tree = QTreeWidget(parent=self)
