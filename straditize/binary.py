@@ -2284,14 +2284,14 @@ class DataReader(LabelSelection):
         groupers = []
         arr_names = []
         df = df.copy()
-        df.columns = list(map(str, df.columns))
+        df.columns = columns = list(map(str, df.columns))
         ds = df.to_xarray()
         ax0 = None
         with psy.Project.block_signals:
             for i, j in zip(breaks, breaks[1:] + [ncols]):
                 grouper = self.get_reader_for_col(i).create_grouper(
                     ds, list(range(i, j)), fig, x0, y0, total_width, height,
-                    ax0=ax0, transformed=transformed)
+                    ax0=ax0, transformed=transformed, colnames=df.columns[i:j])
                 arr_names.extend(
                     arr.psy.arr_name for arr in grouper.plotter_arrays)
                 groupers.append(grouper)
@@ -2329,7 +2329,7 @@ class DataReader(LabelSelection):
             orig_width / total_width * width, height)
 
     def create_grouper(self, ds, columns, fig, x0, y0, width, height, ax0=None,
-                       transformed=True, **kwargs):
+                       transformed=True, colnames=None, **kwargs):
         from psy_strat.stratplot import strat_groupers
         import psyplot.project as psy
         mp = psy.gcp(True)
@@ -2339,12 +2339,11 @@ class DataReader(LabelSelection):
         group = 'Columns %i - %i' % (min(columns), max(columns))
         ds[group] = xr.Variable(
             tuple(), '', attrs={'identifier': self.strat_plot_identifier})
-        for col in map(str, columns):
+        for col in colnames:
             ds.variables[col].attrs['group'] = group
             ds.variables[col].attrs['maingroup'] = group
         grouper = grouper_cls.from_dataset(
-            fig, box, ds, list(map(str, columns)), ax0=ax0, project=mp,
-            group=group, **kwargs)
+            fig, box, ds, colnames, ax0=ax0, project=mp, group=group, **kwargs)
 
         bounds = self.all_column_bounds - self.all_column_starts[:, np.newaxis]
         bounds = bounds[columns]
