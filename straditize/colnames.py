@@ -129,7 +129,7 @@ class ColNamesReader(object):
     def rotated_image(self):
         return self.rotate_image(self.image)
 
-    def __init__(self, image, bounds, rotate=90, mirror=False, flip=False,
+    def __init__(self, image, bounds, rotate=45, mirror=False, flip=False,
                  highres_image=None):
         from PIL import Image
 

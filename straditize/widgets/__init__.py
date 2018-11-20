@@ -150,6 +150,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.col_names_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Column names')
         self.colnames_manager = ColumnNamesManager(self, item)
+        self.add_info_button(item, 'column_names.rst')
 
         self.axes_translations_item = item = QTreeWidgetItem(0)
         item.setText(0, 'Axes translations')

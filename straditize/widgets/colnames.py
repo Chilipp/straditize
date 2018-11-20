@@ -247,6 +247,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.btn_select_colpic.setText('Apply')
         self.btn_cancel_colpic_selection.setVisible(True)
         self.colpic_canvas.draw()
+        self.btn_recognize.setEnabled(True)
 
     def highlight_selected_col(self):
         if self.rect is not None:
@@ -265,6 +266,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             if colpic is not None:
                 self.colpic_im = self.colpic_ax.imshow(colpic)
             self.colpic_canvas.draw()
+            self.btn_recognize.setEnabled(colpic is not None)
         else:
             self.btn_select_colpic.setEnabled(False)
         self.main_canvas.draw()
@@ -286,6 +288,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                     self.dock is not None and self.is_shown):
                 self.hide_plugin()
             elif self.btn_select_names.isEnabled():
+                self.straditizer_widgets.tree.itemWidget(
+                    self.straditizer_widgets.col_names_item, 1).show_docs()
                 self.to_dock(mainwindow, 'Straditizer column names')
                 self.show_plugin()
                 self.dock.raise_()
@@ -327,6 +331,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.btn_load_image.blockSignals(True)
             self.btn_load_image.setChecked(checked)
             self.btn_load_image.blockSignals(False)
+            self.btn_recognize.setEnabled(self.colpic is not None)
         else:
             try:
                 self.im_rotated.remove()

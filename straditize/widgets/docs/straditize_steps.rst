@@ -15,6 +15,7 @@ to a certain degree as well.
     select_data_part
     select_reader
     select_column_starts
+    column_names
     removing_features
     child_readers
     exaggerations
