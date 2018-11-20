@@ -481,6 +481,16 @@ class BarReaderTest(bt.StraditizeWidgetsTestCase):
             x, y = reader.ax.transData.transform([[x, y]])[0]
             reader.ax.figure.canvas.button_press_event(x, y, 1)
             return x, y
+        
+        def revert_split(child):
+            indices = list(map(int, child.text(0).split(',')))
+            last = indices[-1]
+            y= self.data_ylim[0] + last + 1
+            start = reader.all_column_starts[tree._col]
+            x = start + self.data_xlim[0] + reader.full_df.loc[last, tree._col]
+            x, y = reader.ax.transData.transform([[x, y]])[0]
+            reader.ax.figure.canvas.button_press_event(x, y, 3)
+            return x, y
         self.assertTrue(self.digitizer.bar_split_child.isHidden())
         self.test_digitize()
         # make sure that there is something to split
@@ -497,32 +507,28 @@ class BarReaderTest(bt.StraditizeWidgetsTestCase):
         self.assertIsNotNone(item)
         tree.start_splitting(item)
         used_cols.add(tree._col)
+        self.assertEqual(item.childCount(), 2)  # 2 suggestions
+        revert_split(item.child(0))
         self.assertEqual(item.childCount(), 0)
-        self.assertEqual(len(tree.lines), 1)
         x, y = split(item)
-        self.assertEqual(len(tree.lines), 2)
         self.assertEqual(item.childCount(), 2)
 
         # now revert the split
         reader.ax.figure.canvas.button_press_event(x, y, 3)
-        self.assertEqual(len(tree.lines), 1)
         self.assertEqual(item.childCount(), 0)
 
         # split again
         split(item)
         x, y = split(item)
-        self.assertEqual(len(tree.lines), 2)
         self.assertEqual(item.childCount(), 2)
 
         # go to the next bar
         tree.go_to_next_bar()
         used_cols.add(tree._col)
         item = tree.topLevelItem(1).child(0)
-        self.assertIs(tree.selected_child, item)
-        self.assertEqual(len(tree.lines), 1)
+        revert_split(item.child(0))
         self.assertEqual(item.childCount(), 0)
         split(item)
-        self.assertEqual(len(tree.lines), 2)
         self.assertEqual(item.childCount(), 2)
 
         # perform the split
