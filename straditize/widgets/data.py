@@ -350,7 +350,8 @@ class DigitizingControl(StraditizerControlBase):
 
         self.tree_bar_split = BarSplitter(straditizer_widgets)
         self.cb_split_source = QComboBox()
-        self.cb_split_source.addItems(['too long bars', 'all bars'])
+        self.cb_split_source.addItems(
+            ['too long bars', 'overlapping bars', 'all bars'])
 
         self.widgets2disable = [
             self.btn_column_starts, self.btn_column_ends,
@@ -439,11 +440,18 @@ class DigitizingControl(StraditizerControlBase):
         self.tree_bar_split.refresh()
         self.bar_split_child.setHidden(not self.tree_bar_split.filled)
         if self.tree_bar_split.filled:
-            self.cb_split_source.setItemText(0, '%i too long bars' % (
-                sum(map(len, self.straditizer.data_reader._splitted.values())))
+            nsplit = sum(map(len,
+                             self.straditizer.data_reader._splitted.values()))
+            self.cb_split_source.setItemText(0, '%i too long bar%s' % (
+                nsplit, 's' if nsplit > 1 else '')
                 )
+            noverlap = sum(map(len,
+                               self.tree_bar_split.get_overlapping_bars()))
+            self.cb_split_source.setItemText(1, '%i overlapping bar%s' % (
+                noverlap, 's' if noverlap > 1 else ''))
         else:
             self.cb_split_source.setItemText(0, 'too long bars')
+            self.cb_split_source.setItemText(1, 'overlapping bars')
         self.maybe_show_btn_reset_columns()
         self.maybe_show_btn_reset_samples()
         for w in [self.btn_init_reader, self.btn_digitize]:
@@ -947,7 +955,12 @@ class DigitizingControl(StraditizerControlBase):
         self.tree.setItemWidget(edit_child2, 0, w)
 
     def toggle_bar_split_source(self, i):
-        self.tree_bar_split.fill_table('too-long' if i == 0 else 'all')
+        if i == 0:
+            self.tree_bar_split.fill_table('too-long')
+        elif i == 1:
+            self.tree_bar_split.fill_table('overlaps')
+        else:
+            self.tree_bar_split.fill_table('all')
 
     def init_reader(self):
         """Initialize the reader"""
@@ -1443,6 +1456,20 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         except AttributeError:
             pass
 
+    def get_overlapping_bars(self):
+        """Get the bars the overlap with multiple bars in another column"""
+        reader = self.straditizer.data_reader
+        all_indices = list(map(np.array, reader._all_indices))
+        ret = [[] for _ in range(len(all_indices))]
+        for col, l in enumerate(all_indices):
+            for (imin, imax) in l:
+                for col2, l2 in enumerate(all_indices):
+                    if col2 != col and \
+                            ((l2 > imin) & (l2 < imax)).any(axis=1).sum() >= 2:
+                        ret[col].append([imin, imax])
+                        break
+        return ret
+
     def fill_table(self, source='too-long'):
         """Fill the table with the bars that should be splitted"""
         self.clear()
@@ -1451,6 +1478,11 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         if source == 'too-long':
             try:  # use the bars that should be splitted
                 items = self.straditizer.data_reader._splitted.items()
+            except AttributeError:
+                return
+        elif source == 'overlaps':
+            try:  # use overlapping bars
+                items = enumerate(self.get_overlapping_bars())
             except AttributeError:
                 return
         else:  # use all bars
