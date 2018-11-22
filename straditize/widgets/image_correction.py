@@ -15,6 +15,7 @@ class ImageRotator(StraditizerControlBase, QWidget):
     _rotating = False
     _ha = False
     _va = False
+    ask = True
 
     def __init__(self, straditizer_widgets, item=None, *args, **kwargs):
         super(ImageRotator, self).__init__(*args, **kwargs)
@@ -141,7 +142,7 @@ class ImageRotator(StraditizerControlBase, QWidget):
         angle = self.angle
         if angle is None:
             return
-        answer = QMessageBox.question(
+        answer = QMessageBox.Yes if not self.ask else QMessageBox.question(
             self, 'Restart project?',
             'This will close the straditizer and create new figures. '
             'Are you sure, you want to continue?')
