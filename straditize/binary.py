@@ -67,6 +67,8 @@ class DataReader(LabelSelection):
     #: magnified :attr:`plot_im`
     magni_plot_im = None
 
+    magni_color_plot_im = None
+
     #: magnifier
     magni = None
 
