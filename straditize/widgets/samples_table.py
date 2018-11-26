@@ -795,7 +795,7 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
         df = getattr(stradi, '_plotted_full_df', reader._full_df).copy()
         df.columns = [
             str(i) if str(i) == colname else '%s (%i)' % (colname, i)
-            for i, colname in enumerate(stradi.colnames_reader.column_names)]
+            for i, colname in enumerate(stradi.colnames_reader.column_names + ['nextrema'])]
         return MultiCrossMarksView(stradi.marks, df, df.columns,
                                    self.straditizer, axes=axes,
                                    occurences_value=reader.occurences_value)
