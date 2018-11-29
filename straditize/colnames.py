@@ -91,6 +91,12 @@ class ColNamesReader(object):
         return (self.image if self._highres_image is None else
                 self._highres_image)
 
+    @highres_image.setter
+    def highres_image(self, value):
+        self._highres_image = value
+
+    _highres_image = None
+
     @property
     def column_names(self):
         """The names of the columns"""
