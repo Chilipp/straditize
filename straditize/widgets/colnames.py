@@ -71,6 +71,16 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.btn_recognize = QtWidgets.QPushButton('Recognize')
         self.btn_recognize.setToolTip('Use tesseract to recognize the column '
                                       'name in the given image')
+
+        self.btn_find = QtWidgets.QPushButton('Find column names')
+        self.btn_find.setToolTip(
+            'Find the columns names automatically using tesserocr')
+
+        self.cb_find_all_cols = QtWidgets.QCheckBox(
+            "all columns")
+        self.cb_find_all_cols.setToolTip(
+            "Find the column names in all columns or only in the selected one")
+
         super().__init__(Qt.Horizontal)
 
         # centers of the image
@@ -98,6 +108,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.btn_select_colpic)
         hbox.addWidget(self.btn_cancel_colpic_selection)
+        layout.addRow(hbox)
+        hbox = QtWidgets.QHBoxLayout()
+        hbox.addWidget(self.btn_find)
+        hbox.addWidget(self.cb_find_all_cols)
         layout.addRow(hbox)
         left_widget.setLayout(layout)
 
@@ -129,7 +143,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
 
         self.init_straditizercontrol(straditizer_widgets, item)
 
-        self.widgets2disable = [self.btn_select_names]
+        self.widgets2disable = [self.btn_select_names, self.btn_find]
 
         self.btn_select_names.clicked.connect(self.toggle_dialog)
         self.btn_select_colpic.clicked.connect(self.toggle_colpic_selection)
@@ -145,6 +159,9 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                                      self.adjust_lims_after_resize)
         self.btn_load_image.clicked.connect(self.load_image)
         self.btn_recognize.clicked.connect(self.read_colpic)
+        self.btn_find.clicked.connect(self.find_colnames)
+        self.cb_find_all_cols.stateChanged.connect(
+            self.enable_or_disable_btn_find)
 
     def colname_changed(self, row, column):
         """Function that is called when a cell has been changed"""
@@ -210,12 +227,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.main_canvas.toolbar.pan()
             self._colpics_save.clear()
         else:
-            self.selector = RectangleSelector(
-                self.main_ax, self.update_image, interactive=True)
-            if self.colpic_extents is not None:
-                self.selector.draw_shape(self.colpic_extents)
-            self.key_press_cid = self.main_canvas.mpl_connect(
-                'key_press_event', self.update_image)
+            self.create_selector()
             self.btn_select_colpic.setText('Cancel')
             self.main_canvas.toolbar.pan()
             self._colpics_save = list(self.colnames_reader.colpics)
@@ -232,21 +244,33 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         del self.selector
         self.main_canvas.mpl_disconnect(self.key_press_cid)
 
-    def update_image(self, *args, **kwargs):
-        if self.colpic_im is not None:
-            self.colpic_im.remove()
-            del self.colpic_im
+    def create_selector(self):
+        self.selector = RectangleSelector(
+            self.main_ax, self.update_image, interactive=True)
+        if self.colpic_extents is not None:
+            self.selector.extents = self.colpic_extents
+        self.key_press_cid = self.main_canvas.mpl_connect(
+            'key_press_event', self.update_image)
 
+    def plot_colpic(self):
+        if self.colpic_im is not None:
+            try:
+                self.colpic_im.remove()
+            except (AttributeError, ValueError):
+                pass
+        self.colpic_im = self.colpic_ax.imshow(self.colpic)
+        self.colpic_canvas.draw()
+
+    def update_image(self, *args, **kwargs):
         self.colpic_extents = np.round(self.selector.extents).astype(int)
         x, y = self.colpic_extents.reshape((2, 2))
         x0, x1 = sorted(x)
         y0, y1 = sorted(y)
         self.colpic = self.colnames_reader._colpics[self.current_col] = \
             self.colnames_reader.get_colpic(x0, y0, x1, y1)
-        self.colpic_im = self.colpic_ax.imshow(self.colpic)
+        self.plot_colpic()
         self.btn_select_colpic.setText('Apply')
         self.btn_cancel_colpic_selection.setVisible(True)
-        self.colpic_canvas.draw()
         self.btn_recognize.setEnabled(True)
 
     def highlight_selected_col(self):
@@ -270,6 +294,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         else:
             self.btn_select_colpic.setEnabled(False)
         self.main_canvas.draw()
+        self.enable_or_disable_btn_find()
+
+    def enable_or_disable_btn_find(self, *args, **kwargs):
+        self.btn_find.setEnabled(self.should_be_enabled(self.btn_find))
 
     def setup_children(self, item):
         child = QtWidgets.QTreeWidgetItem(0)
@@ -278,8 +306,12 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             child, 0, self.btn_select_names)
 
     def should_be_enabled(self, w):
-        return self.straditizer is not None and getattr(
+        ret = self.straditizer is not None and getattr(
             self.straditizer.data_reader, '_column_starts', None) is not None
+        if ret and w is self.btn_find:
+            ret = (self.cb_find_all_cols.isChecked() or
+                   self.current_col is not None)
+        return ret
 
     def toggle_dialog(self):
         from psyplot_gui.main import mainwindow
@@ -443,3 +475,49 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         ax.set_ylim(yc-new_dy/2, yc+new_dy/2)
         self.fig_w = w
         self.fig_h = h
+
+    def find_colnames(self):
+        """Find the column names automatically"""
+        from straditize.colnames import tesserocr
+        if tesserocr is None:
+            raise ImportError("tesserocr module not found!")
+        x0, x1 = self.main_ax.get_xlim()
+        y0, y1 = sorted(self.main_ax.get_ylim())
+        x0 = max(x0, 0)
+        y0 = max(y0, 0)
+        x1 = min(x1, self.im_rotated.get_size()[1])
+        y1 = min(y1, self.im_rotated.get_size()[0])
+        reader = self.colnames_reader
+        texts, images, boxes = reader.find_colnames(
+            [x0, y0, x1, y1])
+        # make sure we have the exact length
+        reader.column_names
+        reader.colpics
+        all_cols = self.cb_find_all_cols.isChecked()
+        if not all_cols and self.current_col not in texts:
+            if self.current_col is not None:
+                QtWidgets.QMessageBox.warning(
+                    self.straditizer_widgets, 'Could not find column name',
+                    "Could not find a column name of column %i in the "
+                    "selected image!" % self.current_col)
+            return
+        elif not texts:
+            QtWidgets.QMessageBox.warning(
+                self.straditizer_widgets, 'Could not find column name',
+                "Could not find any column name in the selected image!")
+            return
+        elif not all_cols:
+            texts = {self.current_col: texts[self.current_col]}
+        for col, text in texts.items():
+                self.colnames_table.setItem(col, 0,
+                                            QtWidgets.QTableWidgetItem(text))
+                self.colnames_reader._colpics[col] = images[col]
+        if self.current_col is not None:
+            self.colpic = self.colnames_reader._colpics[self.current_col]
+            if self.selector is not None:
+                box = boxes[self.current_col]
+                self.colpic_extents = np.round(box.extents).astype(int)
+                self.remove_selector()
+                self.create_selector()
+                self.main_canvas.draw()
+            self.plot_colpic()

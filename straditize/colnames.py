@@ -3,12 +3,20 @@
 """
 import os
 import xarray as xr
-from PIL import Image, ImageOps
+from PIL import ImageOps
+from straditize.common import rgba2rgb
 import numpy as np
 import subprocess as spr
 import tempfile
 from collections import namedtuple
 from psyplot.data import safe_list
+
+from functools import partial
+
+try:
+    import tesserocr
+except ImportError:
+    tesserocr = None
 
 
 _Bbox = namedtuple('_Bbox', tuple('xywh'))
@@ -36,6 +44,10 @@ class Bbox(_Bbox):
     @property
     def bounds(self):
         return list(self)
+
+    @property
+    def extents(self):
+        return sorted([self.x0, self.x1]) + sorted([self.y0, self.y1])
 
     @property
     def corners(self):
@@ -67,29 +79,6 @@ class Bbox(_Bbox):
         return cls(**d)
 
 
-def rgba2rgb(image, color=(255, 255, 255)):
-    """Alpha composite an RGBA Image with a specified color.
-
-    Source: http://stackoverflow.com/a/9459208/284318
-
-    Parameters
-    ----------
-    image: PIL.Image
-        The PIL RGBA Image object
-    color: tuple
-        The rgb color for the background
-
-    Returns
-    -------
-    PIL.Image
-        The rgb image
-    """
-    image.load()  # needed for split()
-    background = Image.new('RGB', image.size, color)
-    background.paste(image, mask=image.split()[3])  # 3 is the alpha channel
-    return background
-
-
 class ColNamesReader(object):
     """A class to recognize the text in an image"""
 
@@ -97,7 +86,10 @@ class ColNamesReader(object):
 
     _boxes = None
 
-    highres_image = None
+    @property
+    def highres_image(self):
+        return (self.image if self._highres_image is None else
+                self._highres_image)
 
     @property
     def column_names(self):
@@ -355,60 +347,73 @@ class ColNamesReader(object):
         os.remove(fname2)
         return text.strip()
 
-#    def find_colnames(self, extents=None):
-#        """Find the names for the columns using tesserocr"""
-#        from itertools import starmap
-#        from functools import partial
-#        from tesserocr import PyTessBaseAPI, RIL
-#
-#        def get_overlap(col, box):
-#            s, e = bounds[col]
-#            image = self.highres_image if hr else self.image
-#            xmin = self.transform_point(
-#                box.x0 + x0, box.y0 + y0, invert=True, image=image)[0]
-#            xmax = self.transform_point(
-#                box.x0 + x0, box.y1 + y0, invert=True, image=image)[0]
-#            xmin, xmax = sorted([xmin, xmax])
-#            return min(e, xmax) - max(s, xmin)
-#
-#        bounds = self.column_bounds
-#        hr = self.highres_image is not None
-#        if hr:
-#            fx, fy = np.array(self.highres_image.size) / self.image.size
-#            bounds = bounds * fx
-#        if extents is None:
-#            if hr:
-#                image = self.rotate_image(self.highres_image)
-#            else:
-#                image = self.image
-#            x0 = y0 = 0
-#        else:
-#            extents = np.asarray(extents)
-#            if hr:
-#                extents[::2] *= fx
-#                extents[1::2] *= fy
-#                image = self.rotate_image(self.highres_image).crop(extents)
-#            else:
-#                image = self.image.crop(extents)
-#
-#            x0, y0 = self.transform_point(
-#                *extents[:2], image=image, invert=True)
-#
-#        with PyTessBaseAPI() as api:
-#            api.SetImage(rgba2rgb(image))
-#            im_boxes = api.GetComponentImages(RIL.TEXTLINE, True)
-#            texts = {}
-#            images = {}
-#            for i, (im, d, _, _) in enumerate(im_boxes):
-#                box = Bbox(d['x'], d['y'], d['w'], d['h'])
-#                api.SetRectangle(*box)
-#                text = api.GetUTF8Text().strip()
-#                if len(text) >= 3:
-#                    texts[box] = text
-#                    images[box] = im
-#        boxes = {col: max(texts, key=partial(get_overlap, col))
-#                 for col in range(len(bounds))}
-#        return (
-#            {col: texts[box] for col, box in boxes.items()},
-#            {col: images[box] for col, box in boxes.items()},
-#            boxes)
+    def find_colnames(self, extents=None):
+        """Find the names for the columns using tesserocr"""
+
+        def get_overlap(col, box):
+            s, e = bounds[col]
+            image = self.highres_image if hr else self.image
+            x0, y0 = extents[:2]
+            xmin = self.transform_point(
+                box.x0 + x0, box.y0 + y0, invert=True, image=image)[0]
+            xmax = self.transform_point(
+                box.x0 + x0, box.y1 + y0, invert=True, image=image)[0]
+            xmin, xmax = sorted([xmin, xmax])
+            return min(e, xmax) - max(s, xmin)
+
+        bounds = self.column_bounds
+        hr = self.highres_image is not None
+        rotated = self.rotated_image
+        if hr:
+            rotated_hr = self.rotate_image(self.highres_image)
+            fx, fy = np.round(
+                np.array(rotated_hr.size) / rotated.size).astype(int)
+            bounds = bounds * fx
+        else:
+            fx = fy = 1
+        if extents is None:
+            if hr:
+                image = rotated_hr
+            else:
+                image = rotated
+            x0 = y0 = 0
+        else:
+            extents = np.asarray(extents)
+            if hr:
+                extents[::2] *= fx
+                extents[1::2] *= fy
+                image = rotated_hr.crop(extents)
+            else:
+                image = rotated.crop(extents)
+
+            x0, y0 = self.transform_point(
+                *extents[:2], image=self.highres_image if hr else self.image,
+                invert=True)
+
+        with tesserocr.PyTessBaseAPI() as api:
+            api.SetImage(rgba2rgb(image))
+            im_boxes = api.GetComponentImages(tesserocr.RIL.TEXTLINE, True)
+            texts = {}
+            images = {}
+            for i, (im, d, _, _) in enumerate(im_boxes):
+                box = Bbox(d['x'], d['y'], d['w'], d['h'])
+                api.SetRectangle(*box)
+                text = api.GetUTF8Text().strip()
+                if len(text) >= 3:
+                    texts[box] = text
+                    images[box] = im
+
+        if not texts:
+            return {}, {}, {}
+
+        boxes = dict(filter(
+            lambda t: get_overlap(*t) > 0,
+            ((col, max(texts, key=partial(get_overlap, col)))
+             for col in range(len(bounds)))))
+        x0, y0 = extents[:2]
+
+        return (
+            {col: texts[box] for col, box in boxes.items()},
+            {col: images[box] for col, box in boxes.items()},
+            {col: Bbox((x0 + b.x0) / fx, (y0 + b.y) / fy, b.w / fx, b.h / fy)
+             for col, b in boxes.items()})

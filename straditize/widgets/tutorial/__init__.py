@@ -339,6 +339,7 @@ class Tutorial(StraditizerControlBase, TutorialPage):
             SelectDataPart('straditize_tutorial_select_data', self),
             CreateReader('straditize_tutorial_create_reader', self),
             SeparateColumns('straditize_tutorial_column_starts', self),
+            ColumnNames('straditize_tutorial_column_names', self),
             RemoveLines('straditize_tutorial_remove_lines', self),
             DigitizePage('straditize_tutorial_digitize', self),
             SamplesPage('straditize_tutorial_samples', self),
@@ -670,6 +671,65 @@ class SeparateColumns(TutorialPage):
                 "Done! Click the <i>Apply</i> button",
                 sw.apply_button)
         elif starts is not None:
+            super().hint()
+
+
+class ColumnNames(TutorialPage):
+    """The page for recognizing column names"""
+
+    select_names_button_clicked = False
+
+    @property
+    def is_finished(self):
+        reader = self.straditizer_widgets.straditizer.colnames_reader
+        return reader.column_names != list(map(
+            str, range(len(reader.column_bounds))))
+
+    def skip(self):
+        self.straditizer_widgets.straditizer.colnames_reader.column_names = [
+            'Charcoal', 'Pinus', 'Juniperus', 'Quercus ilex-type',
+            'Quercus suber-type', 'Olea', 'Betula', 'Corylus', 'Carpinus-type',
+            'Ericaceae', 'Ephedra distachya-type', 'Ephedra fragilis',
+            'Mentha-type', 'Anthemis-type', 'Artemisia', 'Caryophyllaceae',
+            'Chenopodiaceae', 'Cruciferae', 'Filipendula', 'Gramineae <40um',
+            'Gramineae >40<50um', 'Gramineae >50<60um', 'Gramineae >60um',
+            'Liguliﬂorae', 'Plantago coronopus', 'Pteridium', 'Filicales',
+            'Pollen Concentration']
+
+    def activate(self):
+        sw = self.straditizer_widgets
+        sw.colnames_manager.btn_select_names.clicked.connect(
+            self.clicked_select_names_button)
+
+    def deactivate(self):
+        sw = self.straditizer_widgets
+        sw.colnames_manager.btn_select_names.clicked.disconnect(
+            self.clicked_select_names_button)
+
+    def clicked_select_names_button(self):
+        self.select_names_button_clicked = True
+
+    def hint(self):
+        reader = self.straditizer_widgets.straditizer.data_reader
+        sw = self.straditizer_widgets
+        btn = sw.colnames_manager.btn_select_names
+        rc = sw.col_names_item
+        if not self.select_names_button_clicked or \
+                not sw.colnames_manager.is_shown:
+            if not rc.isExpanded():
+                self.show_tooltip_at_widget(
+                    "Expand the <i>%s</i> item by clicking on the arrow to "
+                    "it's left" % rc.text(0), sw.tree.itemWidget(rc, 1))
+            else:
+                self.show_tooltip_at_widget(
+                    "Click the <i>%s</i> button" % btn.text(), btn)
+        elif not self.is_finished:
+            self.show_tooltip_at_widget(
+                'Edit the column names in the table. You can zoom into the '
+                'plot on the left using the `right` mouse button and navigate '
+                'using the `left` mouse button',
+                sw.colnames_manager.colnames_table)
+        else:
             super().hint()
 
 
