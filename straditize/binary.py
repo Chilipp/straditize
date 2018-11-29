@@ -368,6 +368,36 @@ class DataReader(LabelSelection):
             child.parent = self
         self.parent = parent or self
 
+    def reset_image(self, image, binary=False):
+        """Reset the image for this straditizer
+
+        Parameters
+        ----------
+        image: PIL.Image.Image
+            The new image
+        binary: bool
+            If True, then the `image` is considered as the binary image and
+            the :attr:`image` attribute is not touched"""
+        from PIL import Image
+        if np.ndim(image) == 2:
+            self.binary = np.array(image, dtype=np.int8)
+        else:
+            try:
+                mode = image.mode
+            except AttributeError:
+                image = Image.fromarray(image, mode='RGBA')
+            else:
+                if mode != 'RGBA':
+                    image = image.convert('RGBA')
+
+            if not binary:
+                self.image = image
+            self.binary = self.to_binary_pil(image)
+            self.reset_labels()
+            if self.plot_im is not None:
+                self.update_image(None, None)
+                self.draw_figure()
+
     def reset_labels(self):
         self.labels = self.get_labeled_array()
 
@@ -686,7 +716,7 @@ class DataReader(LabelSelection):
         # initialize the reader
         reader = cls(ds['reader_image'].values, *args,
                      binary=ds['binary'].values, **kwargs)
-        reader.is_exgeratted = ds['is_exaggerated'].values
+        reader.is_exaggerated = ds['is_exaggerated'].values
 
         is_parent = reader.parent is reader
 

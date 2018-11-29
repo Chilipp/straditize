@@ -311,6 +311,37 @@ class Straditizer(LabelSelection):
         self.mark_cids = set()
         self.remove_callbacks = {'image_array': [self.update_image]}
 
+    def reset_image(self, image, reader=False):
+        """Reset the straditizer image
+
+        Parameters
+        ----------
+        image: PIL.Image.Image
+            The new image to use
+        reader: bool
+            If True, the image of the data reader will be replaced, too"""
+        from PIL import Image
+
+        try:
+            mode = image.mode
+        except AttributeError:
+            image = Image.fromarray(image, mode='RGBA')
+        else:
+            if mode != 'RGBA':
+                image = image.convert('RGBA')
+
+        self.image = image
+        if self.plot_im is not None:
+            self.plot_im.set_array(image)
+            if self.magni is not None:
+                self.magni.plot_image.set_array(image)
+        if reader:
+            x0, x1 = map(int, self.data_xlim)
+            y0, y1 = map(int, self.data_ylim)
+            self.data_reader.reset_image(image.crop([x0, y0, x1, y1]))
+        else:
+            self.draw_figure()
+
     def plot_image(self, ax=None, **kwargs):
         draw_slider = (self._horizontal_slider is None or self.ax is None or
                        ax is not self.ax)
@@ -1255,3 +1286,5 @@ class Straditizer(LabelSelection):
         arr[mask] = 0
         self.image = Image.fromarray(arr, self.image.mode)
         self.plot_im.set_array(arr)
+        if self.magni is not None:
+            self.magni.plot_image.set_array(arr)
