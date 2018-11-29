@@ -7,10 +7,11 @@ from itertools import chain
 import datetime as dt
 import six
 from straditize.widgets import StraditizerControlBase
+from straditize.common import rgba2rgb
 from psyplot_gui.compat.qtcompat import (
     with_qt5, QFileDialog, QMenu, QKeySequence, QDialog, QDialogButtonBox,
     QLineEdit, QToolButton, QIcon, QCheckBox, QHBoxLayout, QVBoxLayout, QLabel,
-    QDesktopWidget)
+    QDesktopWidget, QPushButton)
 from psyplot_gui.common import get_icon
 import numpy as np
 from PIL import Image
@@ -276,13 +277,34 @@ class StraditizerMenuActions(StraditizerControlBase):
             a.setToolTip(tooltip)
         return a
 
+    @property
+    def _start_directory(self):
+        def check_current():
+            dirname = osp.dirname(current)
+            if osp.exists(dirname) and osp.isdir(dirname):
+                return dirname
+        if self.straditizer is not None:
+            current = None
+            for attr in 'project_file', 'image_file':
+                try:
+                    current = self.straditizer.get_attr(attr)
+                except KeyError:
+                    pass
+                else:
+                    start = check_current()
+                    if start is not None:
+                        break
+            if current:
+                return osp.splitext(current)[0]
+        return os.getcwd()
+
     def open_straditizer(self, fname=None, *args, **kwargs):
         from straditize.straditizer import Straditizer
         if fname is None or (not isinstance(fname, six.string_types) and
                              np.ndim(fname) < 2):
             fname = QFileDialog.getOpenFileName(
                 self.straditizer_widgets, 'Straditizer project',
-                self._dirname_to_use or os.getcwd(),
+                self._dirname_to_use or self._start_directory,
                 'Projects and images '
                 '(*.nc *.nc4 *.pkl *.jpeg *.jpg *.pdf *.png *.raw *.rgba *.tif'
                 ' *.tiff);;'
@@ -373,7 +395,7 @@ class StraditizerMenuActions(StraditizerControlBase):
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getSaveFileName(
                 self.straditizer_widgets, 'Straditizer file destination',
-                os.getcwd(),
+                self._start_directory,
                 ('NetCDF files (*.nc *.nc4);;Pickle files (*.pkl);;'
                  'All files (*)')
                 )
@@ -395,7 +417,8 @@ class StraditizerMenuActions(StraditizerControlBase):
             ds.to_netcdf(fname, encoding=encoding, engine='netcdf4')
 
     def save_text_image(self, fname=None):
-        self._save_image(self.straditizer.text_reader.image, fname)
+        reader = self.straditizer.colnames_reader
+        self._save_image(reader.highres_image, fname)
 
     def save_full_image(self, fname=None):
         self._save_image(self.straditizer.image, fname)
@@ -421,13 +444,12 @@ class StraditizerMenuActions(StraditizerControlBase):
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getSaveFileName(
                 self.straditizer_widgets, 'Straditizer file destination',
-                os.getcwd(),
+                self._start_directory,
                 'All images '
-                '(*.jpeg *.jpg *.pdf *.png *.raw *.rgba *.tif *.tiff);;'
+                '(*.png *.jpeg *.jpg *.pdf *.tif *.tiff);;'
                 'Joint Photographic Experts Group (*.jpeg *.jpg);;'
                 'Portable Document Format (*.pdf);;'
                 'Portable Network Graphics (*.png);;'
-                'Raw RGBA bitmap (*.raw *.rbga);;'
                 'Tagged Image File Format(*.tif *.tiff);;'
                 'All files (*)'
                 )
@@ -435,6 +457,9 @@ class StraditizerMenuActions(StraditizerControlBase):
                 fname = fname[0]
         if not fname:
             return
+        ext = osp.splitext(fname)[1]
+        if ext.lower() in ['.jpg', '.jpeg', '.pdf'] and image.mode == 'RGBA':
+            image = rgba2rgb(image)
         image.save(fname)
 
     def _export_df(self, df, fname=None):
