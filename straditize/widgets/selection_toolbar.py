@@ -491,7 +491,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         new_select = np.zeros_like(selection)
         for start, end in bounds:
             can_be_selected = reader._selection_arr[:, start:end].astype(bool)
-            end = start + reader._selection_arr.shape[1]
+            end = start + can_be_selected.shape[1]
             last_in_row = selection[:, start:end].argmax(axis=-1).reshape(
                 (-1, 1))
             dist2start = np.tile(np.arange(end - start)[np.newaxis],
