@@ -141,6 +141,9 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.tree.setHeaderLabels(['', ''])
         self.tree.setColumnCount(2)
 
+        self.menu_actions_item = QTreeWidgetItem(0)
+        self.menu_actions_item.setText(0, 'Images import/export')
+        self.tree.addTopLevelItem(self.menu_actions_item)
         self.menu_actions = StraditizerMenuActions(self)
 
         self.digitizer_item = item = QTreeWidgetItem(0)
@@ -223,7 +226,7 @@ class StraditizerWidgets(QWidget, DockMixin):
 
         self.apply_button.setEnabled(False)
         self.cancel_button.setEnabled(False)
-        self.tree.expandItem(self.tree.topLevelItem(0))
+        self.tree.expandItem(self.digitizer_item)
 
         # ---------------------------------------------------------------------
         # --------------------------- Connections -----------------------------
@@ -278,6 +281,7 @@ class StraditizerWidgets(QWidget, DockMixin):
             self.dock.toggleViewAction().triggered.connect(
                 self.show_or_hide_toolbar)
             self.menu_actions.setup_menu_actions(main)
+            self.menu_actions.setup_children(self.menu_actions_item)
             try:
                 main.open_file_options['Straditize project'] = \
                     self.create_straditizer_from_args

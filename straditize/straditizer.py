@@ -231,8 +231,6 @@ class Straditizer(LabelSelection):
 
     mark_cids = set()
 
-    text_reader = None
-
     _indexes = None
 
     _horizontal_slider = None
@@ -1027,7 +1025,7 @@ class Straditizer(LabelSelection):
                 else:
                     if imin >= 0:
                         artists.extend(ax.plot(
-                            s + full_df.iloc[imin:imax, col],
+                            s + full_df.iloc[imin:imax, int(col)],
                             ylim[0] + np.arange(imin, imax), c='0.5', lw=0,
                             marker='+'))
             mark = _new_mark([starts + np.where(row == occ_val, means, row),
@@ -1118,7 +1116,7 @@ class Straditizer(LabelSelection):
                 else:
                     if imin >= 0:
                         artists = ax.plot(
-                            full_df.iloc[imin:imax, col],
+                            full_df.iloc[imin:imax, int(col)],
                             np.arange(imin, imax), c='0.5', lw=0,
                             marker='+')
                     else:

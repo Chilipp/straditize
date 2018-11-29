@@ -11,7 +11,7 @@ from straditize.common import rgba2rgb
 from psyplot_gui.compat.qtcompat import (
     with_qt5, QFileDialog, QMenu, QKeySequence, QDialog, QDialogButtonBox,
     QLineEdit, QToolButton, QIcon, QCheckBox, QHBoxLayout, QVBoxLayout, QLabel,
-    QDesktopWidget, QPushButton)
+    QDesktopWidget, QPushButton, QTreeWidgetItem)
 from psyplot_gui.common import get_icon
 import numpy as np
 from PIL import Image
@@ -220,8 +220,9 @@ class StraditizerMenuActions(StraditizerControlBase):
             self.straditizer_widgets.close_all_straditizers,
             tooltip='Close all open straditize projects')
 
-        # image buttons
+        # export image buttons
         self.export_images_menu = menu = QMenu('Straditizer image(s)')
+        menu.setToolTipsVisible(True)
         main.export_project_menu.addMenu(menu)
 
         self.export_full_image_action = self._add_action(
@@ -236,19 +237,45 @@ class StraditizerMenuActions(StraditizerControlBase):
             menu, 'Save text image', self.save_text_image,
             tooltip='Save the image part with the rotated column descriptions')
 
+        # import image buttons
+        self.import_images_menu = menu = QMenu('Import straditizer image(s)')
+        menu.setToolTipsVisible(True)
+
+        self.import_full_image_action = self._add_action(
+            menu, 'Full image', self.import_full_image,
+            tooltip='Import the diagram into the current project')
+
+        self.import_data_image_action = self._add_action(
+            menu, 'Data image', self.import_data_image,
+            tooltip='Import the data part image')
+
+        self.import_binary_image_action = self._add_action(
+            menu, 'Binary data image', self.import_binary_image,
+            tooltip='Import the binary image for the data part')
+
+        self.import_text_image_action = self._add_action(
+            menu, 'Text image', self.import_text_image,
+            tooltip='Import the image for the column names')
+
         self.window_layout_action = main.window_layouts_menu.addAction(
             'Straditizer layout',
             self.straditizer_widgets.switch_to_straditizer_layout)
 
         self.save_actions = [self.export_full_image_action,
-                             self.save_straditizer_action]
+                             self.save_straditizer_action,
+                             self.import_full_image_action]
         self.data_actions = [self.export_data_image_action,
                              self.export_full_action,
-                             self.export_final_action]
-        self.text_actions = [self.export_text_image_action]
+                             self.export_final_action,
+                             self.import_binary_image_action,
+                             self.import_data_image_action]
+        self.text_actions = [self.export_text_image_action,
+                             self.import_text_image_action]
 
         self.widgets2disable = [self.load_stradi_action,
                                 self.load_clipboard_action]
+
+        self.refresh()
 
     def setup_shortcuts(self, main):
         """Setup the shortcuts when switched to the straditizer layout"""
@@ -298,6 +325,53 @@ class StraditizerMenuActions(StraditizerControlBase):
                 return osp.splitext(current)[0]
         return os.getcwd()
 
+    def import_full_image(self, fname=None):
+        image = self._open_image(fname)
+        if image is not None:
+            if self.straditizer is None:
+                self.open_straditizer(image)
+            else:
+                self.straditizer.reset_image(image)
+
+    def import_data_image(self, fname=None):
+        image = self._open_image(fname)
+        if image is not None:
+            self.straditizer.data_reader.reset_image(image)
+
+    def import_binary_image(self, fname=None):
+        image = self._open_image(fname)
+        if image is not None:
+            self.straditizer.data_reader.reset_image(image, binary=True)
+
+    def import_text_image(self, fname):
+        image = self._open_image(fname)
+        if image is not None:
+            self.straditizer.colnames_reader.highres_image = image
+
+    def _open_image(self, fname=None):
+        if fname is None or (not isinstance(fname, six.string_types) and
+                             np.ndim(fname) < 2):
+            fname = QFileDialog.getOpenFileName(
+                self.straditizer_widgets, 'Stratigraphic diagram',
+                self._dirname_to_use or self._start_directory,
+                'All images '
+                '(*.jpeg *.jpg *.pdf *.png *.raw *.rgba *.tif *.tiff);;'
+                'Joint Photographic Experts Group (*.jpeg *.jpg);;'
+                'Portable Document Format (*.pdf);;'
+                'Portable Network Graphics (*.png);;'
+                'Tagged Image File Format(*.tif *.tiff);;'
+                'All files (*)'
+                )
+            if with_qt5:  # the filter is passed as well
+                fname = fname[0]
+        if not np.ndim(fname) and not fname:
+            return
+        elif np.ndim(fname) >= 2:
+            return fname
+        else:
+            from PIL import Image
+            return Image.open(fname)
+
     def open_straditizer(self, fname=None, *args, **kwargs):
         from straditize.straditizer import Straditizer
         if fname is None or (not isinstance(fname, six.string_types) and
@@ -321,7 +395,7 @@ class StraditizerMenuActions(StraditizerControlBase):
                 )
             if with_qt5:  # the filter is passed as well
                 fname = fname[0]
-        if not fname:
+        if not np.ndim(fname) and not fname:
             return
         elif np.ndim(fname) >= 2:
             stradi = Straditizer(fname, *args, **kwargs)
@@ -480,8 +554,10 @@ class StraditizerMenuActions(StraditizerControlBase):
 
     def refresh(self):
         stradi = self.straditizer
+        import_stradi_action = getattr(self, 'import_full_image_action', None)
         if stradi is None:
-            for w in self.all_actions:
+            for w in filter(lambda w: w is not import_stradi_action,
+                            self.all_actions):
                 w.setEnabled(False)
         else:
             if stradi.data_reader is None:
@@ -490,9 +566,32 @@ class StraditizerMenuActions(StraditizerControlBase):
             else:
                 reader = stradi.data_reader
                 self.export_data_image_action.setEnabled(True)
+                self.import_binary_image_action.setEnabled(True)
+                self.import_data_image_action.setEnabled(True)
                 self.export_full_action.setEnabled(reader.full_df is not None)
                 self.export_final_action.setEnabled(reader.full_df is not None)
             for w in self.text_actions:
-                w.setEnabled(stradi.text_reader is not None)
+                w.setEnabled(stradi.colnames_reader is not None)
             for w in self.save_actions:
                 w.setEnabled(True)
+
+    def setup_children(self, item):
+        tree = self.straditizer_widgets.tree
+
+        # import menu
+        import_child = QTreeWidgetItem(0)
+        item.addChild(import_child)
+        self.btn_import = QToolButton()
+        self.btn_import.setText('Import images')
+        self.btn_import.setMenu(self.import_images_menu)
+        self.btn_import.setPopupMode(QToolButton.InstantPopup)
+        tree.setItemWidget(import_child, 0, self.btn_import)
+
+        # export menu
+        export_child = QTreeWidgetItem(0)
+        item.addChild(export_child)
+        self.btn_export = QToolButton()
+        self.btn_export.setText('Export images')
+        self.btn_export.setMenu(self.export_images_menu)
+        self.btn_export.setPopupMode(QToolButton.InstantPopup)
+        tree.setItemWidget(export_child, 0, self.btn_export)
