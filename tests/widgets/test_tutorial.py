@@ -134,7 +134,7 @@ class ColumnStartTest(TutorialTest):
 
 class RemoveLinesTest(TutorialTest):
 
-    page_number = 5
+    page_number = 6
 
     def test_page(self):
         sw = self.straditizer_widgets
@@ -170,7 +170,7 @@ class RemoveLinesTest(TutorialTest):
 
 class DigitizeTest(TutorialTest):
 
-    page_number = 6
+    page_number = 7
 
     def test_page(self):
         self._test_hint(self.digitizer.btn_digitize.text())
@@ -180,7 +180,7 @@ class DigitizeTest(TutorialTest):
 
 class SamplesTest(TutorialTest):
 
-    page_number = 7
+    page_number = 8
 
     def test_page(self):
         digitizer = self.digitizer
@@ -199,7 +199,7 @@ class SamplesTest(TutorialTest):
 
 class TranslateYAxisTest(TutorialTest):
 
-    page_number = 8
+    page_number = 9
 
     def test_page(self):
         sw = self.straditizer_widgets
@@ -226,7 +226,7 @@ class TranslateYAxisTest(TutorialTest):
 
 class TranslateXAxisTest(TutorialTest):
 
-    page_number = 9
+    page_number = 10
 
     def test_page(self):
         sw = self.straditizer_widgets
@@ -322,7 +322,7 @@ class TranslateXAxisTest(TutorialTest):
 
 class AttributesTest(TutorialTest):
 
-    page_number = 10
+    page_number = 11
 
     def test_page(self):
         sw = self.straditizer_widgets
@@ -337,7 +337,7 @@ class AttributesTest(TutorialTest):
 
 class FinishTest(TutorialTest):
 
-    page_number = 11
+    page_number = 12
 
     def test_page(self):
         self.assertTrue(self.navigation.btn_prev.isEnabled())

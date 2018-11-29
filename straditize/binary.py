@@ -1800,8 +1800,8 @@ class DataReader(LabelSelection):
             bounds = self.all_column_bounds
         for l in range(1, num + 1):
             y, x = np.where(labeled == l)
-            means = [(s+e)/2 for s, e in bounds if ((x >= s) & (x <= e)).any()] or \
-                [x]
+            means = [(s+e)/2 for s, e in bounds
+                     if ((x >= s) & (x <= e)).any()] or [x]
             self.occurences.add(
                 (int(max(means)), int(np.round(y.mean()))))
 
@@ -2333,7 +2333,7 @@ class DataReader(LabelSelection):
         groupers = []
         arr_names = []
         df = df.copy()
-        df.columns = columns = list(map(str, df.columns))
+        df.columns = list(map(str, df.columns))
         ds = df.to_xarray()
         ax0 = None
         with psy.Project.block_signals:
