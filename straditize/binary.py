@@ -577,6 +577,10 @@ class DataReader(LabelSelection):
             'dims': 'column',
             'long_name': 'Mapping from column to reader',
             'units': 'reader_index'},
+        'exag_col_map': {
+            'dims': 'column',
+            'long_name': 'Mapping from column to exaggerated reader',
+            'units': 'reader_index'},
         'column_starts': {
             'dims': 'column',
             'long_name': 'Start of the columns',
@@ -674,9 +678,18 @@ class DataReader(LabelSelection):
         if self.parent._columns is not None and len(self.parent._columns):
             all_columns = sorted(set(chain.from_iterable(
                     r.columns for r in self.iter_all_readers)))
-            if 'col_map' not in ds:
-                self.create_variable(ds, 'col_map', np.zeros_like(all_columns))
-            self.create_variable(ds, 'col_map', ireader, column=self.columns)
+            if self.is_exaggerated:
+                if 'exag_col_map' not in ds:
+                    self.create_variable(ds, 'exag_col_map',
+                                         np.zeros_like(all_columns))
+                self.create_variable(ds, 'exag_col_map', ireader,
+                                     column=self.columns)
+            else:
+                if 'col_map' not in ds:
+                    self.create_variable(ds, 'col_map',
+                                         np.zeros_like(all_columns))
+                self.create_variable(ds, 'col_map', ireader,
+                                     column=self.columns)
             if is_parent:
                 self.create_variable(ds, 'column_starts', self._column_starts)
                 if self._column_ends is not None:
@@ -727,7 +740,10 @@ class DataReader(LabelSelection):
             reader.xaxis_data = ds['xaxis_translation'].sel(
                 px_data='data').values
 
-        if 'col_map' in ds:
+        if reader.is_exaggerated and 'exag_col_map' in ds:
+            reader.columns = list(np.where(
+                ds['exag_col_map'].values == ds.reader.values)[0])
+        elif 'col_map' in ds:
             reader.columns = list(np.where(
                 ds['col_map'].values == ds.reader.values)[0])
 
@@ -850,7 +866,8 @@ class DataReader(LabelSelection):
         cols = set(self.columns)
         return next(
             (child for child in self.iter_all_readers
-             if not child.is_exaggerated and cols <= set(child.columns or [])),
+             if not child.is_exaggerated and
+             set(child.columns or [None]) <= cols),
             None)
 
     def create_exaggerations_reader(self, factor, cls=None):
