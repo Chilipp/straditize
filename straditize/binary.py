@@ -1428,7 +1428,7 @@ class DataReader(LabelSelection):
         # exaggerated value
         min_val = fraction * np.diff(self.column_bounds).T
         min_val[min_val <= absolute] = absolute
-        mask = (non_exag <= min_val) & (new_vals > 0)
+        mask = (non_exag < min_val) & (new_vals > 0)
         non_exag[mask] = new_vals[mask]
         non_exag[mask] /= self.is_exaggerated
         if return_mask:
