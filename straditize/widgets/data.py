@@ -1208,7 +1208,7 @@ class DigitizingControl(StraditizerControlBase):
     def remove_hlines(self):
         """Remove horizontal lines"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
-        max_lw = int(self.sp_max_lw.text().strip() or 0) or None
+        max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
         min_lw = int(self.sp_min_lw.text().strip() or 1)
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
