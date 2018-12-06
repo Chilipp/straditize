@@ -177,7 +177,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         if self.btn_load_image.isChecked():
             fname = QtWidgets.QFileDialog.getOpenFileName(
                 self.straditizer_widgets, 'Straditizer project',
-                os.getcwd(),
+                self.straditizer_widgets.menu_actions._start_directory,
                 'Projects and images '
                 '(*.nc *.nc4 *.pkl *.jpeg *.jpg *.pdf *.png *.raw *.rgba *.tif'
                 ' *.tiff);;'
@@ -348,6 +348,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.cb_flipv.setChecked(reader.flip)
 
             image = self.colnames_reader.highres_image
+            if image.size == self.colnames_reader.image.size:
+                image = None
             if image is not None:
                 self.btn_load_image.setText(
                     'HR image with size {}'.format(image.size))

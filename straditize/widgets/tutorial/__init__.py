@@ -681,9 +681,12 @@ class ColumnNames(TutorialPage):
 
     @property
     def is_finished(self):
-        reader = self.straditizer_widgets.straditizer.colnames_reader
-        return reader.column_names != list(map(
-            str, range(len(reader.column_bounds))))
+        sw = self.straditizer_widgets
+        reader = sw.straditizer.colnames_reader
+        ncols = len(reader.column_bounds)
+        return (
+            reader.column_names != list(map(str, range(ncols))) and
+            not sw.colnames_manager.btn_select_names.isChecked())
 
     def skip(self):
         self.straditizer_widgets.straditizer.colnames_reader.column_names = [
@@ -695,6 +698,9 @@ class ColumnNames(TutorialPage):
             'Gramineae >40<50um', 'Gramineae >50<60um', 'Gramineae >60um',
             'Liguliﬂorae', 'Plantago coronopus', 'Pteridium', 'Filicales',
             'Pollen Concentration']
+        btn = self.straditizer_widgets.colnames_manager.btn_select_names
+        if btn.isChecked():
+            btn.click()
 
     def activate(self):
         sw = self.straditizer_widgets
@@ -710,12 +716,13 @@ class ColumnNames(TutorialPage):
         self.select_names_button_clicked = True
 
     def hint(self):
-        reader = self.straditizer_widgets.straditizer.data_reader
+        reader = self.straditizer_widgets.straditizer.colnames_reader
         sw = self.straditizer_widgets
         btn = sw.colnames_manager.btn_select_names
         rc = sw.col_names_item
-        if not self.select_names_button_clicked or \
-                not sw.colnames_manager.is_shown:
+        is_finished = self.is_finished
+        if not is_finished and (not self.select_names_button_clicked or
+                                not sw.colnames_manager.is_shown):
             if not rc.isExpanded():
                 self.show_tooltip_at_widget(
                     "Expand the <i>%s</i> item by clicking on the arrow to "
@@ -723,12 +730,17 @@ class ColumnNames(TutorialPage):
             else:
                 self.show_tooltip_at_widget(
                     "Click the <i>%s</i> button" % btn.text(), btn)
-        elif not self.is_finished:
-            self.show_tooltip_at_widget(
-                'Edit the column names in the table. You can zoom into the '
-                'plot on the left using the `right` mouse button and navigate '
-                'using the `left` mouse button',
-                sw.colnames_manager.colnames_table)
+        elif not is_finished:
+            ncols = len(reader.column_bounds)
+            if reader.column_names == list(map(str, range(ncols))):
+                self.show_tooltip_at_widget(
+                    'Edit the column names in the table. You can zoom into '
+                    'the plot on the left using the `right` mouse button and '
+                    'navigate using the `left` mouse button',
+                    sw.colnames_manager.colnames_table)
+            elif btn.isChecked():
+                self.show_tooltip_at_widget(
+                    "Click the <i>%s</i> button to finish" % btn.text(), btn)
         else:
             super().hint()
 
