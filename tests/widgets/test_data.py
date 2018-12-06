@@ -423,17 +423,17 @@ class ExaggeratedTest(bt.StraditizeWidgetsTestCase):
 
         # use the exaggerations
         self.test_select_exaggerations()
-        self.digitizer.txt_exag_absolute.setText('2')
+        self.digitizer.txt_exag_absolute.setText('3')
         self.assertFalse(self.digitizer.btn_digitize_exag.isEnabled())
         QTest.mouseClick(self.digitizer.btn_digitize, Qt.LeftButton)
         self.assertTrue(self.digitizer.btn_digitize_exag.isEnabled())
         # digitize the exaggerations
         df, mask = self.reader.digitize_exaggerated(
-            absolute=2, return_mask=True, inplace=False)
+            absolute=3, return_mask=True, inplace=False)
         self.assertFrameEqual(df, orig)
         self.assertArrayEquals(
             mask.values,
-            orig.values.astype(bool) & (orig.values <= 2))
+            orig.values.astype(bool) & (orig.values < 3))
         QTest.mouseClick(self.digitizer.btn_digitize_exag, Qt.LeftButton)
         self.assertFrameEqual(self.reader.full_df, orig)
 
@@ -481,7 +481,7 @@ class BarReaderTest(bt.StraditizeWidgetsTestCase):
             x, y = reader.ax.transData.transform([[x, y]])[0]
             reader.ax.figure.canvas.button_press_event(x, y, 1)
             return x, y
-        
+
         def revert_split(child):
             indices = list(map(int, child.text(0).split(',')))
             last = indices[-1]
