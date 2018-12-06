@@ -59,7 +59,8 @@ install:
         conda config --add channels chilipp
         conda update -q conda
         conda install conda-build anaconda-client
-        conda info -a
+    - conda info -a
+    - conda list
     - reset_secure
 script:
     - unset_secure
