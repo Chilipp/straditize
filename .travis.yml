@@ -58,7 +58,7 @@ install:
         conda config --add channels chilipp/label/master
         conda config --add channels chilipp
         conda update -q conda
-        conda install conda-build
+        conda install conda-build anaconda-client
         conda info -a
     - reset_secure
 script:
@@ -68,12 +68,6 @@ script:
       conda build conda-recipe --python $PYTHON_VERSION
     # export the pw to make it available for the deploy
     - reset_secure
-
-before_deploy:
-    - if [[ $TRAVIS_TAG == "" ]]; then
-          conda install anaconda-client;
-          export BUILDS="$(ls $HOME/miniconda/conda-bld/${TRAVIS_OS_NAME}-64/*.tar.bz2)";
-      fi
 
 deploy:
   - provider: script
