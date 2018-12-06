@@ -59,6 +59,8 @@ install:
         conda config --add channels chilipp
         conda update -q conda
         conda install conda-build anaconda-client
+    - 'echo "backend : module://psyplot_gui.backend" > matplotlibrc'
+    - 'export MATPLOTLIBRC=`pwd`/matplotlibrc'
     - conda info -a
     - conda list
     - reset_secure
