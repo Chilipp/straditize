@@ -77,10 +77,14 @@ before_deploy:
 
 deploy:
   - provider: script
-    script: ci/deploy_anaconda.sh
+    script: ci/deploy_anaconda.py
     skip_cleanup: true
     on:
       all_branches: true
       repo: Chilipp/straditize
-      # do not deploy releases
-      condition: '$TRAVIS_TAG == ""'
+  - provider: script
+    script: ci/deploy_anaconda.py
+    skip_cleanup: true
+    on:
+      tags: true
+      repo: Chilipp/straditize
