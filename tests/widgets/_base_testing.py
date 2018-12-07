@@ -272,11 +272,11 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         except (Exception, AssertionError) as e:
             self.fail(e if six.PY3 else e.message)
 
-    def assertArrayEquals(self, arr, ref):
+    def assertArrayEquals(self, arr, ref, msg=''):
         try:
-            np.testing.assert_equal(arr, ref)
+            np.testing.assert_equal(np.asarray(arr), np.asarray(ref))
         except (Exception, AssertionError) as e:
-            self.fail(e if six.PY3 else e.message)
+            self.fail(str(e if six.PY3 else e.message) + msg)
 
     # ------ Utitlty methods --------------------------------------------------
 

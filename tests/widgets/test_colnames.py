@@ -1,6 +1,5 @@
 """Test module for straditize.widgets.colnames"""
 
-import os.path as osp
 import _base_testing as bt
 import numpy as np
 import unittest

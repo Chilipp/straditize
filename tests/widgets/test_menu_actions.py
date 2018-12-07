@@ -4,6 +4,7 @@ import pandas as pd
 import os.path as osp
 import _base_testing as bt
 import unittest
+from psyplot_gui.compat.qtcompat import QTest, Qt
 
 
 class MenuActionsTest(bt.StraditizeWidgetsTestCase):
@@ -39,6 +40,53 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
         self.assertEqual(self.reader._splitted, old_reader._splitted)
         self.assertFrameEqual(self.reader._full_df_orig,
                               old_reader._full_df_orig)
+
+    def test_save_and_load_05_colnames(self):
+        """Test the saving and loading of column names reader"""
+        from PIL import Image
+        self.init_reader('colnames_diagram.png', xlim=np.array([293., 2098.]),
+                         ylim=np.array([209., 1541.]))
+        self.reader.column_starts = np.array(
+            [0, 198, 914, 1336, 1432, 1531, 1627])
+        self.straditizer.colnames_reader.highres_image = hr_image = Image.open(
+            self.get_fig_path('colnames_diagram-colnames.png'))
+        sw = self.straditizer_widgets
+        sw.refresh()
+
+        if not sw.colnames_manager.is_shown:
+            QTest.mouseClick(sw.colnames_manager.btn_select_names,
+                             Qt.LeftButton)
+
+        sw.colnames_manager.find_colnames(
+            warn=False, full_image=True, all_cols=True)
+        colnames = self.straditizer.colnames_reader.column_names
+        colpics = self.straditizer.colnames_reader.colpics
+        self.assertEqual(colnames[0], 'Charcoal')
+        self.assertEqual(colnames[1], 'Pinus')
+        self.assertIsNotNone(colpics[0])
+        self.assertIsNotNone(colpics[1])
+
+        # save the straditizer
+        for ending in ['.pkl', '.nc']:
+            fname = self.get_random_filename(suffix=ending)
+            sw.menu_actions.save_straditizer_as(fname)
+
+            # load the straditizer
+            sw.menu_actions.open_straditizer(fname)
+
+            self.assertEqual(self.straditizer.colnames_reader.column_names,
+                             colnames, msg='Ending: ' + ending)
+            self.assertArrayEquals(self.straditizer.colnames_reader.colpics[0],
+                                   colpics[0], msg='Ending: ' + ending)
+            self.assertArrayEquals(self.straditizer.colnames_reader.colpics[1],
+                                   colpics[1], msg='Ending: ' + ending)
+
+            self.assertArrayEquals(
+                self.straditizer.colnames_reader.image,
+                self.straditizer.image, msg='Ending: ' + ending)
+            self.assertArrayEquals(
+                self.straditizer.colnames_reader.highres_image, hr_image,
+                msg='Ending: ' + ending)
 
     def _test_save_and_load(self, ending, fname='basic_diagram.png'):
         # create a reader with samples

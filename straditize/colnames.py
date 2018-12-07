@@ -170,7 +170,7 @@ class ColNamesReader(object):
              self.flip),
             {'_colpics': self._colpics,
              '_column_names': self._column_names,
-             'highres_image': self.highres_image})
+             '_highres_image': self._highres_image})
 
     nc_meta = {
         'colnames_image': {

@@ -258,7 +258,9 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.remove_selector()
         self.cb_fliph.setChecked(False)
         self.cb_flipv.setChecked(False)
+        self.txt_rotate.blockSignals(True)
         self.txt_rotate.setText('0')
+        self.txt_rotate.blockSignals(False)
 
     def create_selector(self):
         self.selector = RectangleSelector(
@@ -507,7 +509,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
     def _find_colnames(self):
         return self.find_colnames()
 
-    def find_colnames(self, warn=True, full_image=False):
+    def find_colnames(self, warn=True, full_image=False, all_cols=None):
         """Find the column names automatically"""
         from straditize.colnames import tesserocr
         if tesserocr is None:
@@ -525,7 +527,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         # make sure we have the exact length
         reader.column_names
         reader.colpics
-        all_cols = self.cb_find_all_cols.isChecked()
+        all_cols = all_cols or (all_cols is None and
+                                self.cb_find_all_cols.isChecked())
         if not all_cols and self.current_col not in texts:
             if self.current_col is not None:
                 msg = ("Could not find a column name of column %i in the "

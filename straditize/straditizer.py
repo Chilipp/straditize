@@ -374,7 +374,9 @@ class Straditizer(LabelSelection):
             {'data_reader': self.data_reader,
              'data_xlim': self.data_xlim, 'data_ylim': self.data_ylim,
              '_yaxis_px_orig': self._yaxis_px_orig,
-             'yaxis_data': self.yaxis_data}
+             'yaxis_data': self.yaxis_data,
+             '_colnames_reader': self._colnames_reader,
+             }
             )
 
     nc_meta = {
