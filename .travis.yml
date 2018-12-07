@@ -59,7 +59,7 @@ before_install:
       MINICONDA_FILE="Miniconda3-latest-${OS_NAME}-x86_64.sh"
       curl -L -O "${MINICONDA_URL}/${MINICONDA_FILE}"
       bash $MINICONDA_FILE -bp $HOME/miniconda3
-    - source /Users/travis/miniconda3/bin/activate root
+    - source $HOME/miniconda3/bin/activate root
     - hash -r
     - reset_secure
 
