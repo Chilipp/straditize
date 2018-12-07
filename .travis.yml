@@ -96,17 +96,7 @@ script:
       conda build conda-recipe --python $PYTHON_VERSION
     # export the pw to make it available for the deploy
     - reset_secure
-
-deploy:
-  - provider: script
-    script: ci/deploy_anaconda.py
-    skip_cleanup: true
-    on:
-      all_branches: true
-      repo: Chilipp/straditize
-  - provider: script
-    script: ci/deploy_anaconda.py
-    skip_cleanup: true
-    on:
-      tags: true
-      repo: Chilipp/straditize
+    # deploy here (don't use travis deploy because it requires homebrew)
+    - if [[ $TRAVIS_PULL_REQUEST == "false" && $TRAVIS_REPO_SLUG == "Chilipp/straditize"]]; then
+          ci/deploy_anaconda.py;
+      fi
