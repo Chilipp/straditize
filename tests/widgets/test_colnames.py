@@ -4,6 +4,7 @@ import _base_testing as bt
 import numpy as np
 import unittest
 from psyplot_gui.compat.qtcompat import QTest, Qt
+from straditize.colnames import tesserocr
 from PIL import Image
 
 
@@ -38,6 +39,7 @@ class ColNamesTest(bt.StraditizeWidgetsTestCase):
             self.get_fig_path('colnames_diagram-colnames.png'))
         return reader
 
+    @unittest.skipIf(tesserocr is None, "requires tesserocr")
     def test_find_all_column_names(self):
         sw = self.straditizer_widgets
         reader = self.init_colnames_reader()
@@ -57,6 +59,7 @@ class ColNamesTest(bt.StraditizeWidgetsTestCase):
             ['Charcoal', 'Pinus', 'Juniperus', 'Plantago coronopus',
              'Pteridium', 'Filicales', 'Pollen Concentration'])
 
+    @unittest.skipIf(tesserocr is None, "requires tesserocr")
     def test_find_one_column_name(self):
         sw = self.straditizer_widgets
         reader = self.init_colnames_reader()
@@ -78,6 +81,7 @@ class ColNamesTest(bt.StraditizeWidgetsTestCase):
         QTest.mouseClick(sw.colnames_manager.btn_cancel_colpic_selection,
                          Qt.LeftButton)
 
+    @unittest.skipIf(tesserocr is None, "requires tesserocr")
     def test_recognize(self):
         sw = self.straditizer_widgets
         reader = self.init_colnames_reader()
@@ -117,6 +121,7 @@ class ColNamesTest(bt.StraditizeWidgetsTestCase):
         self.assertArrayEquals(reader.rotated_image,
                                np.asarray(reader.image)[:, ::-1])
 
+    @unittest.skipIf(tesserocr is None, "requires tesserocr")
     def test_colpic_selector(self):
         self.init_colnames_reader()
         sw = self.straditizer_widgets

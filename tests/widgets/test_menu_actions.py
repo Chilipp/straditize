@@ -5,6 +5,7 @@ import os.path as osp
 import _base_testing as bt
 import unittest
 from psyplot_gui.compat.qtcompat import QTest, Qt
+from straditize.colnames import tesserocr
 
 
 class MenuActionsTest(bt.StraditizeWidgetsTestCase):
@@ -41,6 +42,7 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
         self.assertFrameEqual(self.reader._full_df_orig,
                               old_reader._full_df_orig)
 
+    @unittest.skipIf(tesserocr is None, "requires tesserocr")
     def test_save_and_load_05_colnames(self):
         """Test the saving and loading of column names reader"""
         from PIL import Image
