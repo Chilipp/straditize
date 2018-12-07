@@ -8,8 +8,18 @@ env:
 
 matrix:
     include:
-        - os: linux
-        - os: osx
+        - env:
+            - PYTHON_VERSION=3.7
+          os: linux
+        - env:
+            - PYTHON_VERSION=3.6
+          os: linux
+        - env:
+            - PYTHON_VERSION=3.7
+          os: osx
+        - env:
+            - PYTHON_VERSION=3.6
+          os: osx
 
 before_install:
     # Remove homebrew.
