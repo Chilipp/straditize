@@ -475,6 +475,12 @@ class StraditizerWidgets(QWidget, DockMixin):
         tb.wand_action.setChecked(False)
         self.disable_apply_button()
         self.close_all_straditizers()
+        if self.colnames_manager.is_shown:
+            self.colnames_manager.hide_plugin()
+            self.colnames_manager.btn_select_names.setChecked(False)
+        self.colnames_manager.cb_find_all_cols.setChecked(False)
+        self.colnames_manager.btn_select_colpic.setChecked(False)
+        self.colnames_manager.btn_cancel_colpic_selection.setVisible(False)
 
     def autosave(self):
         self.autosaved = [self.straditizer.to_dataset().copy(True)] + \

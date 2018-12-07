@@ -143,7 +143,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
 
         self.init_straditizercontrol(straditizer_widgets, item)
 
-        self.widgets2disable = [self.btn_select_names, self.btn_find]
+        self.widgets2disable = [self.btn_select_names, self.btn_find,
+                                self.btn_load_image, self.btn_select_colpic]
 
         self.btn_select_names.clicked.connect(self.toggle_dialog)
         self.btn_select_colpic.clicked.connect(self.toggle_colpic_selection)
@@ -159,7 +160,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                                      self.adjust_lims_after_resize)
         self.btn_load_image.clicked.connect(self.load_image)
         self.btn_recognize.clicked.connect(self.read_colpic)
-        self.btn_find.clicked.connect(self.find_colnames)
+        self.btn_find.clicked.connect(self._find_colnames)
         self.cb_find_all_cols.stateChanged.connect(
             self.enable_or_disable_btn_find)
 
@@ -172,6 +173,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         text = self.colnames_reader.recognize_text(self.colpic)
         self.colnames_table.item(self.current_col, 0).setText(text)
         self.colnames_reader._column_names[self.current_col] = text
+        return text
 
     def load_image(self):
         if self.btn_load_image.isChecked():
@@ -244,6 +246,20 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         del self.selector
         self.main_canvas.mpl_disconnect(self.key_press_cid)
 
+    def reset_control(self):
+        if self.is_shown:
+            self.hide_plugin()
+            self.btn_select_names.setChecked(False)
+        self.remove_images()
+        self.cb_find_all_cols.setChecked(False)
+        self.btn_select_colpic.setChecked(False)
+        self.btn_cancel_colpic_selection.setVisible(False)
+        if self.selector is not None:
+            self.remove_selector()
+        self.cb_fliph.setChecked(False)
+        self.cb_flipv.setChecked(False)
+        self.txt_rotate.setText('0')
+
     def create_selector(self):
         self.selector = RectangleSelector(
             self.main_ax, self.update_image, interactive=True)
@@ -253,11 +269,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             'key_press_event', self.update_image)
 
     def plot_colpic(self):
-        if self.colpic_im is not None:
-            try:
-                self.colpic_im.remove()
-            except (AttributeError, ValueError):
-                pass
+        try:
+            self.colpic_im.remove()
+        except (AttributeError, ValueError):
+            pass
         self.colpic_im = self.colpic_ax.imshow(self.colpic)
         self.colpic_canvas.draw()
 
@@ -274,8 +289,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.btn_recognize.setEnabled(True)
 
     def highlight_selected_col(self):
+        draw = False
         if self.rect is not None:
             self.rect.remove()
+            draw = True
             del self.rect
         col = self.current_col
         if col is not None:
@@ -291,9 +308,11 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                 self.colpic_im = self.colpic_ax.imshow(colpic)
             self.colpic_canvas.draw()
             self.btn_recognize.setEnabled(colpic is not None)
+            draw = True
         else:
             self.btn_select_colpic.setEnabled(False)
-        self.main_canvas.draw()
+        if draw:
+            self.main_canvas.draw()
         self.enable_or_disable_btn_find()
 
     def enable_or_disable_btn_find(self, *args, **kwargs):
@@ -348,7 +367,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.cb_flipv.setChecked(reader.flip)
 
             image = self.colnames_reader.highres_image
-            if image.size == self.colnames_reader.image.size:
+            if image is self.colnames_reader.image:
                 image = None
             if image is not None:
                 self.btn_load_image.setText(
@@ -367,12 +386,19 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.btn_load_image.blockSignals(False)
             self.btn_recognize.setEnabled(self.colpic is not None)
         else:
-            try:
-                self.im_rotated.remove()
-            except (AttributeError, ValueError):
-                pass
-            self.im_rotated = self.xc = self.yc = None
+            self.colnames_table.setRowCount(0)
+            self.remove_images()
 
+    def remove_images(self):
+        try:
+            self.im_rotated.remove()
+        except (AttributeError, ValueError):
+            pass
+        try:
+            self.colpic_im.remove()
+        except (AttributeError, ValueError):
+            pass
+        self.im_rotated = self.colpic_im = self.xc = self.yc = None
 
     def set_xc_yc(self):
         xc = np.mean(self.main_ax.get_xlim())
@@ -478,17 +504,21 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.fig_w = w
         self.fig_h = h
 
-    def find_colnames(self):
+    def _find_colnames(self):
+        return self.find_colnames()
+
+    def find_colnames(self, warn=True, full_image=False):
         """Find the column names automatically"""
         from straditize.colnames import tesserocr
         if tesserocr is None:
             raise ImportError("tesserocr module not found!")
-        x0, x1 = self.main_ax.get_xlim()
-        y0, y1 = sorted(self.main_ax.get_ylim())
+        ys, xs = self.im_rotated.get_size()
+        x0, x1 = self.main_ax.get_xlim() if not full_image else (0, xs)
+        y0, y1 = sorted(self.main_ax.get_ylim()) if not full_image else (0, ys)
         x0 = max(x0, 0)
         y0 = max(y0, 0)
-        x1 = min(x1, self.im_rotated.get_size()[1])
-        y1 = min(y1, self.im_rotated.get_size()[0])
+        x1 = min(x1, xs)
+        y1 = min(y1, ys)
         reader = self.colnames_reader
         texts, images, boxes = reader.find_colnames(
             [x0, y0, x1, y1])
@@ -498,16 +528,20 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         all_cols = self.cb_find_all_cols.isChecked()
         if not all_cols and self.current_col not in texts:
             if self.current_col is not None:
+                msg = ("Could not find a column name of column %i in the "
+                       "selected image!" % self.current_col)
+                if warn:
+                    QtWidgets.QMessageBox.warning(
+                        self.straditizer_widgets, 'Could not find column name',
+                        msg)
+            return msg
+        elif not texts:
+            msg = "Could not find any column name in the selected image!"
+            if warn:
                 QtWidgets.QMessageBox.warning(
                     self.straditizer_widgets, 'Could not find column name',
-                    "Could not find a column name of column %i in the "
-                    "selected image!" % self.current_col)
-            return
-        elif not texts:
-            QtWidgets.QMessageBox.warning(
-                self.straditizer_widgets, 'Could not find column name',
-                "Could not find any column name in the selected image!")
-            return
+                    msg)
+            return msg
         elif not all_cols:
             texts = {self.current_col: texts[self.current_col]}
         for col, text in texts.items():

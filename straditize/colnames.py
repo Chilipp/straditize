@@ -63,6 +63,14 @@ class Bbox(_Bbox):
         return self.left
 
     @property
+    def height(self):
+        return abs(self.h)
+
+    @property
+    def width(self):
+        return abs(self.w)
+
+    @property
     def x1(self):
         return self.right
 
@@ -239,7 +247,7 @@ class ColNamesReader(object):
         if ds is None:
             ds = xr.Dataset()
         self.create_variable(ds, 'colnames_image', self.image)
-        if self.highres_image is not None:
+        if self._highres_image is not None:
             self.create_variable(ds, 'colnames_hr_image', self.highres_image)
         self.create_variable(ds, 'colnames_bounds', self.column_bounds)
         self.create_variable(ds, 'colname', self.column_names)
@@ -351,7 +359,7 @@ class ColNamesReader(object):
             text = f.read()
         os.remove(fname)
         os.remove(fname2)
-        return text.strip()
+        return text.strip().replace('\n', ' ')
 
     def find_colnames(self, extents=None):
         """Find the names for the columns using tesserocr"""
@@ -366,6 +374,11 @@ class ColNamesReader(object):
                 box.x0 + x0, box.y1 + y0, invert=True, image=image)[0]
             xmin, xmax = sorted([xmin, xmax])
             return min(e, xmax) - max(s, xmin)
+
+        def vbox_distance(b1, b2):
+            if b1.left > b2.right or b1.right < b2.left:
+                return np.inf  # no overlap
+            return min(abs(b1.top - b2.bottom), abs(b2.top - b1.bottom))
 
         bounds = self.column_bounds
         hr = self.highres_image is not None
@@ -407,11 +420,34 @@ class ColNamesReader(object):
                 text = api.GetUTF8Text().strip()
                 if len(text) >= 3:
                     texts[box] = text
-                    images[box] = im
+                    images[box] = im.convert('RGBA')
 
         if not texts:
             return {}, {}, {}
 
+        # merge boxes that are closer than one 1em
+        em = min(b.h for b in texts)
+        merged = {None}
+        while merged:
+            merged = set()
+            for b1, t in list(texts.items()):
+                if b1 in merged:
+                    continue
+                for b2, t in list(texts.items()):
+                    if (b1 is b2 or b2 in merged or
+                            vbox_distance(b1, b2) > 0.5*em):
+                        continue
+                    merged.update([b1, b2])
+                    box = Bbox(min(b1.x, b2.x), min(b1.y, b2.y),
+                               max(b1.x1, b2.x1) - min(b1.x0, b2.x0),
+                               max(b1.y0, b2.y0) - min(b1.y1, b2.y1))
+                    texts[box] = texts[b1] + ' ' + texts[b2]
+                    images[box] = image.crop([box.x0, box.y1, box.x1, box.y0])
+                    b1 = box
+            for b in merged:
+                del texts[b], images[b]
+
+        # get a mapping from box to column from the overlap
         boxes = dict(filter(
             lambda t: get_overlap(*t) > 0,
             ((col, max(texts, key=partial(get_overlap, col)))
