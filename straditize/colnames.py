@@ -2,6 +2,7 @@
 """Module for text recognition
 """
 import os
+import re
 import xarray as xr
 from PIL import ImageOps
 from straditize.common import rgba2rgb
@@ -13,10 +14,24 @@ from psyplot.data import safe_list
 
 from functools import partial
 
+
+# check tesseract version and import tesserocr. If the tesseract version
+# is 4.0.*, then we have to locale.setlocale(locale.LC_ALL, 'C')
+# (see https://github.com/sirfz/tesserocr/issues/137)
 try:
-    import tesserocr
-except ImportError:
-    tesserocr = None
+    tesseract_version = spr.check_output('tesseract --version'.split())
+except FileNotFoundError:
+    tesseract_version = tesserocr = None
+else:
+    tesseract_version = re.findall(
+        '\d+\.\d+\.*', tesseract_version.decode('utf-8'))[0]
+    if tesseract_version.startswith('4.0.'):
+        import locale
+        locale.setlocale(locale.LC_ALL, 'C')
+    try:
+        import tesserocr
+    except ImportError:
+        tesserocr = None
 
 
 _Bbox = namedtuple('_Bbox', tuple('xywh'))
