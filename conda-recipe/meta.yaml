@@ -35,7 +35,7 @@ test:
     - pytest
     - codecov
     - pytest-cov
-    - tesserocr  # [osx]
+    - tesserocr  # [not win]
   source_files:
     - tests
   imports:
