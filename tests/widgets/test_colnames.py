@@ -54,11 +54,12 @@ class ColNamesTest(bt.StraditizeWidgetsTestCase):
         self.assertIsNone(sw.colnames_manager.find_colnames(warn=False,
                                                             full_image=True))
 
-        # test whether we found all column names (whether they are correct or
-        # not...)
-        self.assertFalse(
+        # test whether we found all column names (but Juniperus which has been
+        # removed from the HR image), whether they are correct or
+        # not...
+        self.assertEqual(
             set(map(str.lower, reader.column_names)).intersection(
-                map(str, range(len(reader.column_names)))))
+                map(str, range(len(reader.column_names)))), {'2'})
 
     @unittest.skipIf(tesserocr is None, "requires tesserocr")
     def test_find_one_column_name(self):
