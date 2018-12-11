@@ -65,6 +65,11 @@ class Bbox(_Bbox):
         return sorted([self.x0, self.x1]) + sorted([self.y0, self.y1])
 
     @property
+    def crop_extents(self):
+        """The extents necessary for PIL.Image.crop"""
+        return self.left, self.top, self.right, self.bottom
+
+    @property
     def corners(self):
         return np.array([
             [self.left, self.bottom],
@@ -364,6 +369,10 @@ class ColNamesReader(object):
         return ret
 
     def recognize_text(self, image):
+        if tesseract_version is None:
+            raise ImportError(
+                "tesseract is required but could not be found! Make sure, the "
+                "directory of its executable is in your PATH variable.")
         fname = tempfile.NamedTemporaryFile(
             suffix='.png', prefix='stradi_').name
         fname2 = tempfile.NamedTemporaryFile(
@@ -388,14 +397,18 @@ class ColNamesReader(object):
             xmax = self.transform_point(
                 box.x0 + x0, box.y1 + y0, invert=True, image=image)[0]
             xmin, xmax = sorted([xmin, xmax])
-            return min(e, xmax) - max(s, xmin)
+            return max(min(e, xmax) - max(s, xmin), 0)
 
         def vbox_distance(b1, b2):
             if b1.left > b2.right or b1.right < b2.left:
                 return np.inf  # no overlap
             return min(abs(b1.top - b2.bottom), abs(b2.top - b1.bottom))
 
+        if tesserocr is None:
+            raise ImportError("tesserocr module not found!")
+
         bounds = self.column_bounds
+        cols = list(range(len(bounds)))
         hr = self.highres_image is not None
         rotated = self.rotated_image
         if hr:
@@ -424,15 +437,25 @@ class ColNamesReader(object):
                 *extents[:2], image=self.highres_image if hr else self.image,
                 invert=True)
 
+        if tesseract_version.startswith('4.0.'):
+            # LC_ALL might have been changed by some other module, so we set
+            # it here again to "C"
+            import locale
+            locale.setlocale(locale.LC_ALL, 'C')
+
         with tesserocr.PyTessBaseAPI() as api:
             api.SetImage(rgba2rgb(image))
             im_boxes = api.GetComponentImages(tesserocr.RIL.TEXTLINE, True)
             texts = {}
             images = {}
             for i, (im, d, _, _) in enumerate(im_boxes):
-                box = Bbox(d['x'], d['y'], d['w'], d['h'])
-                api.SetRectangle(*box)
-                text = api.GetUTF8Text().strip()
+                box = Bbox(**d)
+                if not any(get_overlap(col, box) for col in cols):
+                    continue
+                # expand the image to improve text recognition
+                im = ImageOps.expand(rgba2rgb(image.crop(box.crop_extents)),
+                                     int(im.size[1] / 2.), (255, 255, 255))
+                text = tesserocr.image_to_text(im).strip()
                 if len(text) >= 3:
                     texts[box] = text
                     images[box] = im.convert('RGBA')
@@ -448,8 +471,9 @@ class ColNamesReader(object):
             for b1, t in list(texts.items()):
                 if b1 in merged:
                     continue
+                col = max(cols, key=partial(get_overlap, box=b1))
                 for b2, t in list(texts.items()):
-                    if (b1 is b2 or b2 in merged or
+                    if (b1 is b2 or b2 in merged or not get_overlap(col, b2) or
                             vbox_distance(b1, b2) > 0.5*em):
                         continue
                     merged.update([b1, b2])
@@ -457,14 +481,14 @@ class ColNamesReader(object):
                                max(b1.x1, b2.x1) - min(b1.x0, b2.x0),
                                max(b1.y0, b2.y0) - min(b1.y1, b2.y1))
                     texts[box] = texts[b1] + ' ' + texts[b2]
-                    images[box] = image.crop([box.x0, box.y1, box.x1, box.y0])
+                    images[box] = image.crop(box.crop_extents)
                     b1 = box
             for b in merged:
                 del texts[b], images[b]
 
         # get a mapping from box to column from the overlap
         boxes = dict(filter(
-            lambda t: get_overlap(*t) > 0,
+            lambda t: get_overlap(*t),
             ((col, max(texts, key=partial(get_overlap, col)))
              for col in range(len(bounds)))))
         x0, y0 = extents[:2]

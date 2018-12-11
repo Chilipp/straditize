@@ -288,7 +288,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.plot_colpic()
         self.btn_select_colpic.setText('Apply')
         self.btn_cancel_colpic_selection.setVisible(True)
-        self.btn_recognize.setEnabled(True)
+        self.btn_recognize.setEnabled(
+            self.should_be_enabled(self.btn_recognize))
 
     def highlight_selected_col(self):
         draw = False
@@ -309,7 +310,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             if colpic is not None:
                 self.colpic_im = self.colpic_ax.imshow(colpic)
             self.colpic_canvas.draw()
-            self.btn_recognize.setEnabled(colpic is not None)
+            self.btn_recognize.setEnabled(
+                self.should_be_enabled(self.btn_recognize))
             draw = True
         else:
             self.btn_select_colpic.setEnabled(False)
@@ -330,8 +332,13 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         ret = self.straditizer is not None and getattr(
             self.straditizer.data_reader, '_column_starts', None) is not None
         if ret and w is self.btn_find:
-            ret = (self.cb_find_all_cols.isChecked() or
-                   self.current_col is not None)
+            from straditize.colnames import tesserocr
+            ret = tesserocr is not None and (
+                self.cb_find_all_cols.isChecked() or
+                self.current_col is not None)
+        elif ret and w is self.btn_recognize:
+            from straditize.colnames import tesseract_version
+            ret = tesseract_version is not None and self.colpic is not None
         return ret
 
     def toggle_dialog(self):
@@ -386,7 +393,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.btn_load_image.blockSignals(True)
             self.btn_load_image.setChecked(checked)
             self.btn_load_image.blockSignals(False)
-            self.btn_recognize.setEnabled(self.colpic is not None)
+            self.btn_recognize.setEnabled(
+                self.should_be_enabled(self.btn_recognize))
         else:
             self.colnames_table.setRowCount(0)
             self.remove_images()
@@ -511,9 +519,6 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
 
     def find_colnames(self, warn=True, full_image=False, all_cols=None):
         """Find the column names automatically"""
-        from straditize.colnames import tesserocr
-        if tesserocr is None:
-            raise ImportError("tesserocr module not found!")
         ys, xs = self.im_rotated.get_size()
         x0, x1 = self.main_ax.get_xlim() if not full_image else (0, xs)
         y0, y1 = sorted(self.main_ax.get_ylim()) if not full_image else (0, ys)
