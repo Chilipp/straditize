@@ -439,6 +439,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.digitizer.digitize_item.takeChildren()
         self.digitizer.btn_digitize.setChecked(False)
         self.digitizer.btn_digitize.setCheckable(False)
+        self.digitizer.toggle_txt_tolerance('')
 
     def close_straditizer(self):
         self._close_stradi(self.straditizer)
@@ -453,6 +454,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.digitizer.digitize_item.takeChildren()
         self.digitizer.btn_digitize.setChecked(False)
         self.digitizer.btn_digitize.setCheckable(False)
+        self.digitizer.toggle_txt_tolerance('')
         self.refresh()
 
     def add_straditizer(self, stradi):
