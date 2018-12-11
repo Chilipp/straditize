@@ -53,6 +53,13 @@ done via::
 
     pip install tesserocr
 
+or::
+
+    conda install -c chilipp tesserocr  # on linux/MacOS
+
+(see https://pypi.org/project/tesserocr/ for more installation options, in
+particular for Windows).
+
 1. Use a high resolution version of the image
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To improve the result of the text recognition, we recommend to use a sufficient

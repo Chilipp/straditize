@@ -1,8 +1,14 @@
 Specifying the column names
 ===========================
+
+.. note::
+
+    Straditize also has a text recognition implemented if you install
+    ``tesserocr`` (see the :ref:`user guide <colnames-ocr>`). If you would like
+    to use it, install ``tesserocr`` and restart the tutorial.
+
 Straditize can handle column names which will then be included in the final
-export. You can also use text recognition (see below) but for now, we will do
-it manually.
+export.
 
 1. Expand the `Column names` item in the straditizer control and click the
    :guilabel:`Edit column names` button
@@ -18,14 +24,5 @@ it manually.
    `matplotlibs docs on interactive navigation with the Pan/Zoom-tool`_)
 3. When you entered the correct names in the table, click the
    :guilabel:`Edit column names` button again to hide the button.
-
-.. note::
-
-    You can also use text recognition. For this, use the high resolution image
-    that includes the column names *straditize-tutorial-colnames.png* and
-    follow the :ref:`instruction in the user manual <colnames-ocr>`
-
-    .. image:: straditize-tutorial-colnames.png
-        :alt: HR column names image
 
 .. _matplotlibs docs on interactive navigation with the Pan/Zoom-tool: https://matplotlib.org/users/navigation_toolbar.html))

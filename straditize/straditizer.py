@@ -123,7 +123,7 @@ def _new_mark_factory(marks, mark_added, func, fignum, magnifier=None,
 
 
 class Straditizer(LabelSelection):
-    """An object to digitize a stratographic pollen diagram
+    """An object to digitize a stratigraphic pollen diagram
     """
 
     #: A signal that is emitted if a mark has been added. Functions are

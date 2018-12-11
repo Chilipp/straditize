@@ -80,6 +80,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             "all columns")
         self.cb_find_all_cols.setToolTip(
             "Find the column names in all columns or only in the selected one")
+        self.cb_find_all_cols.setChecked(True)
 
         super().__init__(Qt.Horizontal)
 
@@ -233,6 +234,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.btn_select_colpic.setText('Cancel')
             self.main_canvas.toolbar.pan()
             self._colpics_save = list(self.colnames_reader.colpics)
+            self.cb_find_all_cols.setChecked(False)
         self.main_canvas.draw()
 
     def remove_selector(self):
@@ -347,6 +349,9 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             if not self.btn_select_names.isChecked() or (
                     self.dock is not None and self.is_shown):
                 self.hide_plugin()
+                if self.btn_select_colpic.isChecked():
+                    self.btn_select_colpic.setChecked(False)
+                    self.toggle_colpic_selection()
             elif self.btn_select_names.isEnabled():
                 self.straditizer_widgets.tree.itemWidget(
                     self.straditizer_widgets.col_names_item, 1).show_docs()
@@ -382,13 +387,13 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                 self.btn_load_image.setText(
                     'HR image with size {}'.format(image.size))
                 self.btn_load_image.setToolTip(
-                    'Select a version of this image with a higher resolution '
-                    'to improve the text recognition')
+                    'Remove and ignore the high resolution image')
                 checked = True
             else:
                 self.btn_load_image.setText('Load HR image')
                 self.btn_load_image.setToolTip(
-                    'Remove and ignore the high resolution image')
+                    'Select a version of this image with a higher resolution '
+                    'to improve the text recognition')
                 checked = False
             self.btn_load_image.blockSignals(True)
             self.btn_load_image.setChecked(checked)

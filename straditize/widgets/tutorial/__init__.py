@@ -9,6 +9,7 @@ from straditize.widgets import StraditizerControlBase
 import straditize.cross_mark as cm
 from PyQt5 import QtWidgets, QtCore, QtGui
 from psyplot_gui.common import get_icon as get_psy_icon
+import pandas as pd
 
 
 class TutorialNavigation(QtWidgets.QWidget):
@@ -333,13 +334,16 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         mainwindow.help_explorer.show_rst(rst, name, files=files)
 
     def setup_tutorial_pages(self):
+        from straditize.colnames import tesserocr
         self.pages = [
             self,
             LoadImage('straditize_tutorial_load_image', self),
             SelectDataPart('straditize_tutorial_select_data', self),
             CreateReader('straditize_tutorial_create_reader', self),
             SeparateColumns('straditize_tutorial_column_starts', self),
-            ColumnNames('straditize_tutorial_column_names', self),
+            (ColumnNames('straditize_tutorial_column_names', self)
+             if tesserocr is None else
+             ColumnNamesOCR('straditize_tutorial_column_names_ocr', self)),
             RemoveLines('straditize_tutorial_remove_lines', self),
             DigitizePage('straditize_tutorial_digitize', self),
             SamplesPage('straditize_tutorial_samples', self),
@@ -679,25 +683,27 @@ class ColumnNames(TutorialPage):
 
     select_names_button_clicked = False
 
+    column_names = [
+        'Charcoal', 'Pinus', 'Juniperus', 'Quercus ilex-type',
+        'Quercus suber-type', 'Olea', 'Betula', 'Corylus', 'Carpinus-type',
+        'Ericaceae', 'Ephedra distachya-type', 'Ephedra fragilis',
+        'Mentha-type', 'Anthemis-type', 'Artemisia', 'Caryophyllaceae',
+        'Chenopodiaceae', 'Cruciferae', 'Filipendula', 'Gramineae <40um',
+        'Gramineae >40<50um', 'Gramineae >50<60um', 'Gramineae >60um',
+        'Liguliﬂorae', 'Plantago coronopus', 'Pteridium', 'Filicales',
+        'Pollen Concentration']
+
     @property
     def is_finished(self):
         sw = self.straditizer_widgets
         reader = sw.straditizer.colnames_reader
-        ncols = len(reader.column_bounds)
         return (
-            reader.column_names != list(map(str, range(ncols))) and
+            reader.column_names == self.column_names and
             not sw.colnames_manager.btn_select_names.isChecked())
 
     def skip(self):
-        self.straditizer_widgets.straditizer.colnames_reader.column_names = [
-            'Charcoal', 'Pinus', 'Juniperus', 'Quercus ilex-type',
-            'Quercus suber-type', 'Olea', 'Betula', 'Corylus', 'Carpinus-type',
-            'Ericaceae', 'Ephedra distachya-type', 'Ephedra fragilis',
-            'Mentha-type', 'Anthemis-type', 'Artemisia', 'Caryophyllaceae',
-            'Chenopodiaceae', 'Cruciferae', 'Filipendula', 'Gramineae <40um',
-            'Gramineae >40<50um', 'Gramineae >50<60um', 'Gramineae >60um',
-            'Liguliﬂorae', 'Plantago coronopus', 'Pteridium', 'Filicales',
-            'Pollen Concentration']
+        self.straditizer_widgets.straditizer.colnames_reader.column_names = \
+            self.column_names
         btn = self.straditizer_widgets.colnames_manager.btn_select_names
         if btn.isChecked():
             btn.click()
@@ -733,16 +739,155 @@ class ColumnNames(TutorialPage):
         elif not is_finished:
             ncols = len(reader.column_bounds)
             if reader.column_names == list(map(str, range(ncols))):
-                self.show_tooltip_at_widget(
-                    'Edit the column names in the table. You can zoom into '
-                    'the plot on the left using the `right` mouse button and '
-                    'navigate using the `left` mouse button',
-                    sw.colnames_manager.colnames_table)
+                self.hint_for_start_editing()
+            elif reader.column_names != self.column_names:
+                i, (curr, ref) = next(
+                    t for t in enumerate(zip(reader.column_names,
+                                             self.column_names))
+                    if t[1][0] != t[1][1])
+                self.hint_for_wrong_name(i, curr, ref)
             elif btn.isChecked():
                 self.show_tooltip_at_widget(
                     "Click the <i>%s</i> button to finish" % btn.text(), btn)
         else:
             super().hint()
+
+    def hint_for_start_editing(self):
+        self.show_tooltip_at_widget(
+            'Edit the column names in the table. You can zoom into '
+            'the plot on the left using the `right` mouse button and '
+            'navigate using the `left` mouse button',
+            self.straditizer_widgets.colnames_manager.colnames_table)
+
+    def hint_for_wrong_name(self, col, curr, ref):
+        """Display a hint if a name is not correctly set"""
+        manager = self.straditizer_widgets.colnames_manager
+        if manager.current_col != col:
+            self.show_tooltip_at_widget(
+                "Column name of the %s column (column %i) is not correct "
+                "(%r != %r)!<br><br>"
+                "Select the column in the table and enter the correct "
+                "name or click the 'skip' button" % (ref, col, curr, ref),
+                manager.colnames_table)
+        else:
+            self.show_tooltip_at_widget(
+                "Enter the correct name (%r)" % ref, manager.colnames_table)
+
+
+class ColumnNamesOCR(ColumnNames):
+    """Tutorial page for column names with tesserocr support"""
+
+    colpic_extents = [(1051, 1127, 573, 588),
+                      (1176, 1225, 704, 719),
+                      (1338, 1422, 866, 884),
+                      (1437, 1584, 964, 982),
+                      (1490, 1655, 1016, 1034),
+                      (1511, 1550, 1038, 1052),
+                      (1533, 1587, 1061, 1075),
+                      (1557, 1621, 1083, 1102),
+                      (1580, 1699, 1105, 1123),
+                      (1600, 1686, 1123, 1138),
+                      (1623, 1828, 1151, 1169),
+                      (1646, 1783, 1173, 1192),
+                      (1665, 1779, 1195, 1215),
+                      (1689, 1811, 1218, 1237),
+                      (1711, 1793, 1240, 1254),
+                      (1766, 1909, 1288, 1306),
+                      (1788, 1934, 1310, 1328),
+                      (1841, 1929, 1363, 1378),
+                      (1862, 1957, 1390, 1407),
+                      (1885, 2045, 1407, 1422),
+                      (1922, 2116, 1444, 1459),
+                      (1945, 2138, 1467, 1482),
+                      (1968, 2128, 1490, 1505),
+                      (1990, 2083, 1512, 1531),
+                      (2012, 2186, 1540, 1559),
+                      (2035, 2117, 1563, 1577),
+                      (2056, 2126, 1584, 1599),
+                      (2080, 2259, 1601, 1616)
+                      ]
+
+    colpic_sizes = [(270, 88), (189, 88), (307, 109), (494, 109), (550, 109),
+                    (159, 85), (204, 85), (249, 112), (363, 60), (264, 48),
+                    (655, 109), (411, 57), (336, 69), (424, 116), (286, 85),
+                    (487, 112), (493, 109), (309, 88), (297, 51), (523, 88),
+                    (624, 89), (624, 89), (525, 89), (333, 112), (574, 109),
+                    (289, 88), (254, 88), (581, 89)]
+
+    def hint_for_start_editing(self):
+        reader = self.straditizer_widgets.straditizer.colnames_reader
+        sw = self.straditizer_widgets
+        if reader._highres_image is None:
+            self.show_tooltip_at_widget(
+                "Click the %r button and load the image file "
+                "<i>straditize-tutorial-colnames.png</i>" % (
+                    sw.colnames_manager.btn_load_image.text(), ),
+                sw.colnames_manager.btn_load_image)
+        elif not sw.colnames_manager.cb_find_all_cols.isChecked():
+            self.show_tooltip_at_widget(
+                "Check the 'all columns' checkbox",
+                sw.colnames_manager.cb_find_all_cols)
+        else:
+            self.show_tooltip_at_widget(
+                "Click the %r button to automatically find the "
+                "column names." % sw.colnames_manager.btn_find.text(),
+                sw.colnames_manager.btn_find)
+
+    def hint_for_wrong_name(self, col, curr, ref):
+
+        def same_size():
+            from difflib import get_close_matches
+            size = manager.colpic.size
+            return (bool(get_close_matches(curr, [ref])) and
+                    np.abs(np.array(size) -
+                           np.array(self.colpic_sizes[col])).max() < 10)
+
+        def overlaps():
+            x0, x1, y0, y1 = manager.selector.extents
+            ref_extents = self.colpic_extents[col]
+            i1 = pd.Interval(*ref_extents[:2])
+            i2 = pd.Interval(*ref_extents[2:])
+            return x0 in i1 or x1 in i1 or y0 in i2 or y1 in i2
+
+        def isclose():
+            sel_extents = np.array(manager.selector.extents)
+            ref_extents = np.array(self.colpic_extents[col])
+            return np.abs(ref_extents - sel_extents).max() < 15
+
+        manager = self.straditizer_widgets.colnames_manager
+        if manager.current_col != col:
+            self.show_tooltip_at_widget(
+                "Column name of the %s column (column %i) is not correct "
+                "(%r != %r)!<br><br>"
+                "Select the column in the table to edit the name" % (
+                    ref, col, curr, ref),
+                manager.colnames_table)
+        elif same_size():
+            self.show_tooltip_at_widget(
+                "Column name %r is close. Just set the correct name (%r) in "
+                "the table or click 'skip'." % (curr, ref),
+                manager.colnames_table)
+        elif not manager.btn_select_colpic.isChecked():
+            self.show_tooltip_at_widget(
+                "Click the %r button to select/modify the image for the "
+                "column name" % manager.btn_select_colpic.text(),
+                manager.btn_select_colpic)
+        elif not overlaps():
+            self.show_tooltip_at_widget(
+                "Click the %r button to automatically find the column name "
+                "end enable it for editing." % manager.btn_find.text(),
+                manager.btn_find)
+        elif isclose():
+            self.show_tooltip_at_widget(
+                "Click the %r button or enter the correct name (%r) in the "
+                "table" % (manager.btn_recognize.text(), ref),
+                manager.colnames_table)
+        else:
+            self.show_tooltip_at_widget(
+                "Edit the shape of the image and click the %r button or "
+                "set the correct name (%r) directly in the table." % (
+                    manager.btn_recognize.text(), ref),
+                manager.btn_recognize)
 
 
 class RemoveLines(TutorialPage):
