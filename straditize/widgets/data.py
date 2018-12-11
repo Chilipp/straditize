@@ -515,6 +515,10 @@ class DigitizingControl(StraditizerControlBase):
 
     def toggle_txt_tolerance(self, s):
         enable = 'bars' in s
+        try:
+            self.txt_tolerance
+        except RuntimeError:
+            self.txt_tolerance = None
         if enable:
             if self.txt_tolerance is None:
                 self.tolerance_child = QTreeWidgetItem(0)
