@@ -69,7 +69,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.btn_load_image.setCheckable(True)
 
         self.btn_recognize = QtWidgets.QPushButton('Recognize')
-        self.btn_recognize.setToolTip('Use tesseract to recognize the column '
+        self.btn_recognize.setToolTip('Use tesserocr to recognize the column '
                                       'name in the given image')
 
         self.btn_find = QtWidgets.QPushButton('Find column names')
@@ -337,8 +337,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                 self.cb_find_all_cols.isChecked() or
                 self.current_col is not None)
         elif ret and w is self.btn_recognize:
-            from straditize.colnames import tesseract_version
-            ret = tesseract_version is not None and self.colpic is not None
+            from straditize.colnames import tesserocr
+            ret = tesserocr is not None and self.colpic is not None
         return ret
 
     def toggle_dialog(self):

@@ -369,21 +369,14 @@ class ColNamesReader(object):
         return ret
 
     def recognize_text(self, image):
-        if tesseract_version is None:
-            raise ImportError(
-                "tesseract is required but could not be found! Make sure, the "
-                "directory of its executable is in your PATH variable.")
-        fname = tempfile.NamedTemporaryFile(
-            suffix='.png', prefix='stradi_').name
-        fname2 = tempfile.NamedTemporaryFile(
-            suffix='.txt', prefix='stradi_').name
-        image.save(fname)
-        spr.check_call(['tesseract', fname, fname2[:-4]])
-        with open(fname2) as f:
-            text = f.read()
-        os.remove(fname)
-        os.remove(fname2)
-        return text.strip().replace('\n', ' ')
+
+        if tesserocr is None:
+            raise ImportError("tesserocr module not found!")
+
+        if image.mode == 'RGBA':
+            image = rgba2rgb(image)
+
+        return tesserocr.image_to_text(image).strip().replace('\n', ' ')
 
     def find_colnames(self, extents=None):
         """Find the names for the columns using tesserocr"""
