@@ -313,7 +313,7 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         str
             The path to the tutorial introduction file
         list of str
-            The paths of the remaining tutorialpdc files"""
+            The paths of the remaining tutorial files"""
         files = glob.glob(osp.join(self.src_dir, '*.rst')) + \
             glob.glob(osp.join(self.src_dir, '*.png'))
         intro = files.pop(next(
@@ -324,11 +324,15 @@ class Tutorial(StraditizerControlBase, TutorialPage):
     def show(self):
         """Show the documentation of the tutorial"""
         from psyplot_gui.main import mainwindow
+        from straditize.colnames import tesserocr
         intro, files = self.get_doc_files()
         self.filename = osp.splitext(osp.basename(intro))[0]
         mainwindow.help_explorer.set_viewer('HTML help')
         with open(intro) as f:
             rst = f.read()
+        if tesserocr is not None:
+            rst = rst.replace('straditize_tutorial_column_names',
+                              'straditize_tutorial_column_names_ocr')
         name = osp.splitext(osp.basename(intro))[0]
         self.lock_viewer(False)
         mainwindow.help_explorer.show_rst(rst, name, files=files)

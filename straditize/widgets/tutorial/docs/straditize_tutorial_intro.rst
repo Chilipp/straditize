@@ -42,6 +42,7 @@ and we will do our best to assist you.
     straditize_tutorial_select_data
     straditize_tutorial_create_reader
     straditize_tutorial_column_starts
+    straditize_tutorial_column_names
     straditize_tutorial_remove_lines
     straditize_tutorial_digitize
     straditize_tutorial_samples

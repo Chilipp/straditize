@@ -72,6 +72,10 @@ class SelectDataPartTest(TutorialTest):
         # Now click the correct button
         self._test_hint(self.digitizer.btn_select_data.text())
         QTest.mouseClick(self.digitizer.btn_select_data, Qt.LeftButton)
+        for m in self.straditizer.marks + self.straditizer.magni_marks:
+            m.remove()
+        self.straditizer.marks.clear()
+        self.straditizer.magni_marks.clear()
         # this should display a hint to shift+leftclick one of the corners
         self._test_hint('(?i)Shift\+leftclick')
         mark = sw.straditizer._new_mark(*self.page.ref_lims[:, 0] + 20)[0]

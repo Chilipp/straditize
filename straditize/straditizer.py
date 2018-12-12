@@ -490,7 +490,45 @@ class Straditizer(LabelSelection):
         if self.magni is not None:
             self.magni.ax.figure.canvas.draw()
 
-    def marks_for_data_selection(self, nums=2):
+    def guess_data_lims(self, fraction=0.7):
+        """Guess the limits of the diagram part
+
+        Parameters
+        ----------
+        fraction: float
+            The smallest fraction that has to be covered for a cell to be
+            considered as a corner
+
+        Returns
+        -------
+        np.array
+            xmin and xmax of the diagram part (see :attr:`data_xlim`)
+        np.array
+            ymin and ymax of the diagram part (see :attr:`data_ylim`)"""
+        arr = binary.DataReader.to_binary_pil(self.image)
+        mask = arr.astype(bool)
+        max_h = fraction * arr.sum(axis=1).max()
+        max_v = fraction * arr.sum(axis=0).max()
+        cum_x = np.where(mask, arr.cumsum(1), 0)
+        cum_y = np.where(mask, arr.cumsum(0), 0)
+        cum_xr = np.where(mask, arr[:, ::-1].cumsum(1)[:, ::-1], 0)
+        cum_yr = np.where(mask, arr[::-1].cumsum(0)[::-1], 0)
+
+        right = np.vstack(np.where((cum_x > max_h) & (cum_y > max_v)))
+        ymax, xmax = right[:, right.shape[1] - 1 - right.max(0)[::-1].argmax()]
+
+        left = np.vstack(np.where((cum_xr > max_h) & (cum_yr > max_v)))
+        ymin, xmin = left[:, left.min(0).argmin()]
+
+        # now check the right corner, whether the object extents further to the
+        # right
+        labeled = skim.label(arr, 8, return_num=False)
+        label = labeled[ymax, xmax]
+        xmax = np.where(labeled[ymin:ymax] == label)[1].max()
+
+        return np.array([xmin, xmax+1]), np.array([ymin, ymax+1])
+
+    def marks_for_data_selection(self, nums=2, fraction=0.7):
         def new_mark(pos):
             if len(self.marks) == nums:
                 raise ValueError("Cannot use more than %i marks!" % nums)
@@ -502,8 +540,7 @@ class Straditizer(LabelSelection):
             x0, x1 = self.data_xlim
             y0, y1 = self.data_ylim
         else:
-            x0 = x1 = np.mean(self.ax.get_xlim())
-            y0 = y1 = np.mean(self.ax.get_ylim())
+            (x0, x1), (y0, y1) = self.guess_data_lims(fraction)
         Ny, Nx = np.shape(self.image)[:2]
         xlim = (0, Nx)
         ylim = (Ny, 0)
@@ -512,16 +549,15 @@ class Straditizer(LabelSelection):
         idx_h = indexes['x']
         idx_v = indexes['y']
         self.remove_marks()
-        if self.data_xlim is not None and self.data_ylim is not None:
-            self.marks = [
-                cm.CrossMarks(positions[i], ax=self.ax, idx_h=idx_h,
-                              idx_v=idx_v, zorder=2, c='b',
-                              xlim=xlim, ylim=ylim)
-                for i in range(nums)]
-            self.marks[0].connect_marks(self.marks)
-            self.create_magni_marks(self.marks)
-        else:
-            self.marks = []
+
+        self.marks = [
+            cm.CrossMarks(positions[i], ax=self.ax, idx_h=idx_h,
+                          idx_v=idx_v, zorder=2, c='b',
+                          xlim=xlim, ylim=ylim)
+            for i in range(nums)]
+        self.marks[0].connect_marks(self.marks)
+        self.create_magni_marks(self.marks)
+
         self.mark_cids.add(self.fig.canvas.mpl_connect(
             'button_press_event', self._add_mark_event(new_mark)))
         self.mark_cids.add(self.fig.canvas.mpl_connect(

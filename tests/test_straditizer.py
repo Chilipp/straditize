@@ -36,6 +36,13 @@ class StraditizerTest(unittest.TestCase):
                    ax.format_xdata(1.)))
         self.assertEqual(ax.format_coord(x, y), ref)
 
+    def test_guess_data_lims(self):
+        stradi = Straditizer(osp.join(test_dir, 'test_figures',
+                                      'basic_diagram.png'))
+        xlim, ylim = stradi.guess_data_lims()
+        self.assertEqual(list(xlim), [10, 27])
+        self.assertEqual(list(ylim), [10, 30])
+
 
 if __name__ == '__main__':
     unittest.main()

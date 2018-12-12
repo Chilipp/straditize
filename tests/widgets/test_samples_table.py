@@ -1,6 +1,7 @@
 """Test the straditize.widgets.samples_table module"""
 import numpy as np
 import _base_testing as bt
+from itertools import chain
 import unittest
 from psyplot_gui.compat.qtcompat import QTest, Qt
 from psyplot.utils import unique_everseen
