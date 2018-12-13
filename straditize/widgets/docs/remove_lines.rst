@@ -2,8 +2,8 @@
 
 Remove horizontal or vertical lines
 ===================================
-The features described here automatically remove vertical
-or horizontal lines that span a certain fraction of the
+The features described here automatically remove the y- and x-axes, or in
+general vertical or horizontal lines that span a certain fraction of the
 diagram part.
 
 The methodology is simple: If a certain pixel column or
@@ -11,10 +11,18 @@ row in the binary data image is covered, it is considered
 as a vertical or horizontal line, respectively.
 
 +------------------+----------------+
+| x-axes           | y-axes         |
++------------------+----------------+
+| |xaxes|          | |yaxes|        |
++------------------+----------------+
 | horizontal lines | vertical lines |
 +------------------+----------------+
 | |hlines|         | |vlines|       |
 +------------------+----------------+
+
+.. |xaxes| image:: basic_diagram_xaxes.png
+
+.. |yaxes| image:: basic_diagram_yaxes.png
 
 .. |hlines| image:: basic_diagram_hlines.png
 

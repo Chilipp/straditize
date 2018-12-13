@@ -1089,11 +1089,11 @@ class DataReader(LabelSelection):
         # now we check that we have at least one percent of the image width
         # between two columns
         min_diff = 0.01 * binary.shape[1]
-        mask = np.r_[True, ret[1:] - ret[:-1] > min_diff]
+        mask = (np.r_[ret[1:], binary.shape[1]] - ret) > min_diff
         return ret[mask]
 
     @docstrings.get_sectionsf('DataReader._filter_lines')
-    def _filter_lines(self, locs, min_lw=2, max_lw=None):
+    def _filter_lines(self, locs, min_lw=1, max_lw=None):
         """Filter consecutive locations based on their length
 
         This method is used by :meth:`recognize_hlines` and
@@ -1125,10 +1125,81 @@ class DataReader(LabelSelection):
                 raise
         return selection
 
+    def recognize_xaxes(self, fraction=0.3, min_lw=1, max_lw=None,
+                        remove=False, **kwargs):
+        """Recognize (and potentially remove) x-axes at bottom and top
+
+        Parameters
+        ----------
+        fraction: float
+            The fraction (between 0 and 1) that has to be covered to recognize
+            an x-axis
+        min_lw: int
+            The minimum line width of an axis
+        max_lw: int
+            Tha maximum line width of an axis. If not specified, it will be
+            ignored
+        remove: bool
+            If True, they will be removed immediately, otherwise they are
+            displayed using the :meth:`enable_label_selection` method and can
+            be removed through the :meth:`remove_selected_labels` method"""
+        binary = self.merged_binaries()
+        ys, xs = binary.shape
+        ys_5p = max(2, int(np.ceil(ys * 0.05)))
+
+        full_mask = np.zeros_like(binary, dtype=bool)
+
+        # upper 5 percent of the data image
+        arr = binary[:ys_5p+1].copy()
+        mask = (np.nansum(arr, axis=1) / float(xs) > fraction)
+        if mask.any():
+            # filter with min_lw and max_lw
+            rows = np.where(mask)[0]
+            mask = np.zeros_like(mask)
+            selection = self._filter_lines(rows, min_lw, max_lw)
+            mask[selection] = True
+        if mask.any():
+            labeled = skim.label(arr, 8)
+            labels = np.unique(labeled[mask])
+            labels = labels[labels > 0]
+            labeled[mask] = 0
+            n = int(mask.sum() * 2 + xs * 0.01)
+            # look for connected small parts (such as axis ticks)
+            labeled[arr.astype(bool) & np.isin(labeled, labels) &
+                    (~skim.remove_small_objects(labeled.astype(bool), n))] = 0
+            full_mask[:ys_5p+1] = np.where(
+                arr.astype(bool) & ~labeled.astype(bool), True,
+                np.zeros_like(arr, dtype=bool))
+
+        # lower 5 percent of the data image
+        arr = self.binary[-ys_5p:].copy()
+        mask = (np.nansum(arr, axis=1) / float(xs) > fraction)
+        if mask.any():
+            # filter with min_lw and max_lw
+            rows = np.where(mask)[0]
+            mask = np.zeros_like(mask)
+            selection = self._filter_lines(rows, min_lw, max_lw)
+            mask[selection] = True
+        if mask.any():
+            labeled = skim.label(arr, 8)
+            labels = np.unique(labeled[mask])
+            labels = labels[labels > 0]
+            labeled[mask] = 0
+            n = int(mask.sum() * 2 + xs * 0.01)
+            # look for connected small parts (such as axis ticks)
+            labeled[arr.astype(bool) & np.isin(labeled, labels) &
+                    (~skim.remove_small_objects(labeled.astype(bool), n))] = 0
+            full_mask[-ys_5p:] = np.where(
+                arr.astype(bool) & ~labeled.astype(bool), True,
+                np.zeros_like(arr, dtype=bool))
+
+        self._show_parts2remove(self.binary, remove, select_all=False,
+                                selection=full_mask, **kwargs)
+
     docstrings.delete_params('DataReader._filter_lines.parameters', 'locs')
 
     @docstrings.with_indent(8)
-    def recognize_hlines(self, fraction=0.75, min_lw=2, max_lw=None,
+    def recognize_hlines(self, fraction=0.3, min_lw=1, max_lw=None,
                          remove=False, **kwargs):
         """Recognize horizontal lines in the plot and subtract them
 
@@ -1174,16 +1245,117 @@ class DataReader(LabelSelection):
         else:
             kwargs['extent'] = self.extent
             kwargs.setdefault('zorder', self.plot_im.zorder + 0.1)
-            self.enable_label_selection(arr, len(all_rows), **kwargs)
-            self.select_labels(np.where(np.isin(all_rows, selection))[0] + 1)
+            mask = np.zeros_like(self.binary, dtype=bool)
+            mask[selection, :] = self.binary[selection, :].astype(bool)
+            self._show_parts2remove(self.labels, False, select_all=False,
+                                    selection=mask, **kwargs)
 
     def set_hline_locs_from_selection(self):
         selection = self.selected_part
-        rows = np.where(selection[:, 0])[0]
+        rows = np.where(
+            selection.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
         self.hline_locs = np.unique(np.r_[self.hline_locs, rows])
 
+    def recognize_yaxes(self, fraction=0.3, min_lw=0, max_lw=None,
+                        remove=False):
+        """Find (and potentially remove) y-axes in the image
+
+        Parameters
+        ----------
+        fraction: float
+            The fraction (between 0 and 1) that has to be covered to recognize
+            a y-axis
+        min_lw: int
+            The minimum line width of an axis
+        max_lw: int
+            Tha maximum line width of an axis. If not specified, the median
+            if the axes widths is taken
+        remove: bool
+            If True, they will be removed immediately, otherwise they are
+            displayed using the :meth:`enable_label_selection` method and can
+            be removed through the :meth:`remove_selected_labels` method"""
+
+        grey = self.to_grey_pil(self.image)
+        binary = self.binary
+
+        ys, xs = binary.shape
+
+        mask = (np.nansum(self.binary, axis=0) / ys > fraction)
+        bounds = self.column_bounds
+        min_col = bounds.min()
+        yaxes = {}
+        col = -1
+        nvals = 0
+        for i in np.where(mask)[0]:
+            if i < min_col:
+                continue
+            icol = next(icol for icol, (s, e) in enumerate(bounds)
+                        if i >= s and i < e)
+            if i > max(2, bounds[icol, 0] + binary.shape[1] * 0.05):
+                continue
+            if icol != col:
+                col = icol
+                yaxes[icol] = [[i]]
+                nvals = np.nansum(binary[:, i])
+                color = np.bincount(grey[:, i]).argmax()
+                found_data = False
+            # append when we have about the same number of vertical lines
+            elif i - yaxes[icol][-1][-1] == 1:
+                # if we do neither see a change in dominant color nor in the
+                # number of data points in the row, we extend the lineu
+                if (np.bincount(grey[:, i]).argmax() == color and
+                        np.abs(np.nansum(binary[:, i]) / nvals - 1) < 0.05):
+                    yaxes[icol][-1].append(i)
+            elif not found_data:
+                # check whether more than 10% of the previous region has been
+                # covered with data
+                sub = binary[:, yaxes[icol][-1][-1]+1:i]
+                ndata = np.nansum(sub)
+                npotential = sub.size
+                if ndata < 0.1 * npotential:
+                    yaxes[icol].append([i])
+                else:
+                    found_data = True
+
+        max_lw = int(max_lw or
+                     (np.ceil(np.median(list(map(
+                         len, chain.from_iterable(yaxes.values())))))))
+
+        for col_lines in yaxes.values():
+            removed = 0
+            for i, lines in enumerate(col_lines[:]):
+                if len(lines) < min_lw:
+                    del col_lines[i - removed]
+                    removed += 1
+                else:
+                    del lines[max_lw:]
+
+        mask = np.zeros_like(binary, dtype=bool)
+        mask[:, list(chain.from_iterable(
+                chain.from_iterable(yaxes.values())))] = True
+
+        # add small labels to account for ticks
+        labeled = self.labels.copy()
+        labels = np.unique(labeled[mask])
+        labels = labels[labels > 0]
+        labeled[mask] = 0
+        n = int(max_lw * 2 + len(binary) * 0.01)
+        mask[binary.astype(bool) & np.isin(labeled, labels) &
+             (~skim.remove_small_objects(labeled.astype(bool), n))] = True
+
+        # now select up to the maximum for each line
+        for col, indices in yaxes.items():
+            s, e = bounds[col]
+            for l in indices:
+                lmax = l[0] + 1 + np.where(
+                    mask[:, l[0]:l[-1] + max_lw + 1].any(axis=0))[0].max()
+                mask[:, l[0]:lmax] = True
+
+        self._show_parts2remove(binary, remove, select_all=False,
+                                selection=mask)
+
     @docstrings.with_indent(8)
-    def recognize_vlines(self, fraction=0.75, min_lw=2, max_lw=None,
+    def recognize_vlines(self, fraction=0.3, min_lw=1, max_lw=None,
                          remove=False, **kwargs):
         """Recognize horizontal lines in the plot and subtract them
 
@@ -1230,12 +1402,15 @@ class DataReader(LabelSelection):
         else:
             kwargs['extent'] = self.extent
             kwargs.setdefault('zorder', self.plot_im.zorder + 0.1)
-            self.enable_label_selection(arr, len(all_cols), **kwargs)
-            self.select_labels(np.where(np.isin(all_cols, selection))[0] + 1)
+            mask = np.zeros_like(self.binary, dtype=bool)
+            mask[:, selection] = self.binary[:, selection].astype(bool)
+            self._show_parts2remove(self.labels, False, select_all=False,
+                                    selection=mask, **kwargs)
 
     def set_vline_locs_from_selection(self):
         selection = self.selected_part
-        cols = np.where(selection[0, :])[0]
+        cols = np.where(
+            selection.sum(axis=0) / self.binary.sum(axis=0) > 0.3)[0]
         self.vline_locs = np.unique(np.r_[self.vline_locs, cols])
         self._shift_column_starts(cols)
         self._shift_occurences(cols)
@@ -2193,10 +2368,11 @@ class DataReader(LabelSelection):
             return np.where(np.isin(labels, np.unique(selected_labels)),
                             labels, 0)
 
-    def _show_parts2remove(self, arr, remove=False, select_all=True, **kwargs):
+    def _show_parts2remove(self, arr, remove=False, select_all=True,
+                           selection=None, **kwargs):
         kwargs['extent'] = self.extent
         if remove:
-            mask = arr.astype(bool)
+            mask = (arr if selection is None else selection).astype(bool)
             self.labels[mask] = 0
             self.binary[mask] = 0
             self.plot_im.set_array(self.labels)
@@ -2208,6 +2384,11 @@ class DataReader(LabelSelection):
             self.enable_label_selection(labels, num_labels, **kwargs)
             if select_all:
                 self.select_all_labels()
+            elif selection is not None:
+                self._selection_arr[labels.astype(bool) &
+                                    selection.astype(bool)] = num_labels + 1
+                self._select_img.set_array(self._selection_arr)
+                self._update_magni_img()
 
     def show_disconnected_parts(self, fromlast=5, from0=10, remove=False,
                                 **kwargs):

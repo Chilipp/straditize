@@ -107,6 +107,12 @@ class DigitizingControl(StraditizerControlBase):
     #: button for removing horizontal lines
     btn_remove_hlines = None
 
+    #: Button for removing y-axes
+    btn_remove_yaxes = None
+
+    #: button for removing x-axes
+    btn_remove_xaxes = None
+
     #: Button for digitizing the diagram
     btn_digitize = None
 
@@ -261,12 +267,12 @@ class DigitizingControl(StraditizerControlBase):
 
         self.txt_line_fraction = QLineEdit()
         self.txt_line_fraction.setValidator(QDoubleValidator(0.0, 100.0, 5))
-        self.txt_line_fraction.setText('75.0')
+        self.txt_line_fraction.setText('30.0')
         self.txt_line_fraction.setToolTip(
             'The percentage that shall be used to identify a straight line')
 
         self.sp_min_lw = QSpinBox()
-        self.sp_min_lw.setValue(2)
+        self.sp_min_lw.setValue(1)
         self.sp_min_lw.setMaximum(10000)
         self.sp_min_lw.setToolTip(
             'Set the minimal width for selected vertical or horizontal lines')
@@ -283,9 +289,17 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_remove_vlines.setToolTip(
             'Remove vertical lines, i.e. y-axes')
 
+        self.btn_remove_yaxes = QPushButton('y-axes')
+        self.btn_remove_yaxes.setToolTip(
+            'Recognize and remove vertical axes in each of the plots')
+
         self.btn_remove_hlines = QPushButton('horizontal lines')
-        self.btn_remove_vlines.setToolTip(
+        self.btn_remove_hlines.setToolTip(
             'Remove horizonal lines, i.e. lines parallel to the x-axis')
+
+        self.btn_remove_xaxes = QPushButton('x-axes')
+        self.btn_remove_xaxes.setToolTip(
+            'Recognize and remove x-axes at bottom and top of the data image')
 
         self.btn_digitize = QPushButton('Digitize')
         self.btn_digitize.setToolTip('Digitize the binary file')
@@ -362,6 +376,7 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_new_exaggeration, self.btn_select_exaggerations,
             self.btn_select_data, self.btn_remove_hlines,
             self.btn_reset_columns, self.btn_reset_samples,
+            self.btn_remove_xaxes, self.btn_remove_yaxes,
             self.btn_remove_vlines, self.txt_line_fraction,
             self.sp_max_lw, self.sp_min_lw,
             self.btn_show_disconnected_parts, self.txt_fromlast,
@@ -393,6 +408,8 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_digitize.clicked.connect(self.digitize)
         self.btn_digitize_exag.clicked.connect(self.digitize_exaggerations)
         self.btn_digitize.clicked.connect(self.straditizer_widgets.refresh)
+        self.btn_remove_yaxes.clicked.connect(self.remove_yaxes)
+        self.btn_remove_xaxes.clicked.connect(self.remove_xaxes)
         self.btn_remove_hlines.clicked.connect(self.remove_hlines)
         self.btn_remove_vlines.clicked.connect(self.remove_vlines)
         self.btn_show_disconnected_parts.clicked.connect(
@@ -595,6 +612,7 @@ class DigitizingControl(StraditizerControlBase):
                     self.btn_show_disconnected_parts, self.txt_fromlast,
                     self.cb_fromlast, self.txt_from0, self.cb_from0,
                     self.btn_show_cross_column, self.txt_cross_column_px,
+                    self.btn_remove_yaxes,
                     self.btn_show_parts_at_column_ends, self.btn_digitize]):
             return False
         elif (self.straditizer.data_reader.exaggerated_reader is None and
@@ -840,16 +858,20 @@ class DigitizingControl(StraditizerControlBase):
 
         # lines
         self.remove_line_child = line_child = QTreeWidgetItem(0)
-        hbox = QHBoxLayout()
-        hbox.addWidget(self.btn_remove_vlines)
-        hbox.addWidget(self.btn_remove_hlines)
+        grid = QGridLayout()
+        grid.addWidget(self.btn_remove_xaxes, 0, 0)
+        grid.addWidget(self.btn_remove_yaxes, 0, 1)
+        grid.addWidget(self.btn_remove_hlines, 1, 0)
+        grid.addWidget(self.btn_remove_vlines, 1, 1)
         w = QWidget()
-        w.setLayout(hbox)
+        w.setLayout(grid)
         child.addChild(line_child)
         self.tree.setItemWidget(line_child, 0, w)
         self.add_info_button(line_child, 'remove_lines.rst',
                              connections=[self.btn_remove_vlines,
-                                          self.btn_remove_hlines])
+                                          self.btn_remove_hlines,
+                                          self.btn_remove_yaxes,
+                                          self.btn_remove_xaxes])
 
         w = QWidget()
         line_child2 = QTreeWidgetItem(0)
@@ -1209,6 +1231,24 @@ class DigitizingControl(StraditizerControlBase):
         absolute = int(self.txt_exag_absolute.text().strip() or 0)
         reader.digitize_exaggerated(fraction=fraction, absolute=absolute)
 
+    def remove_xaxes(self):
+        """Remove xaxes in the plot"""
+        fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
+        max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
+        min_lw = int(self.sp_min_lw.text().strip() or 1)
+        tb = self.selection_toolbar
+        tb.data_obj = 'Reader'
+        self.reader.recognize_xaxes(fraction=fraction, min_lw=min_lw,
+                                    max_lw=max_lw)
+        self.straditizer_widgets.apply_button.clicked.connect(
+            self.reader.set_hline_locs_from_selection)
+        tb.start_selection(rgba=tb.data_obj.image_array())
+        tb.remove_select_action.setChecked(True)
+        if not tb.wand_action.isChecked():
+            tb.wand_action.setChecked(True)
+        tb.set_row_wand_mode()
+        self.straditizer.draw_figure()
+
     def remove_hlines(self):
         """Remove horizontal lines"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
@@ -1224,8 +1264,25 @@ class DigitizingControl(StraditizerControlBase):
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
             tb.wand_action.setChecked(True)
-        tb.select_action.setEnabled(False)
-        tb.auto_expand = True
+        tb.set_row_wand_mode()
+        self.straditizer.draw_figure()
+
+    def remove_yaxes(self):
+        """Remove horizontal lines"""
+        fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
+        max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
+        min_lw = self.sp_min_lw.value()
+        tb = self.selection_toolbar
+        tb.data_obj = 'Reader'
+        self.reader.recognize_yaxes(fraction=fraction, min_lw=min_lw,
+                                    max_lw=max_lw)
+        self.straditizer_widgets.apply_button.clicked.connect(
+            self.reader.set_vline_locs_from_selection)
+        tb.start_selection(rgba=tb.data_obj.image_array())
+        tb.remove_select_action.setChecked(True)
+        if not tb.wand_action.isChecked():
+            tb.wand_action.setChecked(True)
+        tb.set_col_wand_mode()
         self.straditizer.draw_figure()
 
     def remove_vlines(self):
@@ -1243,8 +1300,7 @@ class DigitizingControl(StraditizerControlBase):
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
             tb.wand_action.setChecked(True)
-        tb.select_action.setEnabled(False)
-        tb.auto_expand = True
+        tb.set_col_wand_mode()
         self.straditizer.draw_figure()
 
     def enable_occurences_selection(self):

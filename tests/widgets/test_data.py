@@ -12,12 +12,29 @@ from psyplot_gui.compat.qtcompat import QTest, Qt
 class RemoverTest(bt.StraditizeWidgetsTestCase):
     """A test case for testing the removing of features"""
 
+    def test_remove_yaxes(self):
+        """Test the removing of yaxes
+
+        This method removes the vertical lines in
+        ``'basic_diagram_yaxes.png'`` and compares it with
+        ``'basic_diagram_yaxes_removed.png'``"""
+        self.init_reader('basic_diagram_yaxes.png', xlim=np.array([9., 27.]))
+        self.reader.column_starts = np.array([0, 7, 15])
+        self.straditizer_widgets.refresh()
+        QTest.mouseClick(self.digitizer.btn_remove_yaxes,
+                         Qt.LeftButton)
+        QTest.mouseClick(self.straditizer_widgets.apply_button,
+                         Qt.LeftButton)
+        self.assertBinaryImageEquals(
+            self.reader.binary,
+            self.get_fig_path('basic_diagram_yaxes_removed.png'))
+
     def test_remove_vlines(self):
         """Test the removing of vertical lines
 
         This method removes the vertical lines in
         ``'basic_diagram_vlines.png'`` and compares it with
-        ``'basic_diagram_binary.png'``"""
+        ``'basic_diagram_vlines_removed.png'``"""
         self.init_reader('basic_diagram_vlines.png')
         self.digitizer.cb_max_lw.setChecked(True)
         self.digitizer.sp_max_lw.setValue(2)
@@ -29,6 +46,23 @@ class RemoverTest(bt.StraditizeWidgetsTestCase):
         self.assertBinaryImageEquals(
             self.reader.binary,
             self.get_fig_path('basic_diagram_vlines_removed.png'))
+
+    def test_remove_xaxes(self):
+        """Test the removing of x-axes
+
+        This method removes the horizontal lines in
+        ``'basic_diagram_xaxes.png'`` and compares it with
+        ``'basic_diagram_xaxes_removed.png'``"""
+        self.init_reader('basic_diagram_xaxes.png', ylim=np.array([10., 33.]),
+                         xlim=np.array([10., 29.]))
+        self.digitizer.txt_line_fraction.setText('50')
+        QTest.mouseClick(self.digitizer.btn_remove_xaxes,
+                         Qt.LeftButton)
+        QTest.mouseClick(self.straditizer_widgets.apply_button,
+                         Qt.LeftButton)
+        self.assertBinaryImageEquals(
+            self.reader.binary,
+            self.get_fig_path('basic_diagram_xaxes_removed.png'))
 
     def test_remove_hlines(self):
         """Test the removing of horizonal lines lines

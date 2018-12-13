@@ -18,6 +18,10 @@ at the bottom of the straditizer control panel.
 
 
 +------------------------------------------------------------+-----------------------------------------------------+
+| :ref:`x-axes <remove-lines>`                               | :ref:`y-axes <remove-lines>`                        |
++------------------------------------------------------------+-----------------------------------------------------+
+|                   |xaxes|                                  |                    |yaxes|                          |
++------------------------------------------------------------+-----------------------------------------------------+
 | :ref:`horizontal lines <remove-lines>`                     | :ref:`vertical lines <remove-lines>`                |
 +------------------------------------------------------------+-----------------------------------------------------+
 |                   |hlines|                                 |                    |vlines|                         |
@@ -32,24 +36,36 @@ at the bottom of the straditizer control panel.
 +------------------------------------------------------------+-----------------------------------------------------+
 
 
+.. |xaxes| image:: basic_diagram_xaxes.png
+    :target: remove_lines.html
+
+.. |yaxes| image:: basic_diagram_yaxes.png
+    :target: remove_lines.html
+
 .. |hlines| image:: basic_diagram_hlines.png
+    :target: remove_lines.html
 
 .. |vlines| image:: basic_diagram_vlines.png
+    :target: remove_lines.html
 
 .. |col-ends| image:: basic_diagram_features_at_col_ends.png
+    :target: remove_col_ends.html
 
 .. |disco| image:: basic_diagram_disconnected.png
+    :target: remove_disconnected_parts.html
 
 .. |cross-col| image:: basic_diagram_cross_col.png
+    :target: remove_cross_column.html
 
 .. |small| image:: basic_diagram_small_features.png
+    :target: remove_small_parts.html
 
 
 .. toctree::
     :hidden:
 
-    remove_col_ends.rst
-    remove_cross_column.rst
-    remove_disconnected_parts.rst
-    remove_lines.rst
-    remove_small_parts.rst
+    remove_col_ends
+    remove_cross_column
+    remove_disconnected_parts
+    remove_lines
+    remove_small_parts

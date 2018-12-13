@@ -272,6 +272,16 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             self.set_color_wand_mode)
         menu_a.setToolTip('Select colors')
 
+        self._wand_actions['row_select'] = menu_a = tool_menu.addAction(
+            QIcon(get_icon('row_select.png')), 'row selection',
+            self.set_row_wand_mode)
+        menu_a.setToolTip('Select pixel rows')
+
+        self._wand_actions['col_select'] = menu_a = tool_menu.addAction(
+            QIcon(get_icon('col_select.png')), 'column selection',
+            self.set_col_wand_mode)
+        menu_a.setToolTip('Select pixel columns')
+
         a.setMenu(tool_menu)
 
         # color_wand widgets
@@ -598,6 +608,24 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self._action_clicked = None
         self.toggle_selection()
 
+    def set_row_wand_mode(self):
+        """Set the current wand tool to the color wand"""
+        self.wand_type = 'rows'
+        self.wand_action.setIcon(QIcon(get_icon('row_select.png')))
+        for a in self.color_wand_actions:
+            a.setVisible(False)
+        self._action_clicked = None
+        self.toggle_selection()
+
+    def set_col_wand_mode(self):
+        """Set the current wand tool to the color wand"""
+        self.wand_type = 'cols'
+        self.wand_action.setIcon(QIcon(get_icon('col_select.png')))
+        for a in self.color_wand_actions:
+            a.setVisible(False)
+        self._action_clicked = None
+        self.toggle_selection()
+
     def set_binary_pattern_mode(self):
         """Set the current pattern mode to the binary pattern"""
         self.pattern_type = 'binary'
@@ -748,6 +776,10 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             expand = True
         elif self.wand_type == 'labels':
             arr = self._select_labels(slx, sly)
+        elif self.wand_type == 'rows':
+            arr = self._select_rows(slx, sly)
+        elif self.wand_type == 'cols':
+            arr = self._select_cols(slx, sly)
         else:
             arr = self._select_colors(slx, sly)
             expand = True
@@ -847,6 +879,34 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             new = valid
             arr = obj._orig_selection_arr.copy()
         obj.select_labels(np.array(sorted(new)))
+        return arr
+
+    def _select_rows(self, slx, sly):
+        obj = self.data_obj
+        arr = self.labels
+        rows = np.arange(arr.shape[0])[sly]
+        if self.remove_select_action.isChecked():
+            arr[rows, :] = np.where(arr[rows, :], -1, 0)
+        else:
+            if self.new_select_action.isChecked():
+                arr = obj._orig_selection_arr.copy()
+                obj._select_img.set_cmap(obj._select_cmap)
+                obj._select_img.set_norm(obj._select_norm)
+            arr[rows, :] = np.where(arr[rows, :], arr.max() + 1, 0)
+        return arr
+
+    def _select_cols(self, slx, sly):
+        obj = self.data_obj
+        arr = self.labels
+        cols = np.arange(arr.shape[1])[slx]
+        if self.remove_select_action.isChecked():
+            arr[:, cols] = np.where(arr[:, cols], -1, 0)
+        else:
+            if self.new_select_action.isChecked():
+                arr = obj._orig_selection_arr.copy()
+                obj._select_img.set_cmap(obj._select_cmap)
+                obj._select_img.set_norm(obj._select_norm)
+            arr[:, cols] = np.where(arr[:, cols], arr.max() + 1, 0)
         return arr
 
     def _select_colors(self, slx, sly):
