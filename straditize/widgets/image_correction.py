@@ -73,11 +73,13 @@ class ImageRotator(StraditizerControlBase, QWidget):
     def start_rotation(self):
         if not self._rotating:
             self._rotating = True
-            self.connect2apply(self.rotate_image, self.remove_marks,
-                               self.straditizer.draw_figure)
+            self.connect2apply(self.rotate_image)
             self.connect2cancel(self.remove_marks,
                                 self.straditizer.draw_figure)
             self.straditizer_widgets.apply_button.setText('Rotate')
+
+    def draw_figure(self):
+        self.straditizer.draw_figure()
 
     def start_horizontal_alignment(self):
         self.start_rotation()
