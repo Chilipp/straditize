@@ -95,11 +95,10 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         except (AttributeError, RuntimeError):
             pass
         else:
+            self.straditizer_widgets.reset_control()
             if restart:
                 self.tearDownClass()
                 self.setUpClass()
-            else:
-                self.straditizer_widgets.reset_control()
 
         for obj in gc.get_objects():
             if isinstance(obj, Signal):
