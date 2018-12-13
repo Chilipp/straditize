@@ -88,8 +88,19 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         from straditize.binary import DataReader
         from psyplot.data import Signal
         import psyplot.project as psy
-        if hasattr(self, 'straditizer_widgets'):
-            self.straditizer_widgets.reset_control()
+
+        # potentially recreate the straditizer control
+        try:
+            restart = self.straditizer_widgets.apply_button.isEnabled()
+        except (AttributeError, RuntimeError):
+            pass
+        else:
+            if restart:
+                self.tearDownClass()
+                self.setUpClass()
+            else:
+                self.straditizer_widgets.reset_control()
+
         for obj in gc.get_objects():
             if isinstance(obj, Signal):
                 obj.disconnect()
