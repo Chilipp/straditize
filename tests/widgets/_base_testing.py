@@ -317,7 +317,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
             self.straditizer_widgets.digitizer.btn_select_data.isEnabled())
         QTest.mouseClick(self.straditizer_widgets.digitizer.btn_select_data,
                          Qt.LeftButton)
-        magni_marks = self.straditize.magni_marks or []
+        magni_marks = self.straditizer.magni_marks or []
         for m in self.straditizer.marks + magni_marks:
             m.remove()
         self.straditizer.marks.clear()
