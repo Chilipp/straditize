@@ -155,6 +155,8 @@ class ImageRotator(StraditizerControlBase, QWidget):
             self.straditizer_widgets.menu_actions.open_straditizer(
                 image, attrs=attrs)
 
+        self._rotating = self._ha = self._va = False
+
     def remove_marks(self):
         self._rotating = self._ha = self._va = False
         self.straditizer.remove_marks()
