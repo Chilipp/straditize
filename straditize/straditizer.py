@@ -518,13 +518,23 @@ class Straditizer(LabelSelection):
         ymax, xmax = right[:, right.shape[1] - 1 - right.max(0)[::-1].argmax()]
 
         left = np.vstack(np.where((cum_xr > max_h) & (cum_yr > max_v)))
-        ymin, xmin = left[:, left.min(0).argmin()]
+        if left.size:
+            ymin, xmin = left[:, left.min(0).argmin()]
+        else:
+            xmin = (cum_yr > max_v).any(axis=0).argmax()
+            ymin = (cum_xr > max_h).any(axis=1).argmax()
+
+        if ymin == ymax:
+            ymin = cum_xr.any(axis=1).argmax()
+        if xmin == xmax:
+            xmin = cum_yr.any(axis=0).argmax()
 
         # now check the right corner, whether the object extents further to the
         # right
-        labeled = skim.label(arr, 8, return_num=False)
-        label = labeled[ymax, xmax]
-        xmax = np.where(labeled[ymin:ymax] == label)[1].max()
+        if mask[ymax, xmax]:
+            labeled = skim.label(arr, 8, return_num=False)
+            label = labeled[ymax, xmax]
+            xmax = np.where(labeled[ymin:ymax+1] == label)[1].max()
 
         return np.array([xmin, xmax+1]), np.array([ymin, ymax+1])
 
