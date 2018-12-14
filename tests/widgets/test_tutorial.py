@@ -150,8 +150,6 @@ class RemoveLinesTest(TutorialTest):
         digitizer.tree.expandItem(digitizer.remove_line_child)
 
         # now remove horizontal lines
-        self._test_hint('minimum line')
-        digitizer.sp_min_lw.setValue(1)
         self._test_hint(digitizer.btn_remove_hlines.text())
         QTest.mouseClick(digitizer.btn_remove_hlines, Qt.LeftButton)
         self._test_hint(sw.apply_button.text())
@@ -162,8 +160,6 @@ class RemoveLinesTest(TutorialTest):
         digitizer.cb_max_lw.setChecked(True)
         self._test_hint('maximum line')
         digitizer.sp_max_lw.setValue(2)
-        self._test_hint('minimum line fraction')
-        digitizer.txt_line_fraction.setText('30')
         self._test_hint(digitizer.btn_remove_vlines.text())
         QTest.mouseClick(digitizer.btn_remove_vlines, Qt.LeftButton)
         self._test_hint(sw.apply_button.text())
