@@ -21,6 +21,9 @@ class RemoverTest(bt.StraditizeWidgetsTestCase):
         self.init_reader('basic_diagram_yaxes.png', xlim=np.array([9., 27.]))
         self.reader.column_starts = np.array([0, 7, 15])
         self.straditizer_widgets.refresh()
+        self.digitizer.txt_line_fraction.setText('30')
+        self.digitizer.cb_max_lw.setChecked(False)
+        self.digitizer.sp_min_lw.setValue(1)
         QTest.mouseClick(self.digitizer.btn_remove_yaxes,
                          Qt.LeftButton)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
@@ -39,6 +42,7 @@ class RemoverTest(bt.StraditizeWidgetsTestCase):
         self.digitizer.cb_max_lw.setChecked(True)
         self.digitizer.sp_max_lw.setValue(2)
         self.digitizer.sp_min_lw.setValue(2)
+        self.digitizer.txt_line_fraction.setText('75')
         QTest.mouseClick(self.digitizer.btn_remove_vlines,
                          Qt.LeftButton)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
@@ -56,6 +60,8 @@ class RemoverTest(bt.StraditizeWidgetsTestCase):
         self.init_reader('basic_diagram_xaxes.png', ylim=np.array([10., 33.]),
                          xlim=np.array([10., 29.]))
         self.digitizer.txt_line_fraction.setText('50')
+        self.digitizer.cb_max_lw.setChecked(False)
+        self.digitizer.sp_min_lw.setValue(1)
         QTest.mouseClick(self.digitizer.btn_remove_xaxes,
                          Qt.LeftButton)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
