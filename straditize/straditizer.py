@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Core module of the Straditizer class"""
 import six
-import gc
 import weakref
 from copy import copy
 from collections import OrderedDict
@@ -15,8 +14,6 @@ import straditize.binary as binary
 from straditize.label_selection import LabelSelection
 from psyplot.data import Signal, safe_list
 from straditize.magnifier import Magnifier
-from straditize.navigation_slider import (HorizontalNavigationSlider,
-                                          VerticalNavigationSlider)
 from psyplot.utils import _temp_bool_prop
 import skimage.morphology as skim
 import xarray as xr
@@ -233,10 +230,6 @@ class Straditizer(LabelSelection):
 
     _indexes = None
 
-    _horizontal_slider = None
-
-    _vertical_slider = None
-
     #: The matplotlib axes
     ax = None
 
@@ -341,8 +334,6 @@ class Straditizer(LabelSelection):
             self.draw_figure()
 
     def plot_image(self, ax=None, **kwargs):
-        draw_slider = (self._horizontal_slider is None or self.ax is None or
-                       ax is not self.ax)
         ax = ax or self.ax
         if ax is None:
             import matplotlib.pyplot as plt
@@ -353,9 +344,6 @@ class Straditizer(LabelSelection):
         self.plot_im = ax.imshow(self.image, **kwargs)
         ax.grid(False)
         self.magni = Magnifier(ax, image=self.image, **kwargs)
-        if draw_slider:
-            self._horizontal_slider = HorizontalNavigationSlider(ax)
-            self._vertical_slider = VerticalNavigationSlider(ax)
         if self._orig_format_coord is None:
             self._orig_format_coord = ax.format_coord
             ax.format_coord = format_coord_func(ax, weakref.ref(self))

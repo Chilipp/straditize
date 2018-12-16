@@ -2,6 +2,7 @@
 """
 import os
 import os.path as osp
+import weakref
 import pandas as pd
 from itertools import chain
 import datetime as dt
@@ -11,12 +12,18 @@ from straditize.common import rgba2rgb
 from psyplot_gui.compat.qtcompat import (
     with_qt5, QFileDialog, QMenu, QKeySequence, QDialog, QDialogButtonBox,
     QLineEdit, QToolButton, QIcon, QCheckBox, QHBoxLayout, QVBoxLayout, QLabel,
-    QDesktopWidget, QPushButton, QTreeWidgetItem)
+    QDesktopWidget, QPushButton, QTreeWidgetItem, Qt)
+from PyQt5 import QtWidgets
 from psyplot_gui.common import get_icon
 import numpy as np
 from PIL import Image
+from straditize.widgets import get_straditizer_widgets
 
 straditizer = None
+
+
+# axes that are being updated currently
+_updating = []
 
 
 class ExportDfDialog(QDialog):
@@ -419,9 +426,111 @@ class StraditizerMenuActions(StraditizerControlBase):
     def finish_loading(self, stradi):
         self.straditizer = stradi
         stradi.show_full_image()
+        self.create_sliders(stradi)
         self.set_stradi_in_console()
         self.stack_zoom_window()
         self.straditizer_widgets.refresh()
+
+    def create_sliders(self, stradi):
+        """Create sliders to navigate in the given axes"""
+        ax = stradi.ax
+        try:
+            manager = ax.figure.canvas.manager
+            dock = manager.window
+            fig_widget = manager.parent_widget
+        except AttributeError:
+            raise
+        from psyplot_gui.backend import FigureWidget
+        import matplotlib.colors as mcol
+        xs, ys = stradi.image.size
+        fc = ax.figure.get_facecolor()
+        rgb = tuple(np.round(np.array(mcol.to_rgb(fc)) * 255).astype(int))
+
+        slh = QtWidgets.QSlider(Qt.Horizontal)
+        slv = QtWidgets.QSlider(Qt.Vertical)
+
+        slh.setStyleSheet("background-color:rgb{};".format(rgb))
+        slv.setStyleSheet("background-color:rgb{};".format(rgb))
+
+        slh.setMaximum(xs)
+        slv.setMaximum(ys)
+        slv.setInvertedAppearance(True)
+        vbox = QVBoxLayout()
+        hbox = QHBoxLayout()
+
+        vbox.setSpacing(0)
+        hbox.setSpacing(0)
+
+        hbox.addWidget(fig_widget)
+        hbox.addWidget(slv)
+        vbox.addLayout(hbox)
+        vbox.addWidget(slh)
+
+        w = FigureWidget()
+        w.dock = dock
+        w.setLayout(vbox)
+        dock.setWidget(w)
+
+        ax.callbacks.connect('xlim_changed', self.update_x_navigation_sliders)
+        ax.callbacks.connect('ylim_changed', self.update_y_navigation_sliders)
+        self.update_x_navigation_sliders(ax)
+        self.update_y_navigation_sliders(ax)
+        ref = weakref.ref(ax)
+        slh.valueChanged.connect(self.set_ax_xlim(ref))
+        slv.valueChanged.connect(self.set_ax_ylim(ref))
+
+    @staticmethod
+    def set_ax_xlim(ax_ref):
+        """Define a function to update xlim from a given centered value"""
+        def update(val):
+            ax = ax_ref()
+            if ax in _updating or ax is None:
+                return
+
+            _updating.append(ax)
+            lims = ax.get_xlim()
+            diff = (lims[1] - lims[0]) / 2
+            ax.set_xlim(val - diff, val + diff)
+            ax.figure.canvas.draw_idle()
+            _updating.remove(ax)
+        return update
+
+    @staticmethod
+    def set_ax_ylim(ax_ref):
+        """Define a function to update ylim from a given centered value"""
+        def update(val):
+            ax = ax_ref()
+            if ax in _updating or ax is None:
+                return
+
+            _updating.append(ax)
+            lims = ax.get_ylim()
+            diff = (lims[1] - lims[0]) / 2
+            ax.set_ylim(val - diff, val + diff)
+            ax.figure.canvas.draw_idle()
+            _updating.remove(ax)
+        return update
+
+    @staticmethod
+    def update_x_navigation_sliders(ax):
+        """Update the horizontal navigation slider for the given `ax``
+        """
+        w = ax.figure.canvas.manager.window.widget()
+        slh = w.layout().itemAt(1).widget()
+
+        xc = np.mean(ax.get_xlim())
+
+        slh.setValue(max(0, min(slh.maximum(), int(round(xc)))))
+
+    @staticmethod
+    def update_y_navigation_sliders(ax):
+        """Update the vertical navigation slider for the given `ax``
+        """
+        w = ax.figure.canvas.manager.window.widget()
+        slv = w.layout().itemAt(0).itemAt(1).widget()
+
+        yc = np.mean(ax.get_ylim())
+        slv.setValue(max(0, min(slv.maximum(), int(round(yc)))))
 
     def stack_zoom_window(self):
         from psyplot_gui.main import mainwindow
