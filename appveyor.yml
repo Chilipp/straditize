@@ -11,9 +11,6 @@ install:
     - "SET ORIGPATH=%PATH%"
     - setlocal
     - set CONDA_REPO_TOKEN=
-    # Prepend newly installed Python to the PATH of this build (this cannot be
-    # done from inside the powershell script as it would require to restart
-    # the parent CMD process).
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - conda config --set always_yes yes --set changeps1 no
     - conda config --add channels conda-forge
