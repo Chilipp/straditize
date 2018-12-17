@@ -701,6 +701,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
             x = mark.xa[mask][i]
             dx = np.diff(xlim) / 2.
             ax.set_xlim(x - dx, x + dx)
+            ax.set_ylim(*ax.get_ylim())
         else:
             distances = (
                 (mark.xa > x).any() and (mark.xa[mark.xa > x] - x).min()
@@ -749,6 +750,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
             x = mark.xa[mask][i]
             dx = np.diff(xlim) / 2.
             ax.set_xlim(x - dx, x + dx)
+            ax.set_ylim(*ax.get_ylim())
         else:
             distances = (
                 (mark.xa < x).any() and (mark.xa[mark.xa < x] - x).min()

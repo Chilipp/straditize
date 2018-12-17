@@ -694,8 +694,8 @@ class SingleCrossMarksView(MultiCrossMarksView):
         xmin = model._bounds[:, 0][cols].min()
         xmax = model._bounds[:, 1][cols].max()
         ax = model.axes[0]
-        ax.set_ylim(y.max() + 10, y.min() - 10)
         ax.set_xlim(xmin, xmax)
+        ax.set_ylim(y.max() + 10, y.min() - 10)
         model.fig.canvas.draw()
 
 

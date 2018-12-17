@@ -371,6 +371,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
 
     def add_mark(self, pos, ax=None):
         """Add a new mark at the given position"""
+        self.straditizer.show_full_image()
         marks = self.straditizer.marks
         n = len(marks)
         if ax is None:

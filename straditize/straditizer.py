@@ -139,6 +139,9 @@ class Straditizer(LabelSelection):
     #: :class:`pandas.DataFrame`. The attributes of this straditizer
     attrs = None
 
+    adjusting = _temp_bool_prop(
+        'adjusting', "True if xlim and ylim are adjusted")
+
     @property
     def valid_attrs(self):
         attrs = self.attrs
@@ -179,6 +182,8 @@ class Straditizer(LabelSelection):
     data_xlim = None
 
     data_ylim = None
+
+    fig_w = fig_h = None
 
     @property
     def colnames_reader(self):
@@ -337,7 +342,17 @@ class Straditizer(LabelSelection):
         ax = ax or self.ax
         if ax is None:
             import matplotlib.pyplot as plt
-            ax = plt.subplots()[1]
+            fig = plt.figure()
+            ax = fig.add_axes([0.1, 0.1, 0.9, 0.9])
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            fig.canvas.mpl_connect('resize_event',
+                                   self.adjust_lims_after_resize)
+            # HACK: This adjusts the limits such that the plot still fills the
+            # entire available space. However, it if (and only if) the ylim is
+            # changed, not if the xlim is changed alone
+            ax.callbacks.connect('ylim_changed', self.adjust_lims_after_zoom)
+        self._ax_pos = ax.get_position()
         self.ax = ax
         extent = [0] + list(np.shape(self.image)[:2][::-1]) + [0]
         kwargs.setdefault('extent', extent)
@@ -347,6 +362,68 @@ class Straditizer(LabelSelection):
         if self._orig_format_coord is None:
             self._orig_format_coord = ax.format_coord
             ax.format_coord = format_coord_func(ax, weakref.ref(self))
+
+    def adjust_lims_after_zoom(self, ax):
+        if self.adjusting:
+            return
+        xs, ys = self.image.size
+
+        # calculate xmax
+        dy = np.abs(np.diff(ax.get_ylim()))[0]
+        xmin, xmax_orig = ax.get_xlim()
+        xmax = xmin + dy * xs / ys
+
+        # calculate ymax
+        dx = np.abs(np.diff(ax.get_xlim()))[0]
+        ymax_orig, ymin = ax.get_ylim()
+        ymax = ymin + dx * ys / xs
+
+        # ymax_orig should be displayed. hence, we set the xlims
+        with self.adjusting:
+            if dx / xs < (dy - 1) / ys:
+                ax.set_xlim(xmin, xmax)
+            elif dy / ys < (dx - 1) / xs:
+                ax.set_ylim(ymax, ymin)
+
+    def adjust_lims_after_resize(self, event=None):
+        try:
+            h = event.height
+            w = event.width
+        except AttributeError:
+            h = self.fig_h
+            w = self.fig_w
+        if self.fig_w is None:
+            self.fig_w = w
+            self.fig_h = h
+            self.adjust_lims()
+            return
+        ax = self.ax
+        dx = np.diff(ax.get_xlim())[0]
+        dy = np.diff(ax.get_ylim())[0]
+        new_dx = dx * w/self.fig_w
+        new_dy = dy * h/self.fig_h
+        xc = np.mean(ax.get_xlim())
+        yc = np.mean(ax.get_ylim())
+
+        with self.adjusting:
+            ax.set_xlim(xc - new_dx/2, xc + new_dx/2)
+            ax.set_ylim(yc-new_dy/2, yc+new_dy/2)
+
+        self.fig_w = w
+        self.fig_h = h
+
+    def adjust_lims(self):
+        xs, ys = self.image.size
+        ax = self.ax
+        figw, figh = ax.figure.get_figwidth(), ax.figure.get_figheight()
+        with self.adjusting:
+            if figw < figh:
+                ax.set_ylim(ys, 0)
+                ax.set_xlim(0, ys * figw/figh)
+            else:
+                ax.set_xlim(0, xs)
+                ax.set_ylim(xs*figh/figw, 0)
+        ax.set_position(self._ax_pos)
 
     def set_attr(self, key, value):
         """Update an attribute in the :attr:`attrs`"""
@@ -843,8 +920,9 @@ class Straditizer(LabelSelection):
         return df
 
     def show_full_image(self):
-        self.ax.set_xlim(0, np.shape(self.image)[1])
-        self.ax.set_ylim(np.shape(self.image)[0], 0)
+        with self.adjusting:
+            self.ax.set_xlim(0, np.shape(self.image)[1])
+            self.ax.set_ylim(np.shape(self.image)[0], 0)
 
     def show_data_diagram(self):
         self.ax.set_xlim(*self.data_xlim)
