@@ -15,7 +15,6 @@ class ImageRotator(StraditizerControlBase, QWidget):
     _rotating = False
     _ha = False
     _va = False
-    ask = True
 
     def __init__(self, straditizer_widgets, item=None, *args, **kwargs):
         super(ImageRotator, self).__init__(*args, **kwargs)
@@ -144,7 +143,8 @@ class ImageRotator(StraditizerControlBase, QWidget):
         angle = self.angle
         if angle is None:
             return
-        answer = QMessageBox.Yes if not self.ask else QMessageBox.question(
+        sw = self.straditizer_widgets
+        answer = QMessageBox.Yes if sw.always_yes else QMessageBox.question(
             self, 'Restart project?',
             'This will close the straditizer and create new figures. '
             'Are you sure, you want to continue?')
@@ -264,8 +264,10 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
     def draw_figure(self):
         self.fig.canvas.draw()
 
-    def rescale(self, ask=True):
-        answer = QMessageBox.question(
+    def rescale(self, ask=None):
+        if ask is None:
+            ask = not self.straditizer_widgets.always_yes
+        answer = QMessageBox.Yes if not ask else QMessageBox.question(
             self, 'Restart project?',
             'This will close the straditizer and create new figures. '
             'Are you sure, you want to continue?')

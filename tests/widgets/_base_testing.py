@@ -76,6 +76,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         else:
             cls.window = main.mainwindow
         cls.straditizer_widgets = get_straditizer_widgets(cls.window)
+        cls.straditizer_widgets.always_yes = True
         cls.straditizer_widgets.switch_to_straditizer_layout()
 
     def setUp(self):

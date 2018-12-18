@@ -69,6 +69,9 @@ class StraditizerWidgets(QWidget, DockMixin):
     """A widget that contains widgets to control a
     :class:`straditize.straditizer.Straditizer`"""
 
+    #: Boolean that is True if all dialogs should be answered with `Yes`
+    always_yes = False
+
     #: The QTreeWidget that contains the different widgets for the digitization
     tree = None
 

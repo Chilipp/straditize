@@ -12,7 +12,7 @@ from straditize.common import rgba2rgb
 from psyplot_gui.compat.qtcompat import (
     with_qt5, QFileDialog, QMenu, QKeySequence, QDialog, QDialogButtonBox,
     QLineEdit, QToolButton, QIcon, QCheckBox, QHBoxLayout, QVBoxLayout, QLabel,
-    QDesktopWidget, QPushButton, QTreeWidgetItem, Qt)
+    QDesktopWidget, QPushButton, QTreeWidgetItem, Qt, QMessageBox)
 from PyQt5 import QtWidgets
 from psyplot_gui.common import get_icon
 import numpy as np
@@ -418,6 +418,25 @@ class StraditizerMenuActions(StraditizerControlBase):
         else:
             from PIL import Image
             image = Image.open(fname)
+            w, h = image.size
+            im_size = w * h
+            if im_size > 20e6:
+                recom_frac = 17403188.0 / im_size
+                answer = (
+                    QMessageBox.Yes
+                    if self.straditizer_widgets.always_yes else
+                    QMessageBox.question(
+                        self.straditizer_widgets, "Large straditizer image",
+                        "This is a rather large image with %1.0f pixels. "
+                        "Shall I reduce it to %1.0f%% of it's size for a "
+                        "better interactive experience?<br>"
+                        "If not, you can rescale it via<br><br>"
+                        "Transform source image &rarr; Rescale image" % (
+                            im_size, 100. * recom_frac)))
+                if answer == QMessageBox.Yes:
+                    image = image.resize((int(round(w * recom_frac)),
+                                          int(round(h * recom_frac))))
+
             stradi = Straditizer(image, *args, **kwargs)
             stradi.set_attr('image_file', fname)
         self.finish_loading(stradi)
