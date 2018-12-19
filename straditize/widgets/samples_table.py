@@ -879,7 +879,10 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
     def to_dock(self, main, title=None, position=None, docktype='df', *args,
                 **kwargs):
         if position is None:
-            position = main.dockWidgetArea(main.help_explorer.dock)
+            if main.centralWidget() is not main.help_explorer:
+                position = main.dockWidgetArea(main.help_explorer.dock)
+            else:
+                position = Qt.RightDockWidgetArea
         connect = self.dock is None
         ret = super(MultiCrossMarksEditor, self).to_dock(
             main, title, position, docktype=docktype, *args, **kwargs)

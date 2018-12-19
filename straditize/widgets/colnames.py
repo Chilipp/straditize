@@ -360,6 +360,14 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                 self.dock.raise_()
             self.refresh()
 
+    def _maybe_check_btn_select_names(self):
+        if self.dock is None:
+            return
+        self.btn_select_names.blockSignals(True)
+        self.btn_select_names.setChecked(
+            self.dock.toggleViewAction().isChecked())
+        self.btn_select_names.blockSignals(False)
+
     def refresh(self):
         with self.refreshing:
             super().refresh()
@@ -485,12 +493,17 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
 
     def to_dock(self, main, title=None, position=None, *args, **kwargs):
         if position is None:
-            position = main.dockWidgetArea(main.help_explorer.dock)
+            if main.centralWidget() is not main.help_explorer:
+                position = main.dockWidgetArea(main.help_explorer.dock)
+            else:
+                position = Qt.RightDockWidgetArea
         connect = self.dock is None
         ret = super(ColumnNamesManager, self).to_dock(
             main, title, position, *args, **kwargs)
         if connect:
-            self.dock.toggleViewAction().triggered.connect(self.maybe_tabify)
+            action = self.dock.toggleViewAction()
+            action.triggered.connect(self.maybe_tabify)
+            action.triggered.connect(self._maybe_check_btn_select_names)
         return ret
 
     def maybe_tabify(self):
