@@ -5,11 +5,32 @@ import os.path as osp
 import glob
 from itertools import chain
 import numpy as np
-from straditize.widgets import StraditizerControlBase
+from straditize.widgets import StraditizerControlBase, get_icon, get_doc_file
 import straditize.cross_mark as cm
 from PyQt5 import QtWidgets, QtCore, QtGui
-from psyplot_gui.common import get_icon as get_psy_icon
+from psyplot_gui.common import get_icon as get_psy_icon, DockMixin
+from psyplot_gui.help_explorer import UrlHelp
 import pandas as pd
+
+
+class TutorialDocs(UrlHelp, DockMixin):
+
+    dock_position = QtCore.Qt.RightDockWidgetArea
+
+    title = 'Straditize tutorial'
+
+    def __init__(self, *args, **kwargs):
+        from psyplot_gui.main import mainwindow
+        super().__init__(*args, **kwargs)
+        self.bt_connect_console.setChecked(False)
+        self.bt_lock.setChecked(False)
+        self._orig_bt_url_lock = self.bt_url_lock
+        self.bt_url_lock = mainwindow.help_explorer.viewers[
+            'HTML help'].bt_url_lock
+        self._orig_bt_url_lock.setVisible(False)
+        self.bt_connect_console.setVisible(False)
+        self.bt_lock.setVisible(False)
+        self.bt_url_menus.setVisible(False)
 
 
 class TutorialNavigation(QtWidgets.QWidget):
@@ -200,22 +221,20 @@ class TutorialPage(object):
 
     def lock_viewer(self, lock):
         """Set or unset the url lock of the HTML viewer"""
-        from psyplot_gui.main import mainwindow
         try:
-            mainwindow.help_explorer.viewer.bt_lock.setChecked(lock)
+            self.tutorial.tutorial_docs.bt_lock.setChecked(lock)
         except AttributeError:
             pass
 
     def show(self):
-        from psyplot_gui.main import mainwindow
         try:
             self.lock_viewer(False)
-            mainwindow.help_explorer.viewer.browse(self.filename)
+            self.tutorial.tutorial_docs.browse(self.filename)
             self.lock_viewer(True)
         except AttributeError:
             with open(osp.join(self.src_dir, self.filename + '.rst')) as f:
                 rst = f.read()
-            mainwindow.help_explorer.show_rst(rst, self.filename)
+            self.tutorial.tutorial_docs.show_rst(rst, self.filename)
 
     def show_tooltip_at_widget(self, tooltip, widget, timeout=20000):
         """Show a tooltip close to a widget
@@ -291,8 +310,20 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         return self.pages[self.navigation.current_step]
 
     def __init__(self, straditizer_widgets):
+        from psyplot_gui.main import mainwindow
         self.init_straditizercontrol(straditizer_widgets)
         self.tutorial = self
+
+        self.central_widget_key = mainwindow.central_widget_key
+
+        self.tutorial_docs = TutorialDocs()
+#        self.tutorial_docs.setMinimumWidth(600)
+
+        self.docs_key = ':'.join(
+            [__name__, self.__class__.__name__, 'tutorial'])
+        mainwindow.plugins[self.docs_key] = self.tutorial_docs
+        self.tutorial_docs.to_dock(mainwindow)
+        mainwindow.set_central_widget(self.tutorial_docs)
 
         self.setup_tutorial_pages()
 
@@ -315,7 +346,11 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         list of str
             The paths of the remaining tutorial files"""
         files = glob.glob(osp.join(self.src_dir, '*.rst')) + \
-            glob.glob(osp.join(self.src_dir, '*.png'))
+            glob.glob(osp.join(self.src_dir, '*.png')) + \
+            glob.glob(get_doc_file('*.rst')) + \
+            glob.glob(get_psy_icon('*.png')) + \
+            glob.glob(get_doc_file('*.png')) + \
+            glob.glob(get_icon('*.png'))
         intro = files.pop(next(
             i for i, f in enumerate(files)
             if osp.basename(f) == 'straditize_tutorial_intro.rst'))
@@ -323,11 +358,9 @@ class Tutorial(StraditizerControlBase, TutorialPage):
 
     def show(self):
         """Show the documentation of the tutorial"""
-        from psyplot_gui.main import mainwindow
         from straditize.colnames import tesserocr
         intro, files = self.get_doc_files()
         self.filename = osp.splitext(osp.basename(intro))[0]
-        mainwindow.help_explorer.set_viewer('HTML help')
         with open(intro) as f:
             rst = f.read()
         if tesserocr is not None:
@@ -335,7 +368,7 @@ class Tutorial(StraditizerControlBase, TutorialPage):
                               'straditize_tutorial_column_names_ocr')
         name = osp.splitext(osp.basename(intro))[0]
         self.lock_viewer(False)
-        mainwindow.help_explorer.show_rst(rst, name, files=files)
+        self.tutorial_docs.show_rst(rst, name, files=files)
 
     def setup_tutorial_pages(self):
         from straditize.colnames import tesserocr
@@ -381,9 +414,11 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         if hasattr(self, 'navigation'):
             self.straditizer_widgets.layout().removeWidget(self.navigation)
             self.navigation.close()
+            self.tutorial_docs.remove_plugin()
             del self.navigation
             del self.straditizer_widgets.tutorial
             del self.straditizer_widgets
+            del self.tutorial_docs
             del self.pages
 
     def goto_page(self, old, new):

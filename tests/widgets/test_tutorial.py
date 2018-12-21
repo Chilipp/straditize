@@ -151,9 +151,9 @@ class RemoveLinesTest(TutorialTest):
 
         # now remove horizontal lines
         self._test_hint(digitizer.btn_remove_hlines.text())
-        QTest.mouseClick(digitizer.btn_remove_hlines, Qt.LeftButton)
+        digitizer.btn_remove_hlines.click()
         self._test_hint(sw.apply_button.text())
-        QTest.mouseClick(sw.apply_button, Qt.LeftButton)
+        sw.apply_button.click()
 
         # and vertical lines
         self._test_hint('Enable')
@@ -161,9 +161,9 @@ class RemoveLinesTest(TutorialTest):
         self._test_hint('maximum line')
         digitizer.sp_max_lw.setValue(2)
         self._test_hint(digitizer.btn_remove_vlines.text())
-        QTest.mouseClick(digitizer.btn_remove_vlines, Qt.LeftButton)
+        digitizer.btn_remove_vlines.click()
         self._test_hint(sw.apply_button.text())
-        QTest.mouseClick(sw.apply_button, Qt.LeftButton)
+        sw.apply_button.click()
 
         super().test_page()
 

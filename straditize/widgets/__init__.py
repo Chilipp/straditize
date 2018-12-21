@@ -265,6 +265,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         mainwindow = self.dock.parent()
         mainwindow.figures_tree.hide_plugin()
         mainwindow.ds_tree.hide_plugin()
+        mainwindow.fmt_widget.hide_plugin()
         self.show_plugin()
         mainwindow.tabifyDockWidget(mainwindow.project_content.dock, self.dock)
         hsize = self.marker_control.sizeHint().width() + 50

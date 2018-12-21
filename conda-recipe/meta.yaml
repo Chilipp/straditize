@@ -20,7 +20,7 @@ requirements:
     - pip
   run:
     - python
-    - psyplot-gui >=1.2.0
+    - psyplot-gui >=1.2.2
     - psyplot >=1.2.0
     - netcdf4
     - pyqt >=5.7.0  # [osx]

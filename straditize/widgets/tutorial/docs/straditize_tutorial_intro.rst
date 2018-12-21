@@ -26,14 +26,6 @@ https://github.com/Chilipp/straditize/issues
 
 and we will do our best to assist you.
 
-.. note::
-
-    To not distract you, we will lock the Help explorer. If you want to unlock
-    it, simply click the |lock| button above the help.
-
-.. |lock| image:: lock.png
-    :width: 1.3em
-
 .. toctree::
     :hidden:
     :numbered:
