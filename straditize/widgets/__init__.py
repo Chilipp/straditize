@@ -3,8 +3,6 @@
 This module contains widgets to digitize the straditizer diagrams through a GUI
 """
 import six
-from copy import deepcopy
-from functools import partial
 import os.path as osp
 from psyplot_gui.compat.qtcompat import (
     QWidget, QtCore, QPushButton, QTreeWidget, QTreeWidgetItem,
