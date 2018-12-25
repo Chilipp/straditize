@@ -36,6 +36,11 @@ def get_icon(fname):
     return osp.join(osp.dirname(__file__), 'icons', fname)
 
 
+doc_files = glob.glob(get_doc_file('*.rst')) + glob.glob(
+    get_psy_icon('*.png')) + glob.glob(get_doc_file('*.png')) + \
+    glob.glob(get_icon('*.png'))
+
+
 class EnableButton(QPushButton):
     """A `QPushButton` that emits a signal when enabled"""
 
@@ -106,6 +111,7 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     def __init__(self, *args, **kwargs):
         from straditize.widgets.menu_actions import StraditizerMenuActions
+        from straditize.widgets.progress_widget import ProgressWidget
         from straditize.widgets.data import DigitizingControl
         from straditize.widgets.selection_toolbar import SelectionToolbar
         from straditize.widgets.marker_control import MarkerControl
@@ -141,6 +147,10 @@ class StraditizerWidgets(QWidget, DockMixin):
         # ---------------------------------------------------------------------
         self.tree.setHeaderLabels(['', ''])
         self.tree.setColumnCount(2)
+
+        self.progress_item = QTreeWidgetItem(0)
+        self.progress_item.setText(0, 'ToDo list')
+        self.progress_widget = ProgressWidget(self, self.progress_item)
 
         self.menu_actions_item = QTreeWidgetItem(0)
         self.menu_actions_item.setText(0, 'Images import/export')
@@ -227,6 +237,7 @@ class StraditizerWidgets(QWidget, DockMixin):
 
         self.apply_button.setEnabled(False)
         self.cancel_button.setEnabled(False)
+        self.tree.expandItem(self.progress_item)
         self.tree.expandItem(self.digitizer_item)
 
         # ---------------------------------------------------------------------
@@ -371,6 +382,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.attrs_button.setEnabled(enable)
         # refresh controls
         self.menu_actions.refresh()
+        self.progress_widget.refresh()
         self.digitizer.refresh()
         self.selection_toolbar.refresh()
         self.plot_control.refresh()
@@ -608,9 +620,7 @@ class InfoButton(QToolButton):
             raise ValueError("A title must be specified for the rst document!")
         self.fname = fname
         self.rst = rst
-        self.files = glob.glob(get_doc_file('*.rst')) + glob.glob(
-            get_psy_icon('*.png')) + glob.glob(get_doc_file('*.png')) + \
-            glob.glob(get_icon('*.png'))
+        self.files = doc_files
         self.name = name
         QToolButton.__init__(self, parent)
         self.setIcon(QIcon(get_psy_icon('info.png')))

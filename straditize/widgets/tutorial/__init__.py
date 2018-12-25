@@ -317,7 +317,6 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         self.central_widget_key = mainwindow.central_widget_key
 
         self.tutorial_docs = TutorialDocs()
-#        self.tutorial_docs.setMinimumWidth(600)
 
         self.docs_key = ':'.join(
             [__name__, self.__class__.__name__, 'tutorial'])
@@ -946,6 +945,7 @@ class RemoveLines(TutorialPage):
         reader.draw_figure()
         self.clicked_hlines_button()
         self.clicked_vlines_button()
+        self.straditizer_widgets.refresh()
 
     def activate(self):
         self.straditizer_widgets.digitizer.btn_remove_hlines.clicked.connect(
@@ -1082,6 +1082,7 @@ class SamplesPage(TutorialPage):
         reader.reset_samples()
         reader.add_samples(*reader.find_samples(max_len=8, pixel_tol=5))
         self.clicked_correct_button()
+        self.straditizer_widgets.refresh()
 
     def hint(self):
         reader = self.straditizer_widgets.straditizer.data_reader
@@ -1122,6 +1123,7 @@ class TranslateYAxis(TutorialPage):
         self.straditizer_widgets.straditizer.yaxis_data = np.array([300, 350])
         self.straditizer_widgets.straditizer._yaxis_px_orig = \
             np.array([910, 1045])
+        self.straditizer_widgets.refresh()
 
     def activate(self):
         btn = self.straditizer_widgets.axes_translations.btn_marks_for_y
@@ -1185,6 +1187,7 @@ class TranslateXAxis(TutorialPage):
         self.clicked_add_reader_button()
         self.clicked_translations_button()
         reader = self.straditizer_widgets.straditizer.data_reader
+        self.straditizer_widgets.refresh()
 
         # charcoal
         reader = reader.get_reader_for_col(0)

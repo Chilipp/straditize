@@ -1072,7 +1072,7 @@ class DigitizingControl(StraditizerControlBase):
                 return
             cls = readers[name]
         reader.new_child_for_cols(cols, cls)
-        self.fill_cb_readers()
+        self.straditizer_widgets.refresh()
 
     def change_reader(self, txt):
         if not self._change_reader:

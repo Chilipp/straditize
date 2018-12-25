@@ -142,6 +142,10 @@ class Straditizer(LabelSelection):
     adjusting = _temp_bool_prop(
         'adjusting', "True if xlim and ylim are adjusted")
 
+    #: straditizer tasks that are marked as done by the user. See the
+    #: :class:`straditize.widgets.progress_list.ProgressWidget` class
+    _done_tasks = set()
+
     @property
     def valid_attrs(self):
         attrs = self.attrs
@@ -306,6 +310,7 @@ class Straditizer(LabelSelection):
         self.magni_marks = []
         self.mark_cids = set()
         self.remove_callbacks = {'image_array': [self.update_image]}
+        self._done_tasks = set()
 
     def reset_image(self, image, reader=False):
         """Reset the straditizer image
@@ -441,6 +446,7 @@ class Straditizer(LabelSelection):
              '_yaxis_px_orig': self._yaxis_px_orig,
              'yaxis_data': self.yaxis_data,
              '_colnames_reader': self._colnames_reader,
+             '_done_tasks': self._done_tasks,
              }
             )
 
@@ -460,6 +466,8 @@ class Straditizer(LabelSelection):
         'yaxis_translation': {
             'dims': ('px_data', 'limit'),
             'long_name': 'Pixel to data mapping for y-axis'},
+        'done_tasks': {
+            'long_name': 'Tasks that are marked as done by the user'},
         }
 
     def to_dataset(self, ds=None):
@@ -483,6 +491,7 @@ class Straditizer(LabelSelection):
         self.create_variable(ds, 'axis', ['y', 'x'])
         self.create_variable(ds, 'limit', ['vmin', 'vmax'])
         self.create_variable(ds, 'px_data', ['pixel', 'data'])
+        self.create_variable(ds, 'done_tasks', sorted(self._done_tasks))
 
         # full straditizer image
         self.create_variable(ds, 'image', self.image)
@@ -520,6 +529,8 @@ class Straditizer(LabelSelection):
         :meth:`to_dataset` method to intialize a new reader"""
         stradi = cls(ds['image'].values, ax=ax, plot=plot,
                      attrs=ds.attrs)
+        if 'done_tasks' in ds:
+            stradi._done_tasks = set(ds['done_tasks'].values)
         if 'data_lims' in ds:
             stradi.data_xlim = ds['data_lims'].sel(axis='x').values
             stradi.data_ylim = ds['data_lims'].sel(axis='y').values

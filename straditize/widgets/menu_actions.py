@@ -116,8 +116,8 @@ class ExportDfDialog(QDialog):
     def _export(self):
         fname = self.txt_fname.text()
         ending = osp.splitext(fname)[1]
-        meta = self.stradi.valid_attrs.copy(True)
-        meta.loc['exported'] = str(dt.datetime.now())
+        self.stradi.set_attr('exported', str(dt.datetime.now()))
+        meta = self.stradi.valid_attrs
         if ending in ['.xls', '.xlsx']:
             with pd.ExcelWriter(fname) as writer:
                 self.df.to_excel(writer, 'Data')
@@ -412,9 +412,11 @@ class StraditizerMenuActions(StraditizerControlBase):
             stradi = Straditizer.from_dataset(ds.load(), *args, **kwargs)
             stradi.set_attr('project_file', fname)
             ds.close()
+            stradi.set_attr('loaded', str(dt.datetime.now()))
         elif fname.endswith('.pkl'):
             stradi = Straditizer.load(fname, *args, **kwargs)
             stradi.set_attr('project_file', fname)
+            stradi.set_attr('loaded', str(dt.datetime.now()))
         else:
             from PIL import Image
             image = Image.open(fname)
