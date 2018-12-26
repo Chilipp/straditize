@@ -71,7 +71,7 @@ class SelectDataPartTest(TutorialTest):
         QTest.mouseClick(sw.cancel_button, Qt.LeftButton)
         # Now click the correct button
         self._test_hint(self.digitizer.btn_select_data.text())
-        QTest.mouseClick(self.digitizer.btn_select_data, Qt.LeftButton)
+        self.digitizer.btn_select_data.click()
         for m in self.straditizer.marks + self.straditizer.magni_marks:
             m.remove()
         self.straditizer.marks.clear()
@@ -90,7 +90,7 @@ class SelectDataPartTest(TutorialTest):
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
         self._test_hint('did not select the correct')
         # and start again
-        QTest.mouseClick(self.digitizer.btn_select_data, Qt.LeftButton)
+        self.digitizer.btn_select_data.click()
         sw.straditizer.marks[1].set_pos(self.page.ref_lims[:, 1])
         self._test_hint(sw.apply_button.text())
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
@@ -103,7 +103,7 @@ class InitReaderTest(TutorialTest):
 
     def test_page(self):
         self._test_hint(self.digitizer.btn_init_reader.text())
-        QTest.mouseClick(self.digitizer.btn_init_reader, Qt.LeftButton)
+        self.digitizer.btn_init_reader.click()
         super().test_page()
 
 
@@ -115,23 +115,23 @@ class ColumnStartTest(TutorialTest):
         sw = self.straditizer_widgets
         self._test_hint(self.digitizer.btn_column_starts.text())
         # Test the 'wrong button' message'
-        QTest.mouseClick(self.digitizer.btn_select_data, Qt.LeftButton)
+        self.digitizer.btn_select_data.click()
         self._test_hint('(?i)wrong')
         QTest.mouseClick(sw.cancel_button, Qt.LeftButton)
         # Now click the correct button
         self._test_hint(self.digitizer.btn_column_starts.text())
-        QTest.mouseClick(self.digitizer.btn_column_starts, Qt.LeftButton)
+        self.digitizer.btn_column_starts.click()
         # remove a mark and apply
         self.straditizer.marks.pop(1).remove()
         self._test_hint(sw.apply_button.text())
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
         # There should be now not enough columns, so we reset
         self._test_hint(sw.digitizer.btn_reset_columns.text())
-        QTest.mouseClick(sw.digitizer.btn_reset_columns, Qt.LeftButton)
+        sw.digitizer.btn_reset_columns.click()
 
         # Now click the correct button again
         self._test_hint(self.digitizer.btn_column_starts.text())
-        QTest.mouseClick(self.digitizer.btn_column_starts, Qt.LeftButton)
+        self.digitizer.btn_column_starts.click()
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
         super().test_page()
 
@@ -188,9 +188,9 @@ class SamplesTest(TutorialTest):
         self._test_hint(digitizer.edit_samples_child.text(0))
         digitizer.tree.expandItem(digitizer.edit_samples_child)
         self._test_hint(digitizer.btn_find_samples.text())
-        QTest.mouseClick(digitizer.btn_find_samples, Qt.LeftButton)
+        digitizer.btn_find_samples.click()
         self._test_hint(digitizer.btn_edit_samples.text())
-        QTest.mouseClick(digitizer.btn_edit_samples, Qt.LeftButton)
+        digitizer.btn_edit_samples.click()
         self._test_hint(sw.apply_button.text())
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
 
@@ -209,11 +209,11 @@ class TranslateYAxisTest(TutorialTest):
         self._test_hint(sw.axes_translations.btn_marks_for_y.text())
 
         # Test the 'wrong button' message'
-        QTest.mouseClick(self.digitizer.btn_select_data, Qt.LeftButton)
+        self.digitizer.btn_select_data.click()
         self._test_hint('(?i)wrong')
         QTest.mouseClick(sw.cancel_button, Qt.LeftButton)
         # Now click the correct button
-        QTest.mouseClick(sw.axes_translations.btn_marks_for_y, Qt.LeftButton)
+        sw.axes_translations.btn_marks_for_y.click()
         self._test_hint('vertical axis')
         self.straditizer._new_mark(318, 641, value=200)
         self._test_hint('another')
@@ -236,12 +236,12 @@ class TranslateXAxisTest(TutorialTest):
         self._test_hint('new reader')
 
         # Test the 'wrong button' message'
-        QTest.mouseClick(self.digitizer.btn_select_data, Qt.LeftButton)
+        self.digitizer.btn_select_data.click()
         self._test_hint('(?i)wrong')
         QTest.mouseClick(sw.cancel_button, Qt.LeftButton)
 
         # now click the correct button and start with the first column
-        QTest.mouseClick(self.digitizer.btn_new_child_reader, Qt.LeftButton)
+        self.digitizer.btn_new_child_reader.click()
         self._test_hint('column 0')
 
         # select the first column
@@ -259,7 +259,7 @@ class TranslateXAxisTest(TutorialTest):
         digitizer.tree.expandItem(sw.axes_translations_item)
         self._test_hint(sw.axes_translations.btn_marks_for_x.text())
 
-        QTest.mouseClick(sw.axes_translations.btn_marks_for_y, Qt.LeftButton)
+        sw.axes_translations.btn_marks_for_y.click()
         self._test_hint('(?i)wrong')
         QTest.mouseClick(sw.cancel_button, Qt.LeftButton)
 
@@ -280,7 +280,7 @@ class TranslateXAxisTest(TutorialTest):
         self._test_hint('new reader')
 
         # select the last column
-        QTest.mouseClick(self.digitizer.btn_new_child_reader, Qt.LeftButton)
+        self.digitizer.btn_new_child_reader.click()
         self._test_hint('column 27')
         self.reader._select_column(col=-1)
         self._test_hint(sw.apply_button.text())
