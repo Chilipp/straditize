@@ -19,6 +19,7 @@ to a certain degree as well.
     removing_features
     child_readers
     exaggerations
+    occurences
     digitize
     samples
     axes_translations
