@@ -23,7 +23,7 @@ requirements:
     - psyplot-gui >=1.2.2
     - psyplot >=1.2.0
     - netcdf4
-    - pyqt >=5.7.0  # [osx]
+    - pyqt >=5.7.0
     - scipy
     - scikit-image
     - openpyxl
