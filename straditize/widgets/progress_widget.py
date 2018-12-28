@@ -319,7 +319,7 @@ class OccurencesTask(ProgressTask):
                     'percentages to show their occurence. Mark this task as '
                     'done if your diagram does not have them.')
 
-#    rst_file = 'occurences'  # not yet written
+    rst_file = 'occurences'
 
     dependencies = ['columns']
 

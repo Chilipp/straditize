@@ -612,7 +612,8 @@ class DigitizingControl(StraditizerControlBase):
                     self.btn_show_disconnected_parts, self.txt_fromlast,
                     self.cb_fromlast, self.txt_from0, self.cb_from0,
                     self.btn_show_cross_column, self.txt_cross_column_px,
-                    self.btn_remove_yaxes,
+                    self.btn_remove_yaxes, self.btn_select_occurences,
+                    self.btn_edit_occurences,
                     self.btn_show_parts_at_column_ends, self.btn_digitize]):
             return False
         elif (self.straditizer.data_reader.exaggerated_reader is None and
@@ -787,6 +788,9 @@ class DigitizingControl(StraditizerControlBase):
         child2 = QTreeWidgetItem(0)
         child.addChild(child2)
         self.tree.setItemWidget(child2, 0, self.btn_edit_occurences)
+        self.add_info_button(child, 'occurences.rst',
+                             connections=[self.btn_select_occurences,
+                                          self.btn_edit_occurences])
 
         # 4: parts to remove features from the binary image
         self.remove_child = child = QTreeWidgetItem(0)
