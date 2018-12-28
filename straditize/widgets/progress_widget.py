@@ -308,6 +308,56 @@ class RemoveLinesTask(RemoveArtifactsTask):
             return super().done_tooltip
 
 
+class OccurencesTask(ProgressTask):
+    """Task to handle occurences"""
+
+    name = 'occurences'
+
+    summary = 'Select occurence markers'
+
+    task_tooltip = ('Pollen diagrams often have markers for low taxon '
+                    'percentages to show their occurence. Mark this task as '
+                    'done if your diagram does not have them.')
+
+#    rst_file = 'occurences'  # not yet written
+
+    dependencies = ['columns']
+
+    @property
+    def is_finished(self):
+        return bool(self.data_reader.occurences)
+
+    @property
+    def done_tooltip(self):
+        return "Marked %i occurences" % len(self.data_reader.occurences)
+
+
+class SelectExaggerationsTask(ProgressTask):
+    """Task to handle exaggerations"""
+
+    name = 'exag'
+
+    summary = 'Select exagerations'
+
+    task_tooltip = ('Pollen diagrams often display an exaggerated value of '
+                    'of the taxon percentage. You can select these '
+                    'exaggerations using the <i>Exaggerations</i> menu. '
+                    'Mark this task as done if your diagram does not have '
+                    'them.')
+
+    rst_file = 'exaggerations'
+
+    dependencies = ['columns']
+
+    @property
+    def is_finished(self):
+        return self.data_reader.exaggerated_reader is not None
+
+    @property
+    def done_tooltip(self):
+        return "Created exaggerations reader"
+
+
 class DigitizeTask(ProgressTask):
     """Task to digitize the data"""
 
@@ -555,10 +605,14 @@ class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
         self.combo_display.addItem(ALL_TASKS)
 
         self.progress_list = QtWidgets.QListWidget()
+        self.info_label = QtWidgets.QLabel()
+        self.info_label.setWordWrap(True)
+        self.info_label.setStyleSheet('border: 1px solid black')
 
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.combo_display)
         vbox.addWidget(self.progress_list)
+        vbox.addWidget(self.info_label)
         self.setLayout(vbox)
 
         self.populate_list()
@@ -567,6 +621,12 @@ class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
         self.combo_display.currentIndexChanged.connect(self.refresh)
         self.progress_list.itemDoubleClicked.connect(self.show_rst)
         self.progress_list.currentItemChanged.connect(self.show_rst)
+        self.progress_list.currentItemChanged.connect(self.update_info_label)
+
+    def update_info_label(self, item, old=None):
+        tt = item.toolTip()
+        self.info_label.setText(tt)
+        self.info_label.setVisible(bool(tt.strip()) and not item.isHidden())
 
     def show_rst(self, item, old=None):
         from psyplot_gui.main import mainwindow
@@ -619,6 +679,7 @@ class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
         pl.addItem(ColumnsTask(pl))
         pl.addItem(RemoveArtifactsTask(pl))
         pl.addItem(RemoveLinesTask(pl))
+        pl.addItem(SelectExaggerationsTask(pl))
         pl.addItem(DigitizeTask(pl))
         pl.addItem(SamplesTask(pl))
         pl.addItem(YTranslationTask(pl))
@@ -644,3 +705,7 @@ class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
                 i, '%i task%s %s' % (count, 's' if count > 1 else '', state))
         self.combo_display.setItemText(
             3, 'all %i tasks' % progress_list.count())
+        if not self.progress_list.selectedItems():
+            self.info_label.setVisible(False)
+        else:
+            self.update_info_label(self.progress_list.selectedItems()[0])
