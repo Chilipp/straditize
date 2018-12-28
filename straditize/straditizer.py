@@ -562,8 +562,9 @@ class Straditizer(LabelSelection):
         return stradi
 
     def draw_figure(self):
-        self.ax.figure.canvas.draw()
-        if self.magni is not None:
+        if self.ax is not None:
+            self.ax.figure.canvas.draw()
+        if self.magni is not None and self.magni.ax is not None:
             self.magni.ax.figure.canvas.draw()
 
     def guess_data_lims(self, fraction=0.7):
