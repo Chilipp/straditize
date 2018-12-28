@@ -170,28 +170,28 @@ class StraditizerSelectionToolsTest(bt.StraditizeWidgetsTestCase):
         self.toolbar.start_pattern_selection()
         # select the template
         pw = self.toolbar._pattern_selection
-        QTest.mouseClick(pw.btn_select_template, Qt.LeftButton)
+        pw.btn_select_template.click()
         pw.selector.extents = np.array([20., 23., 14., 18.])
         pw.update_image()
-        QTest.mouseClick(pw.btn_select_template, Qt.LeftButton)
+        pw.btn_select_template.click()
         # use partial pattern
         if partial:
             pw.fraction_box.setChecked(True)
             pw.sl_increments.setValue(1)
         # correlate
-        QTest.mouseClick(pw.btn_correlate, Qt.LeftButton)
+        pw.btn_correlate.click()
         # plot the correlation
-        QTest.mouseClick(pw.btn_plot_corr, Qt.LeftButton)
+        pw.btn_plot_corr.click()
         self.assertIsNotNone(pw._corr_plot)
-        QTest.mouseClick(pw.btn_plot_corr, Qt.LeftButton)
+        pw.btn_plot_corr.click()
         # start the correlation
-        QTest.mouseClick(pw.btn_select, Qt.LeftButton)
+        pw.btn_select.click()
         pw.sl_thresh.setValue(90)
         # close the plot
         if cancel:
-            QTest.mouseClick(pw.btn_cancel, Qt.LeftButton)
+            pw.btn_cancel.click()
         else:
-            QTest.mouseClick(pw.btn_close, Qt.LeftButton)
+            pw.btn_close.click()
             QTest.mouseClick(self.straditizer_widgets.apply_button,
                              Qt.LeftButton)
             self.check_image()
