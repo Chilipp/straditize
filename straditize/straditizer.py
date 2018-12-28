@@ -146,6 +146,9 @@ class Straditizer(LabelSelection):
     #: :class:`straditize.widgets.progress_list.ProgressWidget` class
     _done_tasks = set()
 
+    #: The :class:`straditize.magnifier.Magnifier` for the diagram image
+    magni = None
+
     @property
     def valid_attrs(self):
         attrs = self.attrs
