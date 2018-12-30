@@ -374,7 +374,7 @@ class Straditizer(LabelSelection):
     def adjust_lims_after_zoom(self, ax):
         if self.adjusting:
             return
-        xs, ys = self.image.size
+        xs, ys = ax.figure.get_figwidth(), ax.figure.get_figheight()
 
         # calculate xmax
         dy = np.abs(np.diff(ax.get_ylim()))[0]
@@ -423,17 +423,21 @@ class Straditizer(LabelSelection):
         self.fig_h = h
 
     def adjust_lims(self):
+        if self.adjusting:
+            return
+        size = xs, ys = np.array(self.image.size)
         ax = self.ax
         figw, figh = ax.figure.get_figwidth(), ax.figure.get_figheight()
-        max_lim = max(self.image.size)
+        woh = figw / figh  # width over height
+        how = figh / figw  # height over width
+        limits = np.array([[xs, xs * how], [xs * woh, xs],
+                           [ys, ys * how], [ys * woh, ys]])
+        x, y = min(filter(lambda a: (a >= size).all(), limits),
+                   key=lambda a: (a - size).max())
         with self.adjusting:
-            if figw < figh:
-                ax.set_ylim(max_lim, 0)
-                ax.set_xlim(0, max_lim * figw/figh)
-            else:
-                ax.set_xlim(0, max_lim)
-                ax.set_ylim(max_lim*figh/figw, 0)
-        ax.set_position(self._ax_pos)
+            ax.set_xlim(0, x)
+            ax.set_ylim(y, 0)
+            ax.set_position(self._ax_pos)
 
     def set_attr(self, key, value):
         """Update an attribute in the :attr:`attrs`"""
