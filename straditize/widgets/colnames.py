@@ -40,6 +40,11 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
 
     colpic_im = colpic_extents = selector = colpic = None
 
+    NAVIGATION_LABEL = ("Use left-click of your mouse to move the image below "
+                        "and right-click to zoom in and out.")
+
+    SELECT_LABEL = "Left-click and hold on the image to select the column name"
+
     @property
     def current_col(self):
         """The currently selected column"""
@@ -94,6 +99,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.cb_fliph = QtWidgets.QCheckBox('Flip horizontally')
         self.cb_flipv = QtWidgets.QCheckBox('Flip vertically')
 
+        self.info_label = QtWidgets.QLabel()
+        self.info_label.setWordWrap(True)
+        self.info_label.setStyleSheet('border: 1px solid black')
+
         self.main_canvas = EmbededMplCanvas()
         self.main_ax = self.main_canvas.figure.add_axes([0, 0, 1, 1])
         self.main_toolbar = DummyNavigationToolbar2(self.main_canvas)
@@ -105,6 +114,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         layout.addRow(QtWidgets.QLabel('Rotate:'), self.txt_rotate)
         layout.addRow(self.cb_fliph)
         layout.addRow(self.cb_flipv)
+        layout.addRow(self.info_label)
         layout.addRow(self.main_canvas)
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.btn_select_colpic)
@@ -229,9 +239,11 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.btn_cancel_colpic_selection.setVisible(False)
             self.main_canvas.toolbar.pan()
             self._colpics_save.clear()
+            self.info_label.setText(self.NAVIGATION_LABEL)
         else:
             self.create_selector()
             self.btn_select_colpic.setText('Cancel')
+            self.info_label.setText(self.SELECT_LABEL)
             self.main_canvas.toolbar.pan()
             self._colpics_save = list(self.colnames_reader.colpics)
             self.cb_find_all_cols.setChecked(False)
@@ -358,6 +370,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                 self.to_dock(mainwindow, 'Straditizer column names')
                 self.show_plugin()
                 self.dock.raise_()
+                self.info_label.setText(self.NAVIGATION_LABEL)
             self.refresh()
 
     def _maybe_check_btn_select_names(self):
