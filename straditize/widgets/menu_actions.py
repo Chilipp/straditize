@@ -460,7 +460,7 @@ class StraditizerMenuActions(StraditizerControlBase):
             dock = manager.window
             fig_widget = manager.parent_widget
         except AttributeError:
-            raise
+            return
         from psyplot_gui.backend import FigureWidget
         import matplotlib.colors as mcol
         xs, ys = stradi.image.size
