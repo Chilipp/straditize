@@ -1086,9 +1086,9 @@ class DataReader(LabelSelection):
         increased = [s + 1 for s, e in starts_ends
                      if (summed[e] > summed[s] * 2 and valid[e])]
         ret = np.unique(np.r_[starts, doubled, increased])
-        # now we check that we have at least two percent of the image width
+        # now we check that we have at least one percent of the image width
         # between two columns
-        min_diff = 0.02 * binary.shape[1]
+        min_diff = 0.01 * binary.shape[1]
         mask = (np.r_[ret[1:], binary.shape[1]] - ret) > min_diff
         return ret[mask]
 
