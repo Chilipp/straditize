@@ -394,6 +394,8 @@ class Straditizer(LabelSelection):
                 ax.set_ylim(ymax, ymin)
 
     def adjust_lims_after_resize(self, event=None):
+        if self.adjusting:
+            return
         try:
             h = event.height
             w = event.width
@@ -421,16 +423,16 @@ class Straditizer(LabelSelection):
         self.fig_h = h
 
     def adjust_lims(self):
-        xs, ys = self.image.size
         ax = self.ax
         figw, figh = ax.figure.get_figwidth(), ax.figure.get_figheight()
+        max_lim = max(self.image.size)
         with self.adjusting:
             if figw < figh:
-                ax.set_ylim(ys, 0)
-                ax.set_xlim(0, ys * figw/figh)
+                ax.set_ylim(max_lim, 0)
+                ax.set_xlim(0, max_lim * figw/figh)
             else:
-                ax.set_xlim(0, xs)
-                ax.set_ylim(xs*figh/figw, 0)
+                ax.set_xlim(0, max_lim)
+                ax.set_ylim(max_lim*figh/figw, 0)
         ax.set_position(self._ax_pos)
 
     def set_attr(self, key, value):
