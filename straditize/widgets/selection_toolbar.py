@@ -454,9 +454,17 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         if obj._selection_arr is None:
             rgba = obj.image_array() if hasattr(obj, 'image_array') else None
             self.start_selection(self.labels, rgba=rgba)
-        # TODO: This does not work at the moment with the normal rectangular
-        # select tool!!
-        obj.select_all_other_labels()
+        if (obj._selection_arr != obj._orig_selection_arr).any():
+            selection = obj.selected_part
+
+            # clear the current selection
+            obj._selection_arr[:] = np.where(
+                obj._selection_arr.astype(bool) & (~selection),
+                obj._orig_selection_arr.max() + 1, obj._orig_selection_arr)
+            obj._select_img.set_array(obj._selection_arr)
+            obj.unselect_all_labels()
+        else:
+            obj.select_all_other_labels()
         self.canvas.draw()
 
     def clear_selection(self):
