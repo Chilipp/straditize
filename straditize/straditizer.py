@@ -204,7 +204,8 @@ class Straditizer(LabelSelection):
             from straditize.colnames import ColNamesReader
             self._colnames_reader = ColNamesReader(
                 self.image,
-                self.data_reader.all_column_bounds + self.data_xlim[0])
+                self.data_reader.all_column_bounds + self.data_xlim[0],
+                data_ylim=self.data_ylim)
         ret = self._colnames_reader
         # make sure, we use the correct column bounds
         ret.column_bounds = self.data_reader.all_column_bounds + \
@@ -693,6 +694,8 @@ class Straditizer(LabelSelection):
                     len(y)))
         self.data_xlim = x
         self.data_ylim = y
+        if self._colnames_reader is not None:
+            self._colnames_reader.data_ylim = y
         self.remove_marks()
         self.draw_data_box()
 

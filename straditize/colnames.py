@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 """Module for text recognition
 """
-import os
 import re
 import xarray as xr
-from PIL import ImageOps
+from PIL import ImageOps, Image
 from straditize.common import rgba2rgb
 import numpy as np
 import subprocess as spr
-import tempfile
 from collections import namedtuple
 from psyplot.data import safe_list
 
@@ -114,10 +112,20 @@ class ColNamesReader(object):
 
     _boxes = None
 
+    ignore_data_part = True
+
+    data_ylim = None
+
     @property
     def highres_image(self):
-        return (self.image if self._highres_image is None else
-                self._highres_image)
+        ret = (self.image if self._highres_image is None else
+               self._highres_image)
+        if self.data_ylim is not None and self.ignore_data_part:
+            arr = np.array(ret)
+            ylim = self.data_ylim * ret.size[1] / self.image.size[1]
+            arr[slice(*ylim.astype(int))] = 0
+            ret = Image.fromarray(arr)
+        return ret
 
     @highres_image.setter
     def highres_image(self, value):
@@ -156,7 +164,7 @@ class ColNamesReader(object):
         return self.rotate_image(self.image)
 
     def __init__(self, image, bounds, rotate=45, mirror=False, flip=False,
-                 highres_image=None):
+                 highres_image=None, data_ylim=None):
         from PIL import Image
 
         try:
@@ -180,6 +188,7 @@ class ColNamesReader(object):
                 if mode != 'RGBA':
                     highres_image = highres_image.convert('RGBA')
         self.highres_image = highres_image
+        self.data_ylim = data_ylim
         self._column_names = []
         self._colpics = []
 
@@ -190,7 +199,8 @@ class ColNamesReader(object):
              self.flip),
             {'_colpics': self._colpics,
              '_column_names': self._column_names,
-             '_highres_image': self._highres_image})
+             '_highres_image': self._highres_image,
+             'data_ylim': self.data_ylim})
 
     nc_meta = {
         'colnames_image': {
@@ -305,6 +315,8 @@ class ColNamesReader(object):
                 if xs and ys else None
                 for arr, (ys, xs) in zip(ds['colpic'],
                                          ds['colpic_extents'].values)]
+        if 'data_lims' in ds:
+            ret.data_ylim = ds['data_lims'].sel(axis='y').values
         return ret
 
     def transform_point(self, x, y, invert=False, image=None):

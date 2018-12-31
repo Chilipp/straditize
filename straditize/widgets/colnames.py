@@ -79,13 +79,18 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
 
         self.btn_find = QtWidgets.QPushButton('Find column names')
         self.btn_find.setToolTip(
-            'Find the columns names automatically using tesserocr')
+            'Find the columns names automatically in the image above using '
+            'tesserocr')
 
         self.cb_find_all_cols = QtWidgets.QCheckBox(
             "all columns")
         self.cb_find_all_cols.setToolTip(
             "Find the column names in all columns or only in the selected one")
         self.cb_find_all_cols.setChecked(True)
+
+        self.cb_ignore_data_part = QtWidgets.QCheckBox("ignore data part")
+        self.cb_ignore_data_part.setToolTip("ignore everything from the top "
+                                            "to the bottom of the data part")
 
         super().__init__(Qt.Horizontal)
 
@@ -114,6 +119,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         layout.addRow(QtWidgets.QLabel('Rotate:'), self.txt_rotate)
         layout.addRow(self.cb_fliph)
         layout.addRow(self.cb_flipv)
+        layout.addRow(self.cb_ignore_data_part)
         layout.addRow(self.info_label)
         layout.addRow(self.main_canvas)
         hbox = QtWidgets.QHBoxLayout()
@@ -174,6 +180,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.btn_find.clicked.connect(self._find_colnames)
         self.cb_find_all_cols.stateChanged.connect(
             self.enable_or_disable_btn_find)
+        self.cb_ignore_data_part.stateChanged.connect(
+            self.change_ignore_data_part)
 
     def colname_changed(self, row, column):
         """Function that is called when a cell has been changed"""
@@ -368,9 +376,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
                 self.straditizer_widgets.tree.itemWidget(
                     self.straditizer_widgets.col_names_item, 1).show_docs()
                 self.to_dock(mainwindow, 'Straditizer column names')
+                self.info_label.setText(self.NAVIGATION_LABEL)
                 self.show_plugin()
                 self.dock.raise_()
-                self.info_label.setText(self.NAVIGATION_LABEL)
+                self.widget(0).layout().update()
             self.refresh()
 
     def _maybe_check_btn_select_names(self):
@@ -400,9 +409,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.txt_rotate.setText(str(reader.rotate))
             self.cb_fliph.setChecked(reader.mirror)
             self.cb_flipv.setChecked(reader.flip)
+            self.cb_ignore_data_part.setChecked(reader.ignore_data_part)
 
-            image = self.colnames_reader.highres_image
-            if image is self.colnames_reader.image:
+            image = reader._highres_image
+            if image is reader.image:
                 image = None
             if image is not None:
                 self.btn_load_image.setText(
@@ -451,6 +461,9 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.colnames_reader.mirror = checked == Qt.Checked
         self.replot_figure()
 
+    def change_ignore_data_part(self, checked):
+        self.colnames_reader.ignore_data_part = checked == Qt.Checked
+
     def rotate(self, val):
         if not str(val).strip():
             return
@@ -491,15 +504,17 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.adjust_lims()
 
     def adjust_lims(self):
-        ys, xs = self.im_rotated.get_size()
+        size = xs, ys = np.array(self.im_rotated.get_size())
         ax = self.main_ax
         figw, figh = ax.figure.get_figwidth(), ax.figure.get_figheight()
-        if figw < figh:
-            ax.set_ylim(ys, 0)
-            ax.set_xlim(0, ys * figw/figh)
-        else:
-            ax.set_xlim(0, xs)
-            ax.set_ylim(xs*figh/figw, 0)
+        woh = figw / figh  # width over height
+        how = figh / figw  # height over width
+        limits = np.array([[xs, xs * how], [xs * woh, xs],
+                           [ys, ys * how], [ys * woh, ys]])
+        x, y = min(filter(lambda a: (a >= size).all(), limits),
+                   key=lambda a: (a - size).max())
+        ax.set_xlim(0, x)
+        ax.set_ylim(y, 0)
         ax.axis('off')
         ax.margins(0)
         ax.set_position([0, 0, 1, 1])
