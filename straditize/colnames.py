@@ -485,7 +485,8 @@ class ColNamesReader(object):
                     box = Bbox(min(b1.x, b2.x), min(b1.y, b2.y),
                                max(b1.x1, b2.x1) - min(b1.x0, b2.x0),
                                max(b1.y0, b2.y0) - min(b1.y1, b2.y1))
-                    texts[box] = texts[b1] + ' ' + texts[b2]
+                    texts[box] = texts[b1] + (
+                        ' ' if not texts[b1].endswith('-') else '') + texts[b2]
                     images[box] = image.crop(box.crop_extents)
                     b1 = box
             for b in merged:
