@@ -123,7 +123,8 @@ class ColNamesReader(object):
         if self.data_ylim is not None and self.ignore_data_part:
             arr = np.array(ret)
             ylim = self.data_ylim * ret.size[1] / self.image.size[1]
-            arr[slice(*ylim.astype(int))] = 0
+            arr[slice(*ylim.astype(int)), :, :-1] = 255
+            arr[slice(*ylim.astype(int)), :, -1] = 0
             ret = Image.fromarray(arr)
         return ret
 
@@ -247,19 +248,17 @@ class ColNamesReader(object):
 
     def get_colpic(self, x0, y0, x1, y1):
         """Extract the picture of the column name"""
-        if self.highres_image is not None:
-            image = self.rotate_image(self.highres_image)
-            xs_hr, ys_hr = self.highres_image.size
-            xs, ys = self.image.size
-            x01, y01 = self.transform_point(x0, y0, invert=True)
-            x11, y11 = self.transform_point(x1, y1, invert=True)
-            x02, y02 = self.transform_point(
-                x01 * xs_hr / xs, y01 * ys_hr / ys, image=self.highres_image)
-            x12, y12 = self.transform_point(
-                x11 * xs_hr / xs, y11 * ys_hr / ys, image=self.highres_image)
-            return image.crop([x02, y02, x12, y12])
-        else:
-            return self.rotated_image.crop([x0, y0, x1, y1])
+        hr = self.highres_image
+        image = self.rotate_image(hr)
+        xs_hr, ys_hr = hr.size
+        xs, ys = self.image.size
+        x01, y01 = self.transform_point(x0, y0, invert=True)
+        x11, y11 = self.transform_point(x1, y1, invert=True)
+        x02, y02 = self.transform_point(
+            x01 * xs_hr / xs, y01 * ys_hr / ys, image=hr)
+        x12, y12 = self.transform_point(
+            x11 * xs_hr / xs, y11 * ys_hr / ys, image=hr)
+        return image.crop([x02, y02, x12, y12])
 
     def to_dataset(self, ds=None):
         """All the necessary data as a :class:`xarray.Dataset`
@@ -278,7 +277,7 @@ class ColNamesReader(object):
             ds = xr.Dataset()
         self.create_variable(ds, 'colnames_image', self.image)
         if self._highres_image is not None:
-            self.create_variable(ds, 'colnames_hr_image', self.highres_image)
+            self.create_variable(ds, 'colnames_hr_image', self._highres_image)
         self.create_variable(ds, 'colnames_bounds', self.column_bounds)
         self.create_variable(ds, 'colname', self.column_names)
         self.create_variable(ds, 'rotate_colnames', self.rotate)
@@ -395,12 +394,11 @@ class ColNamesReader(object):
 
         def get_overlap(col, box):
             s, e = bounds[col]
-            image = self.highres_image if hr else self.image
             x0, y0 = extents[:2]
             xmin = self.transform_point(
-                box.x0 + x0, box.y0 + y0, invert=True, image=image)[0]
+                box.x0 + x0, box.y0 + y0, invert=True, image=hr)[0]
             xmax = self.transform_point(
-                box.x0 + x0, box.y1 + y0, invert=True, image=image)[0]
+                box.x0 + x0, box.y1 + y0, invert=True, image=hr)[0]
             xmin, xmax = sorted([xmin, xmax])
             return max(min(e, xmax) - max(s, xmin), 0)
 
@@ -414,32 +412,24 @@ class ColNamesReader(object):
 
         bounds = self.column_bounds
         cols = list(range(len(bounds)))
-        hr = self.highres_image is not None
         rotated = self.rotated_image
-        if hr:
-            rotated_hr = self.rotate_image(self.highres_image)
-            fx, fy = np.round(
-                np.array(rotated_hr.size) / rotated.size).astype(int)
-            bounds = bounds * fx
-        else:
-            fx = fy = 1
+        hr = self.highres_image
+        rotated_hr = self.rotate_image(hr)
+        fx, fy = np.round(
+            np.array(rotated_hr.size) / rotated.size).astype(int)
+        bounds = bounds * fx
+
         if extents is None:
-            if hr:
-                image = rotated_hr
-            else:
-                image = rotated
+            image = rotated_hr
             x0 = y0 = 0
         else:
             extents = np.asarray(extents)
-            if hr:
-                extents[::2] *= fx
-                extents[1::2] *= fy
-                image = rotated_hr.crop(extents)
-            else:
-                image = rotated.crop(extents)
+            extents[::2] *= fx
+            extents[1::2] *= fy
+            image = rotated_hr.crop(extents)
 
             x0, y0 = self.transform_point(
-                *extents[:2], image=self.highres_image if hr else self.image,
+                *extents[:2], image=hr,
                 invert=True)
 
         if tesseract_version.startswith('4.0.'):
