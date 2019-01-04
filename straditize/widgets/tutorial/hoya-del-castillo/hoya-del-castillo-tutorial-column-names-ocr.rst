@@ -22,11 +22,11 @@ corrections are unavoidable.
    image with only the column names on it and a sufficient resolution. We have
    something prepared for you:
 
-   .. image:: straditize-tutorial-colnames.png
+   .. image:: hoya-del-castillo-colnames.png
         :alt: HR column names image
 
-    Click the :guilabel:`Load HR image` button and select the
-    `straditize-tutorial-colnames.png` image file.
+   Click the :guilabel:`Load HR image` button and select the
+   `hoya-del-castillo-colnames.png` image file.
 3. We will now use the automatic finding of column names. For this,
    click the :guilabel:`Find column names` button. This will search for the
    column names in the plot to the left of the table

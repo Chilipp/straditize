@@ -58,6 +58,8 @@ docs/gui/
 docs/api/
 docs/tutorial/*.rst
 docs/tutorial/*.png
+docs/tutorial/beginner
+docs/tutorial/hoya-del-castillo
 !docs/tutorial/index.rst
 
 # test results

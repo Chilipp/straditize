@@ -23,6 +23,6 @@ export.
    out using right-click (see
    `matplotlibs docs on interactive navigation with the Pan/Zoom-tool`_)
 3. When you entered the correct names in the table, click the
-   :guilabel:`Edit column names` button again to hide the button.
+   :guilabel:`Edit column names` button again to hide the dialog.
 
-.. _matplotlibs docs on interactive navigation with the Pan/Zoom-tool: https://matplotlib.org/users/navigation_toolbar.html))
+.. _matplotlibs docs on interactive navigation with the Pan/Zoom-tool: https://matplotlib.org/users/navigation_toolbar.html

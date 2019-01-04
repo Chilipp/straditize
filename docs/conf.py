@@ -85,23 +85,28 @@ if not osp.exists(gui_dir) or on_rtd:
         shutil.copyfile(f, osp.join(gui_dir, osp.basename(f)))
 
 tutorial_dir = osp.join(osp.dirname(__file__), 'tutorial')
-files = chain(
-    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                       'widgets', 'tutorial', 'docs', '*.rst')),
-    glob.glob(get_psy_icon('*.png')),
-    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                       'widgets', 'tutorial', 'docs', '*.png')),
-    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                       'widgets', 'docs', '*.png')),
-    glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                       'widgets', 'icons', '*.png')))
-for f in files:
-    shutil.copyfile(f, osp.join(tutorial_dir, osp.basename(f)))
-with open(osp.join('tutorial', 'straditize_tutorial_intro.rst')) as f:
-    s = f.read()
-with open(osp.join('tutorial', 'straditize_tutorial_intro.rst'), 'w') as f:
-    f.write(s.replace(':hidden:', ''))
-del s, f
+for base in ['beginner', 'hoya-del-castillo']:
+    if osp.exists(osp.join(tutorial_dir, base)):
+        shutil.rmtree(osp.join(tutorial_dir, base))
+    os.mkdir(osp.join(tutorial_dir, base))
+    files = chain(
+        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                           'widgets', 'tutorial', base, '*.rst')),
+        glob.glob(get_psy_icon('*.png')),
+        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                           'widgets', 'tutorial', base, '*.png')),
+        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                           'widgets', 'docs', '*.png')),
+        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                           'widgets', 'icons', '*.png')))
+    for f in files:
+        shutil.copyfile(f, osp.join(tutorial_dir, base, osp.basename(f)))
+    with open(osp.join('tutorial', base, base + '-tutorial-intro.rst')) as f:
+        s = f.read()
+    with open(osp.join('tutorial', base,
+                       base + '-tutorial-intro.rst'), 'w') as f:
+        f.write(s.replace(':hidden:', ''))
+    del s, f
 
 napoleon_use_admonition_for_examples = True
 

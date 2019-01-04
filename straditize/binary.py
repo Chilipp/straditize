@@ -1150,11 +1150,16 @@ class DataReader(LabelSelection):
         full_mask = np.zeros_like(binary, dtype=bool)
 
         # upper 5 percent of the data image
-        arr = binary[:ys_5p+1].copy()
-        mask = (np.nansum(arr, axis=1) / float(xs) > fraction)
+        arr = binary[:ys_5p+1]
+        row_sums = np.nansum(arr, axis=1)
+        mask = (row_sums / float(xs) > fraction)
         if mask.any():
             # filter with min_lw and max_lw
             rows = np.where(mask)[0]
+            for i, row in enumerate(rows[1:], 1):
+                if np.abs(row_sums[row] / row_sums[rows[i-1]] - 1) > 0.05:
+                    rows = rows[:i]
+                    break
             mask = np.zeros_like(mask)
             selection = self._filter_lines(rows, min_lw, max_lw)
             mask[selection] = True
@@ -1163,7 +1168,7 @@ class DataReader(LabelSelection):
             labels = np.unique(labeled[mask])
             labels = labels[labels > 0]
             labeled[mask] = 0
-            n = int(mask.sum() * 2 + xs * 0.01)
+            n = int(mask.sum() * 2 * np.ceil(xs * 0.01))
             # look for connected small parts (such as axis ticks)
             labeled[arr.astype(bool) & np.isin(labeled, labels) &
                     (~skim.remove_small_objects(labeled.astype(bool), n))] = 0
@@ -1172,11 +1177,17 @@ class DataReader(LabelSelection):
                 np.zeros_like(arr, dtype=bool))
 
         # lower 5 percent of the data image
-        arr = self.binary[-ys_5p:].copy()
-        mask = (np.nansum(arr, axis=1) / float(xs) > fraction)
+        arr = self.binary[-ys_5p:]
+        row_sums = np.nansum(arr, axis=1)
+        mask = (row_sums / float(xs) > fraction)
         if mask.any():
             # filter with min_lw and max_lw
-            rows = np.where(mask)[0]
+            rows = np.where(mask)[0][::-1]
+            for i, row in enumerate(rows[1:], 1):
+                if np.abs(row_sums[row] / row_sums[rows[i-1]] - 1) > 0.05:
+                    rows = rows[:i]
+                    break
+            rows.sort()
             mask = np.zeros_like(mask)
             selection = self._filter_lines(rows, min_lw, max_lw)
             mask[selection] = True
@@ -1185,13 +1196,18 @@ class DataReader(LabelSelection):
             labels = np.unique(labeled[mask])
             labels = labels[labels > 0]
             labeled[mask] = 0
-            n = int(mask.sum() * 2 + xs * 0.01)
+            n = int(mask.sum() * 2 * np.ceil(xs * 0.01))
             # look for connected small parts (such as axis ticks)
             labeled[arr.astype(bool) & np.isin(labeled, labels) &
                     (~skim.remove_small_objects(labeled.astype(bool), n))] = 0
             full_mask[-ys_5p:] = np.where(
                 arr.astype(bool) & ~labeled.astype(bool), True,
                 np.zeros_like(arr, dtype=bool))
+
+        if remove:
+            rows = np.where(
+                full_mask.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
+            self.hline_locs = np.unique(np.r_[self.hline_locs, rows])
 
         self._show_parts2remove(self.binary, remove, select_all=False,
                                 selection=full_mask, **kwargs)
@@ -1293,18 +1309,20 @@ class DataReader(LabelSelection):
                         if i >= s and i < e)
             if i > max(2, bounds[icol, 0] + binary.shape[1] * 0.05):
                 continue
+            dominant_color = np.bincount(grey[:, i]).argmax()
             if icol != col:
                 col = icol
                 yaxes[icol] = [[i]]
                 nvals = np.nansum(binary[:, i])
-                color = np.bincount(grey[:, i]).argmax()
+                line_color = dominant_color
                 found_data = False
             # append when we have about the same number of vertical lines
             elif i - yaxes[icol][-1][-1] == 1:
                 # if we do neither see a change in dominant color nor in the
-                # number of data points in the row, we extend the lineu
-                if (np.bincount(grey[:, i]).argmax() == color and
+                # number of data points in the row, we extend the line
+                if ((dominant_color == line_color or line_color > 150) and
                         np.abs(np.nansum(binary[:, i]) / nvals - 1) < 0.05):
+                    line_color = dominant_color
                     yaxes[icol][-1].append(i)
             elif not found_data:
                 # check whether more than 10% of the previous region has been
@@ -1339,7 +1357,7 @@ class DataReader(LabelSelection):
         labels = np.unique(labeled[mask])
         labels = labels[labels > 0]
         labeled[mask] = 0
-        n = int(max_lw * 2 + len(binary) * 0.01)
+        n = int(max_lw * 2 * np.ceil(len(binary) * 0.01))
         mask[binary.astype(bool) & np.isin(labeled, labels) &
              (~skim.remove_small_objects(labeled.astype(bool), n))] = True
 
@@ -1350,6 +1368,11 @@ class DataReader(LabelSelection):
                 lmax = l[0] + 1 + np.where(
                     mask[:, l[0]:l[-1] + max_lw + 1].any(axis=0))[0].max()
                 mask[:, l[0]:lmax] = True
+
+        if remove:
+            rows = np.where(
+                mask.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
+            self.vline_locs = np.unique(np.r_[self.vline_locs, rows])
 
         self._show_parts2remove(binary, remove, select_all=False,
                                 selection=mask)
@@ -2375,6 +2398,7 @@ class DataReader(LabelSelection):
             mask = (arr if selection is None else selection).astype(bool)
             self.labels[mask] = 0
             self.binary[mask] = 0
+            self.reset_labels()
             self.plot_im.set_array(self.labels)
             if self.magni_plot_im is not None:
                 self.magni_plot_im.set_array(self.labels)

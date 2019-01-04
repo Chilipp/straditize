@@ -11,4 +11,5 @@ the straditizer control.
 .. toctree::
     :maxdepth: 1
 
-    straditize_tutorial_intro
+    beginner/beginner-tutorial-intro
+    hoya-del-castillo/hoya-del-castillo-tutorial-intro

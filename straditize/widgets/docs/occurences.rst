@@ -41,7 +41,7 @@ This is very useful information which can be considered by straditize.
    .. image:: edited-occurences.png
        :alt: Edited occurences
 
-    Click the :guilabel:`Apply` button when you are done.
+   Click the :guilabel:`Apply` button when you are done.
 
 5. The marked occurences will appear later in the final data frame with the
    specified *Occurence value*.

@@ -52,7 +52,7 @@ class StraditizerInitTest(TutorialTest):
     page_number = 1
 
     def test_page(self):
-        self._test_hint('straditize-tutorial.png')
+        self._test_hint('hoya-del-castillo.png')
         self.page.skip()
         super().test_page()
 

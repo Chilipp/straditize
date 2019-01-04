@@ -7,7 +7,7 @@ import os.path as osp
 from psyplot_gui.compat.qtcompat import (
     QWidget, QtCore, QPushButton, QTreeWidget, QTreeWidgetItem,
     QVBoxLayout, QHBoxLayout, Qt, QToolButton, QIcon, with_qt5,
-    QComboBox, QLabel, QMessageBox)
+    QComboBox, QLabel, QMessageBox, QInputDialog)
 from psyplot_gui.common import (
     DockMixin, get_icon as get_psy_icon, PyErrorMessage)
 import numpy as np
@@ -335,12 +335,28 @@ class StraditizerWidgets(QWidget, DockMixin):
                 self.switch_to_straditizer_layout()
             return fname is not None
 
-    def start_tutorial(self, state):
-        from straditize.widgets.tutorial import Tutorial
+    def start_tutorial(self, state, tutorial_cls=None):
         if self.tutorial is not None or not state:
             self.tutorial.close()
             self.tutorial_button.setText('Tutorial')
         elif state:
+            if tutorial_cls is None:
+                tutorial_cls, ok = QInputDialog.getItem(
+                    self, 'Start tutorial', "Select the tutorial type",
+                    ["Beginner", "Advanced (Hoya del Castillo)"],
+                    editable=False)
+                if not ok:
+                    self.tutorial_button.blockSignals(True)
+                    self.tutorial_button.setChecked(False)
+                    self.tutorial_button.blockSignals(False)
+                    return
+                if tutorial_cls == 'Beginner':
+                    from straditize.widgets.tutorial import Tutorial
+                else:
+                    from straditize.widgets.tutorial import (
+                        HoyaDelCastilloTutorial as Tutorial)
+            else:
+                Tutorial = tutorial_cls
             self.tutorial = Tutorial(self)
             self.tutorial_button.setText('Stop tutorial')
 

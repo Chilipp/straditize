@@ -15,5 +15,3 @@ If you have questions or troubles, please open an issue on
 https://github.com/Chilipp/straditize/issues
 
 Thanks for using **straditize** and happy digitizing!
-
-:ref:`Back to the GUI documentation <straditize-gui>`

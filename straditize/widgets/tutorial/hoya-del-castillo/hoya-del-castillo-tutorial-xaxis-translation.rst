@@ -95,7 +95,7 @@ Therefore it is enough to perform the above steps just for one of the columns.
 2. Click the :guilabel:`Insert X-axis values` button in the `Axes translations`
    section of the straditizer control
 3. In the appearing dialog, enter the x-value of the column start (here again
-  ``0``) or Shift-Leftclick on the plot and then enter it (see note above).
+   ``0``) or Shift-Leftclick on the plot and then enter it (see note above).
 4. After hitting the :guilabel:`Ok` button, you will see a mark on the plot
    (blue line). Again, you can select the mark, drag it or delete it as before.
 5. now repeat steps 2-4 on a second point in the same column. Your diagram
