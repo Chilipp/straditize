@@ -50,3 +50,4 @@ References
    Early–Mid Holocene Forests, Fires and Flooding in the Central Ebro Desert,
    NE Spain.” Quat. Sci. Rev. , vol. 26, no. 13–14, 13–14, 2007, pp. 1695–712,
    `doi:10.1016/j.quascirev.2007.04.007 <https://dx.doi.org/10.1016/j.quascirev.2007.04.007>`__.
+
