@@ -4,6 +4,7 @@ from itertools import chain
 from psyplot_gui.compat.qtcompat import QTest, Qt
 import straditize.cross_mark as cm
 import unittest
+import pandas as pd
 
 
 class MarkerControlTest(bt.StraditizeWidgetsTestCase):
@@ -110,8 +111,10 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax.set_xlim(minx - 1, minx + 1)
         ax.set_ylim(miny - 1, miny + 1)
         self.marker_control.go_to_right_mark()
-        self.assertEqual(list(ax.get_xlim()), [maxx - 1, maxx + 1])
-        self.assertEqual(list(ax.get_ylim()), [maxy - 1, maxy + 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(maxx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(maxy, yi)
 
     def test_goto_right_mark_02_multi(self):
         """Test the navigation button to the right mark for multiple edges
@@ -128,8 +131,10 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax.set_xlim(minx - 1, minx + 1)
         ax.set_ylim(miny + 1, miny - 1)
         self.marker_control.go_to_right_mark()
-        self.assertEqual(list(ax.get_xlim()), [maxx - 1, maxx + 1])
-        self.assertEqual(list(ax.get_ylim()), [miny + 1, miny - 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(maxx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(miny, yi)
 
     def test_goto_left_mark_01_single(self):
         """Test the navigation button to the right mark for one edge per mark
@@ -140,8 +145,10 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax.set_xlim(maxx - 1, maxx + 1)
         ax.set_ylim(maxy - 1, maxy + 1)
         self.marker_control.go_to_left_mark()
-        self.assertEqual(list(ax.get_xlim()), [minx - 1, minx + 1])
-        self.assertEqual(list(ax.get_ylim()), [miny - 1, miny + 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(minx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(miny, yi)
 
     def test_goto_left_mark_02_multi(self):
         """Test the navigation button to the right mark for multiple edges
@@ -158,8 +165,10 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax.set_xlim(maxx - 1, maxx + 1)
         ax.set_ylim(miny + 1, miny - 1)
         self.marker_control.go_to_left_mark()
-        self.assertEqual(list(ax.get_xlim()), [minx - 1, minx + 1])
-        self.assertEqual(list(ax.get_ylim()), [miny + 1, miny - 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(minx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(miny, yi)
 
     def test_goto_lower_mark_01_single(self):
         """Test the navigation button to the right mark for one edge per mark
@@ -167,11 +176,13 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax = self.straditizer.ax
         minx, maxx = sorted(self.data_xlim)
         miny, maxy = sorted(self.data_ylim)
-        ax.set_xlim(minx - 1, minx + 1)
-        ax.set_ylim(miny - 1, miny + 1)
+        ax.set_xlim(minx - 0.5, minx + 1)
+        ax.set_ylim(miny - 0.5, miny + 1)
         self.marker_control.go_to_lower_mark()
-        self.assertEqual(list(ax.get_xlim()), [maxx - 1, maxx + 1])
-        self.assertEqual(list(ax.get_ylim()), [maxy - 1, maxy + 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(maxx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(maxy, yi)
 
     def test_goto_lower_mark_02_multi(self):
         """Test the navigation button to the right mark for multiple edges
@@ -188,8 +199,10 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax.set_xlim(minx - 1, minx + 1)
         ax.set_ylim(miny + 1, miny - 1)
         self.marker_control.go_to_lower_mark()
-        self.assertEqual(list(ax.get_xlim()), [minx - 1, minx + 1])
-        self.assertEqual(list(ax.get_ylim()), [maxy + 1, maxy - 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(minx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(maxy, yi)
 
     def test_goto_upper_mark_01_single(self):
         """Test the navigation button to the right mark for one edge per mark
@@ -200,8 +213,10 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax.set_xlim(maxy - 1, maxy + 1)
         ax.set_ylim(maxy - 1, maxy + 1)
         self.marker_control.go_to_upper_mark()
-        self.assertEqual(list(ax.get_xlim()), [minx - 1, minx + 1])
-        self.assertEqual(list(ax.get_ylim()), [miny - 1, miny + 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(minx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(miny, yi)
 
     def test_goto_upper_mark_02_multi(self):
         """Test the navigation button to the right mark for multiple edges
@@ -218,8 +233,10 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         ax.set_xlim(minx - 1, minx + 1)
         ax.set_ylim(maxy + 1, maxy - 1)
         self.marker_control.go_to_upper_mark()
-        self.assertEqual(list(ax.get_xlim()), [minx - 1, minx + 1])
-        self.assertEqual(list(ax.get_ylim()), [miny + 1, miny - 1])
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(minx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(miny, yi)
 
 
 if __name__ == '__main__':
