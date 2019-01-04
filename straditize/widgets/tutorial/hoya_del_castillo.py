@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """The tutorial of straditize
 
 This module contains a guided tour through straditize"""

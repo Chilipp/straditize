@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """The straditizer widgets
 
 This module contains widgets to digitize the straditizer diagrams through a GUI

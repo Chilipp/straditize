@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test module for the tutorial"""
 import _base_testing as bt
 from PyQt5.QtTest import QTest

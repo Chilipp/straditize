@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test module for straditize.widgets.marker_control"""
 import _base_testing as bt
 from itertools import chain

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """The main control widget for handling the data
 """
 from __future__ import division

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from itertools import chain
 from collections import OrderedDict
 from straditize.widgets import StraditizerControlBase

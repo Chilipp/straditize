@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Widget for handling column names"""
 import numpy as np
 import os
