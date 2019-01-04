@@ -23,8 +23,9 @@ class TutorialTest(bt.StraditizeWidgetsTestCase):
         return self.tutorial.pages[self.page_number]
 
     def setUp(self):
+        from straditize.widgets.tutorial import HoyaDelCastilloTutorial
         super().setUp()
-        self.straditizer_widgets.start_tutorial(True)
+        self.straditizer_widgets.start_tutorial(True, HoyaDelCastilloTutorial)
         for i in range(self.page_number):
             self.navigation.skip()
         self.assertEqual(self.navigation.current_step, self.page_number)
