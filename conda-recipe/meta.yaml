@@ -34,7 +34,7 @@ test:
   requires:
     - pytest
     - codecov
-    - pytest-cov
+    - pytest-cov>=2.6.1
     - tesserocr  # [not win]
   source_files:
     - tests
