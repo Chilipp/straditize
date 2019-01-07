@@ -5,7 +5,7 @@ import datetime as dt
 from itertools import product
 from psyplot_gui.common import DockMixin
 from psyplot_gui.compat.qtcompat import (
-    QWidget, QScrollArea, Qt, with_qt5, QLabel, QCheckBox, QHBoxLayout,
+    QWidget, Qt, with_qt5, QLabel, QHBoxLayout,
     QVBoxLayout, QPushButton, QGridLayout)
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas)
@@ -377,6 +377,8 @@ class PatternSelectionWidget(QWidget, DockMixin):
                     pass
             self.data_obj.draw_figure()
             del self.selector
+        if self._corr_plot is not None:
+            self.toggle_correlation_plot()
         if self.key_press_cid is not None:
             self.data_obj.ax.figure.canvas.mpl_disconnect(self.key_press_cid)
         for attr in ['data_obj', 'arr', 'template', 'key_press_cid']:
