@@ -103,7 +103,6 @@ Documentation
     command_line
     gui/straditize
     api/straditize
-    todos
 
 
 Indices and tables
