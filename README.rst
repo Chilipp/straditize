@@ -53,10 +53,6 @@ Digitizing stratigraphic diagrams
     :alt: Supported implementations
     :target: https://pypi.python.org/pypi/straditize
 
-.. |joss| image:: http://joss.theoj.org/papers/3535c28017003f0b5fb63b1b64118b60/status.svg
-    :alt: Journal of Open Source Software
-    :target: http://joss.theoj.org/papers/3535c28017003f0b5fb63b1b64118b60
-
 .. |github| image:: https://img.shields.io/github/release/Chilipp/straditize.svg
     :target: https://github.com/Chilipp/straditize/releases/latest
     :alt: Latest github release
@@ -86,29 +82,15 @@ variables, the automatic and semi-automatic recognition of picture artifacts,
 as well an automatic measurement finder to exactly reproduce the data that has
 been used to create the diagram.
 
-**BETA-VERSION**: Straditize is currently in it's beta version. New
-installation methods will be provided and the documentation will be
-significantly improved.
-
-EGU Presentation
------------------
-straditize will be presented at the  European Geosciences Union General
-Assembly (EGU) 2018 as a `PICO presentation`_ in the session of
-`Free and Open Source Software (FOSS) for Geoinformatics and Geosciences`_.
-
-The PICO presentation files can be downloaded via http://dx.doi.org/10.13140/RG.2.2.34357.58083
-
-.. _PICO presentation: https://meetingorganizer.copernicus.org/EGU2018/EGU2018-4433.pdf
-.. _Free and Open Source Software (FOSS) for Geoinformatics and Geosciences: https://meetingorganizer.copernicus.org/EGU2018/session/26511
-
 Installation
 ------------
-At the moment, straditize has to be installed from the source files, i.e. the
-github repository. We highly recommend to use anaconda_ and install the
-dependencies via::
+We highly recommend to use anaconda_ and install straditize::
 
     conda config --add channels conda-forge
-    conda install -c chilipp/label/dev psyplot-gui scikit-image
+    conda install -c chilipp straditize
+
+or install it from the source files via::
+
     git clone https://github.com/Chilipp/straditize.git
     cd straditize
     python setup.py install
@@ -117,4 +99,7 @@ It can then be started from the command line via::
 
     straditize
 
+A more detailed description is provided in the docs_.
+
 .. _anaconda: https://www.continuum.io/downloads
+.. _docs: https://straditize.readthedocs.io/en/latest/installing.html

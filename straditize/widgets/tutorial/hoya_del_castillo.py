@@ -580,8 +580,14 @@ class EditMeta(TutorialPage):
     def skip(self):
         for attr, val in zip(
                 ['sitename', 'Archive', 'Country', 'Restricted',
-                 'Y-axis name'],
-                ['Hoya del Castillo', 'Pollen', 'Spain', 'No', 'Depth (cm)']):
+                 'Y-axis name', 'Lon', 'Lat', 'Reference', 'DOI'],
+                ['Hoya del Castillo', 'Pollen', 'Spain', 'No', 'Depth (cm)',
+                 '-0.5', '41.25',
+                 ('Davis, Basil A. S., and A. C. Stevenson. "The 8.2ka Event '
+                  'and Early-Mid Holocene Forests, Fires and Flooding in the '
+                  'Central Ebro Desert, NE Spain." Quat. Sci. Rev. , vol. 26, '
+                  'no. 13-14, 2007, pp. 1695-712'),
+                 '10.1016/j.quascirev.2007.04.007']):
             self.straditizer_widgets.straditizer.set_attr(attr, val)
 
     def hint(self):

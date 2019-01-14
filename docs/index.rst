@@ -86,10 +86,6 @@ remains a problem and an under-utilized scientific resource.
 This program tackles this problem by providing a python package to digitize
 especially pollen diagrams, but also any other type of stratigraphic diagram.
 
-**BETA-VERSION**: Straditize is currently in it's beta version. New
-installation methods will be provided and the documentation will be
-significantly improved.
-
 The package is very new and there are many features that will be included in
 the future. So we are very pleased for feedback! Please simply raise an issue
 on `GitHub <https://github.com/Chilipp/straditize>`__.
@@ -103,8 +99,8 @@ Documentation
 
     about
     installing
-    command_line
     tutorial/index
+    command_line
     gui/straditize
     api/straditize
     todos
