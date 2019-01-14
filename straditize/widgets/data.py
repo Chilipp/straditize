@@ -15,10 +15,9 @@ from psyplot_gui.compat.qtcompat import (
     QPushButton, QLineEdit, QComboBox, QLabel, QDoubleValidator,
     Qt, QHBoxLayout, QVBoxLayout, QWidget, QTreeWidgetItem,
     with_qt5, QIcon, QIntValidator, QTreeWidget, QToolBar, QGridLayout,
-    QCheckBox, QInputDialog, QFileDialog)
+    QCheckBox, QInputDialog, QFileDialog, QMessageBox)
 from psyplot.utils import unique_everseen
 from itertools import chain
-from collections import defaultdict
 
 if with_qt5:
     from PyQt5.QtWidgets import QGroupBox, QSpinBox
@@ -645,9 +644,10 @@ class DigitizingControl(StraditizerControlBase):
         return True
 
     def reset_column_starts(self):
-        self.straditizer.data_reader.reset_column_starts()
-        self.maybe_show_btn_reset_columns()
-        self.refresh()
+        if self._ask_for_column_modification():
+            self.straditizer.data_reader.reset_column_starts()
+            self.maybe_show_btn_reset_columns()
+            self.refresh()
 
     def reset_samples(self):
         self.straditizer.data_reader.reset_samples()
@@ -1447,7 +1447,25 @@ class DigitizingControl(StraditizerControlBase):
         self.connect2cancel(self.straditizer.remove_marks,
                             self.straditizer.draw_figure)
 
+    def _ask_for_column_modification(self):
+        answer = QMessageBox.Yes
+        sw = self.straditizer_widgets
+        if not sw.always_yes:
+            msg = None
+            if self.reader.children:
+                msg = 'Column specific readers have already been created!'
+            elif self.reader._full_df is not None:
+                msg = 'The data has already been digitized!'
+            if msg:
+                answer = QMessageBox.question(
+                    sw, 'Really modify columns?',
+                    msg + ' Are you sure you want to conitnue? This might '
+                    'result in unexpected behaviour')
+        return answer == QMessageBox.Yes
+
     def select_column_starts(self):
+        if not self._ask_for_column_modification():
+            return
         threshold = self.txt_column_thresh.text()
         threshold = float(threshold) / 100. if threshold else None
         self.straditizer.marks_for_column_starts(threshold)
@@ -1459,6 +1477,8 @@ class DigitizingControl(StraditizerControlBase):
                             self.straditizer.draw_figure)
 
     def modify_column_ends(self):
+        if not self._ask_for_column_modification():
+            return
         threshold = self.txt_column_thresh.text()
         threshold = float(threshold) / 100. if threshold else None
         self.straditizer.marks_for_column_ends(threshold)
