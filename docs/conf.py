@@ -54,6 +54,7 @@ extensions = [
     'sphinxarg.ext',
     'autodocsumm',
     'sphinx.ext.imgconverter',
+    'sphinx_nbexamples',  # just to get the style sheet
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -109,6 +110,8 @@ for base in ['beginner', 'hoya-del-castillo']:
     del s, f
 
 napoleon_use_admonition_for_examples = True
+
+example_gallery_config = {'examples_dirs': [], 'gallery_dirs': []}
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:

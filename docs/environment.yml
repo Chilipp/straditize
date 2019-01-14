@@ -17,3 +17,6 @@ dependencies:
     - scikit-image
     - scipy
     - psy-strat
+    - pip:
+        - autodocsumm
+        - sphinx-nbexamples
