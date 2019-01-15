@@ -83,3 +83,6 @@ tests/chinese.*
 # installers
 straditize-conda-*.sh
 straditize-conda-*.exe
+
+# paper.pdf
+paper/paper.pdf
