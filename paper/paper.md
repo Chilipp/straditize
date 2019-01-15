@@ -14,6 +14,8 @@ authors:
     - name: Philipp S. Sommer
       orcid: 0000-0001-6171-7716
       affiliation: 1
+    - name: Dilan Rech
+      affiliation: 1
     - name: Manuel Chevalier
       orcid: 0000-0002-8183-9881
       affiliation: 1
@@ -61,5 +63,10 @@ use image recognition functions from the scikit-image package [@Walt2014] and
 numeric routines from scipy [@Jones2001] and numpy [@Oliphant2006].
 
 ![A standard pollen diagram from Hoya del Castillo with data from @Davis2007](hoya-del-castillo.png)
+
+# Acknowledgements
+
+We gratefully acknowledge funding by the Swiss National Science Foundation
+(SNF) through the HORNET project (200021_169598).
 
 # References
