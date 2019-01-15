@@ -931,7 +931,7 @@ class DigitizingControl(StraditizerControlBase):
 
         # 7: edit samples button
         self.edit_samples_child = child = QTreeWidgetItem(0)
-        child.setText(0, 'Edit samples')
+        child.setText(0, 'Samples')
         item.addChild(child)
         self.add_info_button(child, 'samples.rst')
 

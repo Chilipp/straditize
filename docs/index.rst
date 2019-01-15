@@ -87,8 +87,9 @@ This program tackles this problem by providing a python package to digitize
 especially pollen diagrams, but also any other type of stratigraphic diagram.
 
 The package is very new and there are many features that will be included in
-the future. So we are very pleased for feedback! Please simply raise an issue
-on `GitHub <https://github.com/Chilipp/straditize>`__.
+the future. Therefore we would be very pleased to get feedback! To do so, you
+can contact us or raise an issue on
+`GitHub <https://github.com/Chilipp/straditize>`__.
 
 
 Documentation

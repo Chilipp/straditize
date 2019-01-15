@@ -12,8 +12,9 @@ separate them automatically.
    blue lines appearing on the plot that you can drag and drop such as you did
    it when selecting the diagram part. You can change their colors using the
    :ref:`marker control <marker-control>`
-2. In our case, straditize recognizes these columns automatically, so just hit
-   the :guilabel:`Apply` button and you are done.
+2. straditize recognizes these columns automatically and in our example, you
+   do not have to edit them. Therefore  hit the :guilabel:`Apply` button at the
+   bottom of the control and you are done.
 
 
 .. seealso::

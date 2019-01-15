@@ -1,11 +1,10 @@
 Create the diagram reader
 =========================
-Now you have to select, which type of diagram you are digitizing. In our case,
-it's an area diagram which is already selected in the dropdown menu next to the
+Now you have to select, which type of diagram you are digitizing. In the
+example, it is an area diagram which is already selected in the dropdown menu next to the
 :guilabel:`Select data part` button.
 
-So just click the :guilabel:`Convert image` button and you are ready to go for
-the digitization.
+Click on :guilabel:`Convert image` to start the digitization.
 
 .. seealso::
 
