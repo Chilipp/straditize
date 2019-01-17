@@ -67,6 +67,7 @@ numeric routines from scipy [@Jones2001] and numpy [@Oliphant2006].
 # Acknowledgements
 
 We gratefully acknowledge funding by the Swiss National Science Foundation
-(SNF) through the HORNET project (200021_169598).
+(SNF) through the HORNET project (200021_169598) and Dilan Rech acknowledges
+funding by the IDYST institute.
 
 # References
