@@ -55,8 +55,8 @@ test:
 
 about:
   home: https://github.com/Chilipp/straditize
-  license: GPLv2
-  license_family: GPL2
+  license: GPLv3
+  license_family: GPL3
   license_file: LICENSE
   summary: 'Python package for digitizing pollen diagrams'
 
