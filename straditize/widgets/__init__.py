@@ -2,6 +2,23 @@
 """The straditizer widgets
 
 This module contains widgets to digitize the straditizer diagrams through a GUI
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 import six
 import os.path as osp
@@ -13,6 +30,7 @@ from psyplot_gui.common import (
     DockMixin, get_icon as get_psy_icon, PyErrorMessage)
 import numpy as np
 import glob
+from straditize.common import docstrings
 
 
 if with_qt5:
@@ -45,17 +63,80 @@ doc_files = glob.glob(get_doc_file('*.rst')) + glob.glob(
 class EnableButton(QPushButton):
     """A `QPushButton` that emits a signal when enabled"""
 
+    #: A signal that is emitted with a boolean whether if the button is
+    #: enabled or disabled
     enabled = QtCore.pyqtSignal(bool)
 
     def setEnabled(self, b):
+        """Reimplemented to emit the :attr:`enabled` signal"""
         if b is self.isEnabled():
             return
         super(EnableButton, self).setEnabled(b)
         self.enabled.emit(b)
 
 
+class InfoButton(QToolButton):
+    """A button to display help informations in the help explorer"""
+
+    @docstrings.get_sectionsf('InfoButton')
+    def __init__(self, parent, fname=None, rst=None, name=None):
+        """
+        Parameters
+        ----------
+        parent: QWidget
+            The parent widget
+        fname: str
+            The name of the rst file. If None, specify the `rst` directly
+        rst: str
+            The restructured text to render when this button is clicked. If
+            None, the `fname` has to be provided
+        name: str
+            The name to use for the document in the help_explorer
+        """
+        if fname is None and rst is None:
+            raise ValueError("Either `fname` or `rst` must be specified!")
+        elif fname is not None and rst is not None:
+            raise ValueError("Either `fname` or `rst` must be specified! "
+                             "Not both!")
+        elif rst is not None and name is None:
+            raise ValueError("A title must be specified for the rst document!")
+        self.fname = fname
+        self.rst = rst
+        self.files = doc_files
+        self.name = name
+        QToolButton.__init__(self, parent)
+        self.setIcon(QIcon(get_psy_icon('info.png')))
+        self.clicked.connect(self.show_docs)
+
+    def show_docs(self):
+        """Show the docs
+
+        Shows the docs in the
+        in the :attr:`~psyplot_gui.main.MainWindow.help_explorer`"""
+        from psyplot_gui.main import mainwindow
+        if self.fname is not None:
+            rst = read_doc_file(self.fname)
+            name = osp.splitext(osp.basename(self.fname))[0]
+        else:
+            rst = self.rst
+            name = self.name
+        mainwindow.help_explorer.show_rst(
+            rst, name, files=list(set(self.files) - {self.fname}))
+
+
 def get_straditizer_widgets(mainwindow=None):
-    """Get the :class:`StraditizerWidgets` from the psyplot GUI mainwindow"""
+    """Get the :class:`StraditizerWidgets` from the psyplot GUI mainwindow
+
+    Parameters
+    ----------
+    psyplot_gui.main.MainWindow
+        The mainwindow to use. If None, the :attr:`psyplot_gui.main.mainwindow`
+        is used.
+
+    Returns
+    -------
+    StraditizerWidgets
+        The straditizer widgets of the given `mainwindow`"""
     if mainwindow is None:
         from psyplot_gui.main import mainwindow
     if mainwindow is None:
@@ -70,8 +151,19 @@ def get_straditizer_widgets(mainwindow=None):
 
 
 class StraditizerWidgets(QWidget, DockMixin):
-    """A widget that contains widgets to control a
-    :class:`straditize.straditizer.Straditizer`"""
+    """A widget that contains widgets to control the straditization in a GUI
+
+    This widget is the basis of the straditize GUI and implemented as a
+    plugin into the psyplot gui. The open straditizers are handled in the
+    :attr:`_straditizer` attribute.
+
+    The central parts of this widget are
+
+    - The combobox to manage the open straditizers
+    - The QTreeWidget in the :attr:`tree` attribute that contains all the
+      controls to interface the straditizer
+    - the tutorial area
+    - the :guilabel:`Apply` and :guilabel:`Cancel` button"""
 
     #: Boolean that is True if all dialogs should be answered with `Yes`
     always_yes = False
@@ -87,6 +179,61 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     #: The button to edit the straditizer attributes
     attrs_button = None
+
+    #: The button to start a tutorial
+    tutorial_button = None
+
+    #: An :class:`InfoButton` to display the docs
+    info_button = None
+
+    #: A QComboBox to select the current straditizer
+    stradi_combo = None
+
+    #: A button to open a new straditizer
+    btn_open_stradi = None
+
+    #: A button to close the current straditizer
+    btn_close_stradi = None
+
+    #: A button to reload the last autosaved state
+    btn_reload_autosaved = None
+
+    #: The :class:`straditize.widgets.progress_widget.ProgressWidget` to
+    #: display the progress of the straditization
+    progress_widget = None
+
+    #: The :class:`straditize.widgets.data.DigitizingControl` to interface
+    #: the :straditize.straditizer.Straditizer.data_reader`
+    digitizer = None
+
+    #: The :class:`straditize.widgets.colnames.ColumnNamesManager` to interface
+    #: the :straditize.straditizer.Straditizer.colnames_reader`
+    colnames_manager = None
+
+    #: The :class:`straditize.widgets.axes_translations.AxesTranslations` to
+    #: handle the y- and x-axis conversions
+    axes_translations = None
+
+    #: The :class:`straditize.widgets.image_correction.ImageRescaler` class to
+    #: rescale the image
+    image_rescaler = None
+
+    #: The :class:`straditize.widgets.image_correction.ImageRotator` class to
+    #: rotate the image
+    image_rotator = None
+
+    #: The :class:`straditize.widgets.plots.PlotControl` to display additional
+    #: information on the diagram
+    plot_control = None
+
+    #: The :class:`straditize.widgets.marker_control.MarkerControl` to modify
+    #: the appearance of the :class:`~straditize.straditizer.Straditizer.marks`
+    #: of the current straditizer
+    marker_control = None
+
+    #: The :class:`straditize.widgets.selection_toolbar.SelectionToolbar` to
+    #: select features in the stratigraphic diagram
+    selection_toolbar = None
 
     #: The :class:`straditize.straditizer.Straditizer` instance
     straditizer = None
@@ -272,6 +419,10 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.refresh_button.setEnabled(True)
 
     def switch_to_straditizer_layout(self):
+        """Switch to the straditizer layout
+
+        This method makes this widget visible and stacks it with the psyplot
+        content widget"""
         mainwindow = self.dock.parent()
         mainwindow.figures_tree.hide_plugin()
         mainwindow.ds_tree.hide_plugin()
@@ -304,6 +455,8 @@ class StraditizerWidgets(QWidget, DockMixin):
         return ret
 
     def show_or_hide_toolbar(self):
+        """Show or hide the toolbar depending on the visibility of this widget
+        """
         self.selection_toolbar.setVisible(self.is_shown)
 
     def _create_straditizer_from_args(self, args):
@@ -314,29 +467,42 @@ class StraditizerWidgets(QWidget, DockMixin):
     def create_straditizer_from_args(
                 self, fnames, project=None, xlim=None, ylim=None, full=False,
                 reader_type='area'):
-            fname = fnames[0]
-            if fname is not None:
-                self.menu_actions.open_straditizer(fname)
-                stradi = self.straditizer
-                if stradi is None:
-                    return
-                if xlim is not None:
-                    stradi.data_xlim = xlim
-                if ylim is not None:
-                    stradi.data_ylim = ylim
-                if xlim is not None or ylim is not None or full:
-                    if stradi.data_xlim is None:
-                        stradi.data_xlim = [0, np.shape(stradi.image)[1]]
-                    if stradi.data_ylim is None:
-                        stradi.data_ylim = [0, np.shape(stradi.image)[0]]
-                    stradi.init_reader(reader_type)
-                    stradi.data_reader.digitize()
-                self.refresh()
-            if not self.is_shown:
-                self.switch_to_straditizer_layout()
-            return fname is not None
+        """Create a straditizer from the given file name
+
+        This method is called when the :attr:`psyplot_gui.main.mainwindow`
+        receives a 'straditize' callback"""
+        fname = fnames[0]
+        if fname is not None:
+            self.menu_actions.open_straditizer(fname)
+            stradi = self.straditizer
+            if stradi is None:
+                return
+            if xlim is not None:
+                stradi.data_xlim = xlim
+            if ylim is not None:
+                stradi.data_ylim = ylim
+            if xlim is not None or ylim is not None or full:
+                if stradi.data_xlim is None:
+                    stradi.data_xlim = [0, np.shape(stradi.image)[1]]
+                if stradi.data_ylim is None:
+                    stradi.data_ylim = [0, np.shape(stradi.image)[0]]
+                stradi.init_reader(reader_type)
+                stradi.data_reader.digitize()
+            self.refresh()
+        if not self.is_shown:
+            self.switch_to_straditizer_layout()
+        return fname is not None
 
     def start_tutorial(self, state, tutorial_cls=None):
+        """Start or stop the tutorial
+
+        Parameters
+        ----------
+        state: bool
+            If False, the tutorial is stopped. Otherwise it is started
+        tutorial_cls: straditize.widgets.tutorial.beginner.Tutorial
+            The tutorial class to use. If None, it will be asked in a
+            QInputDialog"""
         if self.tutorial is not None or not state:
             self.tutorial.close()
             self.tutorial_button.setText('Tutorial')
@@ -362,6 +528,10 @@ class StraditizerWidgets(QWidget, DockMixin):
             self.tutorial_button.setText('Stop tutorial')
 
     def edit_attrs(self):
+        """Edit the attributes of the current straditizer
+
+        This creates a new dataframe editor to edit the
+        :attr:`straditize.straditizer.Straditizer.attrs` meta informations"""
         def add_attr(key):
             model = editor.table.model()
             n = len(attrs)
@@ -418,8 +588,21 @@ class StraditizerWidgets(QWidget, DockMixin):
         except KeyError:
             pass
 
+    docstrings.delete_params('InfoButton.parameters', 'parent')
+
+    @docstrings.get_sectionsf('StraditizerWidgets.add_info_button')
+    @docstrings.with_indent(8)
     def add_info_button(self, child, fname=None, rst=None, name=None,
                         connections=[]):
+        """Add an infobutton to the :attr:`tree` widget
+
+        Parameters
+        ----------
+        child: QTreeWidgetItem
+            The item to which to add the infobutton
+        %(InfoButton.parameters.no_parent)s
+        connections: list of QPushButtons
+            Buttons that should be clicked when the info button is clicked"""
         button = InfoButton(self, fname=fname, rst=rst, name=name)
         self.tree.setItemWidget(child, 1, button)
         for btn in connections:
@@ -427,6 +610,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         return button
 
     def raise_figures(self):
+        """Raise the figures of the current straditizer in the GUI"""
         from psyplot_gui.main import mainwindow
         if mainwindow.figures and self.straditizer:
             dock = self.straditizer.ax.figure.canvas.manager.window
@@ -451,6 +635,7 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.autosaved.clear()
 
     def _close_stradi(self, stradi):
+        """Close the given straditizer and all it's figures"""
         is_current = stradi is self.straditizer
         if is_current:
             self.selection_toolbar.disconnect()
@@ -473,9 +658,11 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.digitizer.toggle_txt_tolerance('')
 
     def close_straditizer(self):
+        """Close the current straditizer"""
         self._close_stradi(self.straditizer)
 
     def close_all_straditizers(self):
+        """Close all straditizers"""
         self.selection_toolbar.disconnect()
         for stradi in self._straditizers:
             stradi.close()
@@ -489,12 +676,14 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.refresh()
 
     def add_straditizer(self, stradi):
+        """Add a straditizer to the list of open straditizers"""
         if stradi and stradi not in self._straditizers:
             self._straditizers.append(stradi)
             self.stradi_combo.addItem(' ')
             self.set_current_stradi(len(self._straditizers) - 1)
 
     def reset_control(self):
+        """Reset the GUI of straditize"""
         if getattr(self.selection_toolbar, '_pattern_selection', None):
             self.selection_toolbar._pattern_selection.dock.close()
             del self.selection_toolbar._pattern_selection
@@ -511,10 +700,12 @@ class StraditizerWidgets(QWidget, DockMixin):
         self.colnames_manager.reset_control()
 
     def autosave(self):
+        """Autosave the current straditizer"""
         self.autosaved = [self.straditizer.to_dataset().copy(True)] + \
             self.autosaved[:4]
 
     def reload_autosaved(self):
+        """Reload the autosaved straditizer and close the old one"""
         from straditize.straditizer import Straditizer
         if not self.autosaved:
             return
@@ -534,12 +725,17 @@ class StraditizerControlBase(object):
     #: A list of widgets to disable or enable if the apply_button is enabled
     widgets2disable = []
 
+    #: The :class:`StraditizierWidgets` control
+    straditizer_widgets = None
+
     @property
     def straditizer(self):
+        """The current straditizer from the :attr:`straditizer_widgets`"""
         return self.straditizer_widgets.straditizer
 
     @straditizer.setter
     def straditizer(self, value):
+        """The current straditizer from the :attr:`straditizer_widgets`"""
         self.straditizer_widgets.straditizer = value
         self.straditizer_widgets.add_straditizer(value)
 
@@ -552,13 +748,30 @@ class StraditizerControlBase(object):
 
     @property
     def apply_button(self):
+        """The apply button of the :attr:`straditizer_widgets`"""
         return self.straditizer_widgets.apply_button
 
     @property
     def cancel_button(self):
+        """The cancel button of the :attr:`straditizer_widgets`"""
         return self.straditizer_widgets.cancel_button
 
+    @docstrings.get_sectionsf('StraditizerControlBase.init_straditizercontrol')
     def init_straditizercontrol(self, straditizer_widgets, item=None):
+        """Initialize the straditizer control widget
+
+        This method should be called by every subclass when initializing. It
+        sets the :attr:`straditizer_widgets`, connects the
+        :meth:`enable_or_disable_widgets` method and adds a new item to the
+        :attr:`StraditizerWidgets.tree`
+
+        Parameters
+        ----------
+        straditizer_widgets: StraditizerWidgets
+            The main widget for the straditizer GUI
+        item: QTreeWidgetItem
+            The parent item in the :attr:`StraditizerWidgets.tree`. If given,
+            the :meth:`setup_children` is called with this item"""
         self.straditizer_widgets = straditizer_widgets
         self.control_item = item
         if item is not None:
@@ -567,11 +780,30 @@ class StraditizerControlBase(object):
         self.apply_button.enabled.connect(self.enable_or_disable_widgets)
 
     def setup_children(self, item):
+        """Setup the children for this control
+
+        This method is called to setup the children in the
+        :attr:`StraditizerWidgets.tree`. By default, it just creates a child
+        QTreeWidgetItem and sets this control as it's widget
+
+        Parameters
+        ----------
+        item: QTreeWidgetItem
+            The top level item in the :attr:`StraditizerWidgets.tree`"""
         child = QTreeWidgetItem(0)
         item.addChild(child)
         self.straditizer_widgets.tree.setItemWidget(child, 0, self)
 
     def enable_or_disable_widgets(self, b):
+        """Enable or disable the widgets in this control
+
+        This method enables or disables the :attr:`widgets2disable` if
+        the :meth:`should_be_enabled` method evaluates to True
+
+        Parameters
+        ----------
+        b: bool
+            If True, enable the widgets, if False, disable them"""
         if not b:  # use only those widget, that should be enabled
             it = filter(self.should_be_enabled, self.widgets2disable)
         else:
@@ -602,6 +834,13 @@ class StraditizerControlBase(object):
             w.setEnabled(self.should_be_enabled(w))
 
     def connect2apply(self, *funcs):
+        """Connect the functions to the :attr:`apply_button`
+
+        Parameters
+        ----------
+        ``*funcs``
+            The callables that should be connected to the :attr:`apply_button`
+        """
         btn = self.apply_button
         btn.clicked.connect(self.straditizer_widgets.autosave)
         for func in funcs:
@@ -611,6 +850,13 @@ class StraditizerControlBase(object):
         self.straditizer_widgets.refresh_button.setEnabled(False)
 
     def connect2cancel(self, *funcs):
+        """Connect the functions to the :attr:`cancel_button`
+
+        Parameters
+        ----------
+        ``*funcs``
+            The callables that should be connected to the :attr:`cancel_button`
+        """
         btn = self.cancel_button
         for func in funcs:
             btn.clicked.connect(func)
@@ -618,38 +864,14 @@ class StraditizerControlBase(object):
         btn.setEnabled(True)
         self.straditizer_widgets.refresh_button.setEnabled(False)
 
+    @docstrings.with_indent(8)
     def add_info_button(self, child, fname=None, rst=None, name=None,
                         connections=[]):
+        """Add an info button to the given QTreeWidgetItem
+
+        Parameters
+        ----------
+        %(StraditizerWidgets.add_info_button.parameters)s
+        """
         return self.straditizer_widgets.add_info_button(
             child, fname, rst, name, connections)
-
-
-class InfoButton(QToolButton):
-    """A button to display help informations in the help explorer"""
-
-    def __init__(self, parent, fname=None, rst=None, name=None):
-        if fname is None and rst is None:
-            raise ValueError("Either `fname` or `rst` must be specified!")
-        elif fname is not None and rst is not None:
-            raise ValueError("Either `fname` or `rst` must be specified! "
-                             "Not both!")
-        elif rst is not None and name is None:
-            raise ValueError("A title must be specified for the rst document!")
-        self.fname = fname
-        self.rst = rst
-        self.files = doc_files
-        self.name = name
-        QToolButton.__init__(self, parent)
-        self.setIcon(QIcon(get_psy_icon('info.png')))
-        self.clicked.connect(self.show_docs)
-
-    def show_docs(self):
-        from psyplot_gui.main import mainwindow
-        if self.fname is not None:
-            rst = read_doc_file(self.fname)
-            name = osp.splitext(osp.basename(self.fname))[0]
-        else:
-            rst = self.rst
-            name = self.name
-        mainwindow.help_explorer.show_rst(
-            rst, name, files=list(set(self.files) - {self.fname}))

@@ -1,7 +1,24 @@
 """Progress widget for the straditization
 
 The ProgressWidget defined here is a ListWidget to show the current state
-of the stradititization"""
+of the stradititization.
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import os.path as osp
 import datetime as dt
 from PyQt5 import QtWidgets, QtGui, QtCore
@@ -593,6 +610,16 @@ class SaveProjectTask(ProgressTask):
 class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
     """A widget to show the progress of the straditization"""
 
+    #: A QListWidget to display the :class:`ProgressTask` instances
+    progress_list = None
+
+    #: A QComboBox to select which tasks to display (todo, done, not yet ready
+    #: or all tasks)
+    combo_display = None
+
+    #: A QLabel to display the tooltip of the selected task
+    info_label = None
+
     def __init__(self, straditizer_widgets, item):
         super().__init__()
         self.init_straditizercontrol(straditizer_widgets, item)
@@ -624,11 +651,31 @@ class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
         self.progress_list.currentItemChanged.connect(self.update_info_label)
 
     def update_info_label(self, item, old=None):
+        """Update the :attr:`info_label` from a :class:`ProgressTask`
+
+        Parameters
+        ----------
+        item: ProgressTask
+            The selected task whose tooltip the :attr:`info_label` shall
+            display
+        old: ProgressTask
+            The old task that has been selected previously (this parameter is
+            ignored)"""
         tt = item.toolTip()
         self.info_label.setText(tt)
         self.info_label.setVisible(bool(tt.strip()) and not item.isHidden())
 
     def show_rst(self, item, old=None):
+        """Show the documentation corresponding to a :class:`ProgressTask
+
+        Parameters
+        ----------
+        item: ProgressTask
+            The task to display it's :attr:`rst_file` in the
+            :attr:`psyplot_gui.main.MainWindow.help_explorer`
+        old: ProgressTask
+            The old task that has been selected previously (this parameter is
+            ignored)"""
         from psyplot_gui.main import mainwindow
         if item.rst_file:
             try:
@@ -642,6 +689,7 @@ class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
                     files=list(set(doc_files) - {item.rst_file}))
 
     def setup_menu(self):
+        """Set up the context menu"""
         self.menu = menu = QtWidgets.QMenu(self)
         self._done_action = menu.addAction(
             'Mark as done', self.toggle_done_by_user)
@@ -672,6 +720,10 @@ class ProgressWidget(QtWidgets.QWidget, StraditizerControlBase):
             event.accept()
 
     def populate_list(self):
+        """Populate the :attr:`progress_list`
+
+        This method adds instances of the :class:`ProgressTask` class (or it's
+        subclasses) to the the :attr:`progress_list`"""
         pl = self.progress_list
         pl.addItem(InitStraditizerTask(pl))
         pl.addItem(DataLimitsTask(pl))

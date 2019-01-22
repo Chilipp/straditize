@@ -1,4 +1,25 @@
-"""A wdiget to select patterns in the image"""
+"""A wdiget to select patterns in the image
+
+The :class:`PatternSelectionWidget` is used by the
+:class:`straditize.widget.selection_toolbar.SelectionToolbar` to select
+patterns in the straditizer image
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 from __future__ import division
 import numpy as np
 import datetime as dt
@@ -36,23 +57,53 @@ class EmbededMplCanvas(FigureCanvas):
 
 
 class PatternSelectionWidget(QWidget, DockMixin):
-    """A wdiget to select patterns in the image"""
+    """A wdiget to select patterns in the image
 
+    This widget consist of an :class:`EmbededMplCanvas` to display the template
+    for the pattern and uses the :func:`skimage.feature.match_template`
+    function to identify it in the :attr:`arr`
+
+    See Also
+    --------
+    straditize.widget.selection_toolbar.SelectionToolbar.start_pattern_selection
+    """
+
+    #: The template to look for in the :attr:`arr`
     template = None
 
+    #: The selector to select the template in the original image
     selector = None
 
+    #: The extents of the :attr:`template` in the original image
     template_extents = None
 
+    #: The matplotlib artist of the :attr:`template` in the
+    #: :attr:`template_fig`
     template_im = None
 
+    #: The :class:`EmbededMplCanvas` to display the :attr:`template`
+    template_fig = None
+
     axes = None
+
+    #: A QSlider to set the threshold for the template correlation
+    sl_thresh = None
 
     _corr_plot = None
 
     key_press_cid = None
 
     def __init__(self, arr, data_obj, remove_selection=False, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        arr: np.ndarray of shape ``(Ny, Nx)``
+            The labeled selection array
+        data_obj: straditize.label_selection.LabelSelection
+            The data object whose image shall be selected
+        remove_selection: bool
+            If True, remove the selection on apply
+        """
         super(PatternSelectionWidget, self).__init__(*args, **kwargs)
         self.arr = arr
         self.data_obj = data_obj
@@ -178,6 +229,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
             self.btn_correlate.setEnabled(True)
 
     def update_image(self, *args, **kwargs):
+        """Update the template image based on the :attr:`selector` extents"""
         if self.template_im is not None:
             self.template_im.remove()
             del self.template_im
@@ -222,6 +274,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
         self.btn_select.setEnabled(enable)
 
     def toggle_selection(self):
+        """Modifiy the selection (or not) based on the template correlation"""
         obj = self.data_obj
         if self.btn_select.isChecked():
             self._orig_selection_arr = obj._selection_arr.copy()
@@ -248,6 +301,13 @@ class PatternSelectionWidget(QWidget, DockMixin):
             obj.draw_figure()
 
     def modify_selection(self, i):
+        """Modify the selection based on the correlation threshold
+
+        Parameters
+        ----------
+        i: int
+            An integer between 0 and 100, the value of the :attr:`sl_thresh`
+            slider"""
         if not self.btn_select.isChecked():
             return
         obj = self.data_obj
@@ -267,6 +327,26 @@ class PatternSelectionWidget(QWidget, DockMixin):
 
     def correlate_template(self, arr, template, fraction=False, increment=1,
                            report=True):
+        """Correlate a template with the `arr`
+
+        This method uses the :func:`skimage.feature.match_template` function
+        to find the given `template` in the source array `arr`.
+
+        Parameters
+        ----------
+        arr: np.ndarray of shape ``(Ny,Nx)``
+            The labeled selection array (see :attr:`arr`), the source of the
+            given `template`
+        template: np.ndarray of shape ``(nx, ny)``
+            The template from ``arr`` that shall be searched
+        fraction: float
+            If not null, we will look through the given fraction of the
+            template to look for partial matches as well
+        increment: int
+            The increment of the loop with the `fraction`.
+        report: bool
+            If True and `fraction` is not null, a QProgressDialog is opened
+            to inform the user about the progress"""
         from skimage.feature import match_template
         mask = self.data_obj.selected_part
         x = mask.any(axis=0)
@@ -326,6 +406,8 @@ class PatternSelectionWidget(QWidget, DockMixin):
         return np.where(mask, ret, 0)
 
     def toggle_correlation_plot(self):
+        """Toggle the correlation plot between :attr:`template` and :attr:`arr`
+        """
         obj = self.data_obj
         if self._corr_plot is None:
             self._corr_plot = obj.ax.imshow(

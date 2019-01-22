@@ -1,10 +1,28 @@
 # -*- coding: utf-8 -*-
-"""Module for a cross mark to select one point in a matplotlib axes"""
+"""Module for a cross mark to select one point in a matplotlib axes
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import numpy as np
 import six
 from psyplot.data import Signal
 from psyplot.utils import _temp_bool_prop
 from itertools import chain, repeat, product
+from straditize.common import docstrings
 
 if six.PY2:
     from itertools import izip_longest as zip_longest
@@ -19,6 +37,7 @@ class CrossMarks(object):
 
     @property
     def fig(self):
+        """The :class:`matplotlib.figure.Figure` that this mark plots on"""
         return self.ax.figure
 
     @property
@@ -28,6 +47,7 @@ class CrossMarks(object):
 
     @y.setter
     def y(self, value):
+        """The y-position of the mark"""
         self.ya[self._i_hline] = value
 
     @property
@@ -37,14 +57,17 @@ class CrossMarks(object):
 
     @x.setter
     def x(self, value):
+        """The x-position of the mark"""
         self.xa[self._i_vline] = value
 
     @property
     def hline(self):
+        """The current horizontal line"""
         return self.hlines[self._i_hline]
 
     @property
     def vline(self):
+        """The current vertical line"""
         return self.vlines[self._i_vline]
 
     @property
@@ -55,6 +78,7 @@ class CrossMarks(object):
 
     @pos.setter
     def pos(self, value):
+        """The position of the current line"""
         self.xa[self._i_vline] = value[0] if np.ndim(value) else value
         self.ya[self._i_hline] = value[1] if np.ndim(value) else value
 
@@ -65,18 +89,22 @@ class CrossMarks(object):
 
     @property
     def line_connections(self):
+        """The line connections to the current position"""
         return self._all_line_connections[self._i_hline][self._i_vline]
 
     @line_connections.setter
     def line_connections(self, value):
+        """The line connections to the current position"""
         self._all_line_connections[self._i_hline][self._i_vline] = value
 
     @property
     def other_connections(self):
+        """All other connections to the current position"""
         return self._all_other_connections[self._i_hline][self._i_vline]
 
     @other_connections.setter
     def other_connections(self, value):
+        """All other connections to the current position"""
         self._all_other_connections[self._i_hline][self._i_vline] = value
 
     @property
@@ -86,6 +114,7 @@ class CrossMarks(object):
 
     @idx_h.setter
     def idx_h(self, value):
+        """The index for vertical lines"""
         if self._idx_h is None:
             self._idx_h = [None] * len(self.xa)
         self._idx_h[self._i_vline] = value
@@ -97,6 +126,7 @@ class CrossMarks(object):
 
     @idx_v.setter
     def idx_v(self, value):
+        """The index for horizontal lines"""
         if self._idx_v is None:
             self._idx_v = [None] * len(self.ya)
         self._idx_v[self._i_hline] = value
@@ -128,18 +158,36 @@ class CrossMarks(object):
     #: The matplotlib axes to plot on
     ax = None
 
+    #: The x-limits of the :attr:`hlines`
     xlim = None
+
+    #: The x-limits of the :attr:`vlines`
     ylim = None
+
+    #: Class attribute that is set to a :class:`CrossMark` instance to lock the
+    #: selection of marks
     lock = None
 
     #: A boolean to control whether the connected artists should be shown
     #: at all
     show_connected_artists = True
 
+    #: a list of :class:`matplotlib.artist.Artist` whose colors are changed
+    #: when this mark is selected
+    connected_artists = []
+
     #: The default properties of the unselected mark, complementing the
     #: :attr:`_select_props`
     _unselect_props = {}
 
+    #: the list of horizontal lines
+    hlines = []
+
+    #: the list of vertical lines
+    vlines = []
+
+    @docstrings.get_sectionsf('CrossMarks')
+    @docstrings.dedent
     def __init__(self, pos=(0, 0), ax=None, selectable=['h', 'v'],
                  draggable=['h', 'v'], idx_h=None, idx_v=None,
                  xlim=None, ylim=None, select_props={'c': 'r'},
@@ -191,8 +239,7 @@ class CrossMarks(object):
             If None, the default class attribute is used
         ``**kwargs``
             Any other keyword argument that is passed to the
-            :func:`matplotlib.pyplot.plot` function
-        """
+            :func:`matplotlib.pyplot.plot` function"""
         self.xa = np.asarray([pos[0]] if not np.ndim(pos[0]) else pos[0],
                              dtype=float)
         self.ya = np.asarray([pos[1]] if not np.ndim(pos[1]) else pos[1],
@@ -244,14 +291,26 @@ class CrossMarks(object):
             self.ax = ax
 
     def set_connected_artists(self, artists):
-        """Set the connected artists"""
+        """Set the connected artists
+
+        Parameters
+        ----------
+        artists: matplotlib.artist.Artist
+            The artists (e.g. other lines) that should be connected and
+            highlighted if this mark is selected"""
         self.connected_artists = artists
         self._connected_artists_props = [
             {key: getattr(a, 'get_' + key)() for key in self._select_props}
             for a in artists]
 
     def draw_lines(self, **kwargs):
-        """Draw the vertical and horizontal lines"""
+        """Draw the vertical and horizontal lines
+
+        Parameters
+        ----------
+        ``**kwargs``
+            An keyword that is passed to the :func:`matplotlib.pyplot.plot`
+            function"""
         if kwargs:
             self._line_kwargs = kwargs
         else:
@@ -314,6 +373,13 @@ class CrossMarks(object):
                 l.set_lw(0)
 
     def set_visible(self, b):
+        """Set the visibility of the mark
+
+        Parameters
+        ----------
+        b: bool
+            If False, hide all horizontal and vertical lines, and the
+            :attr:`connected_artists`"""
         for l in self.hlines:
             l.set_visible(b and not self.hide_horizontal)
         for l in self.vlines:
@@ -465,6 +531,13 @@ class CrossMarks(object):
 
     def is_selected_by(self, event, buttons=[1]):
         """Test if the given `event` selects the mark
+
+        Parameters
+        ----------
+        event: matplotlib.backend_bases.MouseEvent
+            The matplotlib event
+        button: list of int
+            Possible buttons to select this mark
 
         Returns
         -------
@@ -692,7 +765,7 @@ class CrossMarks(object):
         force: bool
             If True, the mark is released although it does not contain
             the `event`
-        move_connected: bool
+        connected: bool
             If True, connected marks that should maintain a constant x- and
             y-distance are released, too
         draw: bool
@@ -745,7 +818,13 @@ class CrossMarks(object):
         fig.canvas.mpl_disconnect(self.cidmotion)
 
     def remove(self, artists=True):
-        """Remove all lines and disconnect the mark"""
+        """Remove all lines and disconnect the mark
+
+        Parameters
+        ----------
+        artists: bool
+            If True, the :attr:`connected_artists` list is cleared and the
+            corresponding artists are removed as well"""
         for l in chain(self.hlines, self.vlines,
                        self.connected_artists if artists else [],
                        chain.from_iterable(chain.from_iterable(
@@ -814,6 +893,11 @@ class DraggableHLine(CrossMarks):
 
     hide_vertical = True
 
+    docstrings.delete_params('CrossMarks.parameters', 'pos', 'ax',
+                             'selectable', 'draggable')
+
+    @docstrings.get_sectionsf('DraggableHLine')
+    @docstrings.dedent
     def __init__(self, y, ax=None, *args, **kwargs):
         """
         Parameters
@@ -822,6 +906,7 @@ class DraggableHLine(CrossMarks):
             The y-position for the horizontal line
         ax: matplotlib.axes.Axes
             The matplotlib axes
+        %(CrossMarks.parameters.no_pos|ax|selectable|draggable)s
         """
         if ax is None:
             import matplotlib.pyplot as plt
@@ -858,6 +943,8 @@ class DraggableVLine(CrossMarks):
 
     hide_horizontal = True
 
+    @docstrings.get_sectionsf('DraggableVLine')
+    @docstrings.dedent
     def __init__(self, x, ax=None, *args, **kwargs):
         """
         Parameters
@@ -866,6 +953,7 @@ class DraggableVLine(CrossMarks):
             The x-position for the vertical line
         ax: matplotlib.axes.Axes
             The matplotlib axes
+        %(CrossMarks.parameters.no_pos|ax|selectable|draggable)s
         """
         if ax is None:
             import matplotlib.pyplot as plt
@@ -892,11 +980,32 @@ class DraggableVLine(CrossMarks):
             a.set_visible(show_connected)
 
 
+docstrings.params['CrossMarksText.parameters.new'] = """
+dtype: object
+    The data type for the data conversion
+message: str
+    The message to display in the dialog
+label: str
+    The label to how this value should be named
+value: float
+    The initial value to use""".strip()
+
+
 class CrossMarkText(CrossMarks):
     """A CrossMarks that opens a QInputDialog after changing the position
     """
 
+    #: The value of this cross mark
+    value = None
+
+    @docstrings.get_sectionsf('CrossMarkText')
+    @docstrings.dedent
     def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(CrossMarks.parameters)s
+        %(CrossMarksText.parameters.new)s"""
         self.dtype = kwargs.pop('dtype', str)
         self.message = kwargs.pop('message',
                                   'Enter the value for this position')
@@ -905,6 +1014,16 @@ class CrossMarkText(CrossMarks):
         super(CrossMarkText, self).__init__(*args, **kwargs)
 
     def ask_for_value(self, val=None, label=None):
+        """Ask for a value for the cross mark
+
+        This method opens a QInputDialog to ask for a new :attr:`value`
+
+        Parameters
+        ----------
+        val: float
+            The initial value
+        label: str
+            the name of what to ask for"""
         from psyplot_gui.compat.qtcompat import QInputDialog, QLineEdit
         from psyplot_gui.main import mainwindow
         initial = str(val) if val is not None else ''
@@ -915,12 +1034,15 @@ class CrossMarkText(CrossMarks):
             self.value = self.dtype(value)
 
     def on_release(self, event, *args, **kwargs):
-        # ask for the value if the shift key is not pressed
+        """reimplemented to ask for the value if the shift key is not pressed
+        """
         if (kwargs.get('ask', True) and self.press is not None and
                 event.key != 'shift'):
             self.ask_for_value()
         kwargs['ask'] = False
         super(CrossMarkText, self).on_release(event, *args, **kwargs)
+
+    on_release.__doc__ = CrossMarks.on_release.__doc__
 
     def __reduce__(self):
         ret = super(CrossMarkText, self).__reduce__()
@@ -933,7 +1055,13 @@ class DraggableHLineText(DraggableHLine):
     """A CrossMarks that opens a QInputDialog after changing the position
     """
 
+    @docstrings.dedent
     def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(DraggableHLine.parameters)s
+        %(CrossMarksText.parameters.new)s"""
         self.dtype = kwargs.pop('dtype', str)
         self.message = kwargs.pop('message',
                                   'Enter the value for this position')
@@ -949,6 +1077,8 @@ class DraggableHLineText(DraggableHLine):
         kwargs['ask'] = False
         super(DraggableHLineText, self).on_release(event, *args, **kwargs)
 
+    on_release.__doc__ = CrossMarks.on_release.__doc__
+
     def ask_for_value(self, val=None, label=None):
         from psyplot_gui.compat.qtcompat import QInputDialog, QLineEdit
         from psyplot_gui.main import mainwindow
@@ -958,6 +1088,8 @@ class DraggableHLineText(DraggableHLine):
             initial)
         if ok:
             self.value = self.dtype(value)
+
+    ask_for_value.__doc__ = CrossMarkText.ask_for_value.__doc__
 
     def __reduce__(self):
         ret = super(DraggableHLineText, self).__reduce__()
@@ -972,7 +1104,13 @@ class DraggableVLineText(DraggableVLine):
     """A CrossMarks that opens a QInputDialog after changing the position
     """
 
+    @docstrings.dedent
     def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(DraggableVLine.parameters)s
+        %(CrossMarksText.parameters.new)s"""
         self.dtype = kwargs.pop('dtype', str)
         self.message = kwargs.pop('message',
                                   'Enter the value for this position')
@@ -988,6 +1126,8 @@ class DraggableVLineText(DraggableVLine):
         kwargs['ask'] = False
         super(DraggableVLineText, self).on_release(event, *args, **kwargs)
 
+    on_release.__doc__ = CrossMarks.on_release.__doc__
+
     def ask_for_value(self, val=None, label=None):
         from psyplot_gui.compat.qtcompat import QInputDialog, QLineEdit
         from psyplot_gui.main import mainwindow
@@ -997,6 +1137,8 @@ class DraggableVLineText(DraggableVLine):
             initial)
         if ok:
             self.value = self.dtype(value)
+
+    ask_for_value.__doc__ = CrossMarkText.ask_for_value.__doc__
 
     def __reduce__(self):
         ret = super(DraggableVLineText, self).__reduce__()

@@ -1,4 +1,21 @@
 """The main control widget for a straditizer
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 import os.path as osp
@@ -8,16 +25,15 @@ from itertools import chain
 import datetime as dt
 import six
 from straditize.widgets import StraditizerControlBase
-from straditize.common import rgba2rgb
+from straditize.common import rgba2rgb, docstrings
 from psyplot_gui.compat.qtcompat import (
     with_qt5, QFileDialog, QMenu, QKeySequence, QDialog, QDialogButtonBox,
     QLineEdit, QToolButton, QIcon, QCheckBox, QHBoxLayout, QVBoxLayout, QLabel,
-    QDesktopWidget, QPushButton, QTreeWidgetItem, Qt, QMessageBox)
+    QDesktopWidget, QTreeWidgetItem, Qt, QMessageBox)
 from PyQt5 import QtWidgets
 from psyplot_gui.common import get_icon
 import numpy as np
 from PIL import Image
-from straditize.widgets import get_straditizer_widgets
 
 straditizer = None
 
@@ -27,7 +43,9 @@ _updating = []
 
 
 class ExportDfDialog(QDialog):
+    """A QDialog to export a :class:`pandas.DataFrame` to Excel or CSV"""
 
+    @docstrings.get_sectionsf('ExportDfDialog')
     def __init__(self, df, straditizer, fname=None, *args, **kwargs):
         """
         Parameters
@@ -81,6 +99,7 @@ class ExportDfDialog(QDialog):
             self._export()
 
     def get_open_file_name(self):
+        """Ask the user for a filename for saving the data frame"""
         def check_current():
             dirname = osp.dirname(current)
             if osp.exists(dirname) and osp.isdir(dirname):
@@ -140,8 +159,15 @@ class ExportDfDialog(QDialog):
         super().accept()
 
     @classmethod
+    @docstrings.dedent
     def export_df(cls, parent, df, straditizer, fname=None, exec_=True):
-        """Open a dialog for exporting a DataFrame"""
+        """Open a dialog for exporting a DataFrame
+
+        Parameters
+        ----------
+        parent: QWidget
+            The parent widget
+        %(ExportDfDialog.parameters)s"""
         dialog = cls(df, straditizer, fname, parent=parent)
         if fname is None:
             available_width = QDesktopWidget().availableGeometry().width() / 3.
@@ -161,8 +187,17 @@ class StraditizerMenuActions(StraditizerControlBase):
 
     This object is creates menu actions to load the straditizer"""
 
-    save_actions = data_actions = text_actions = []
+    #: The QActions to save the straditizer, straditizer image, etc.
+    save_actions = []
 
+    #: The QActions to save the exported DataFrames and data images
+    data_actions = []
+
+    #: The QActions to save the column names images
+    text_actions = []
+
+    #: The action to
+    #: :meth:`~straditize.widgets.StraditizerWidgets.switch_to_straditizer_layout`
     window_layout_action = None
 
     #: The path to a directory from where to open a straditizer. Is set in the
@@ -171,6 +206,8 @@ class StraditizerMenuActions(StraditizerControlBase):
 
     @property
     def all_actions(self):
+        """:attr:`save_actions`, :attr:`data_actions` and :attr:`text_actions`
+        """
         return chain(self.save_actions, self.data_actions, self.text_actions)
 
     def __init__(self, straditizer_widgets):
@@ -285,7 +322,12 @@ class StraditizerMenuActions(StraditizerControlBase):
         self.refresh()
 
     def setup_shortcuts(self, main):
-        """Setup the shortcuts when switched to the straditizer layout"""
+        """Setup the shortcuts when switched to the straditizer layout
+
+        Parameters
+        ----------
+        main: psyplot_gui.main.MainWindow
+            The psyplot mainwindow"""
         main.register_shortcut(self.save_straditizer_action, QKeySequence.Save)
         main.register_shortcut(self.save_straditizer_as_action,
                                QKeySequence.SaveAs)
@@ -332,30 +374,21 @@ class StraditizerMenuActions(StraditizerControlBase):
                 return osp.splitext(current)[0]
         return os.getcwd()
 
-    def import_full_image(self, fname=None):
-        image = self._open_image(fname)
-        if image is not None:
-            if self.straditizer is None:
-                self.open_straditizer(image)
-            else:
-                self.straditizer.reset_image(image)
-
-    def import_data_image(self, fname=None):
-        image = self._open_image(fname)
-        if image is not None:
-            self.straditizer.data_reader.reset_image(image)
-
-    def import_binary_image(self, fname=None):
-        image = self._open_image(fname)
-        if image is not None:
-            self.straditizer.data_reader.reset_image(image, binary=True)
-
-    def import_text_image(self, fname):
-        image = self._open_image(fname)
-        if image is not None:
-            self.straditizer.colnames_reader.highres_image = image
-
+    @docstrings.get_sectionsf('StraditizerMenuActions._open_image')
     def _open_image(self, fname=None):
+        """Open an image file
+
+        Parameters
+        ----------
+        fname: :class:`str`, :class:`PIL.Image.Image` or ``None``
+            The path of the image file or the :class:`PIL.Image.Image`. If
+            None, a QFileDialog is opened to request the file from the user.
+
+        Returns
+        -------
+        PIL.Image.Image
+            The image file or None if the operation has been cancelled by the
+            user"""
         if fname is None or (not isinstance(fname, six.string_types) and
                              np.ndim(fname) < 2):
             fname = QFileDialog.getOpenFileName(
@@ -379,7 +412,100 @@ class StraditizerMenuActions(StraditizerControlBase):
             from PIL import Image
             return Image.open(fname)
 
+    @docstrings.with_indent(8)
+    def import_full_image(self, fname=None):
+        """Import the straditizer image from an external file
+
+        This method imports the
+        :attr:`straditize.straditizer.Straditizer.image` from an external
+        file and sets it to the current straditizer.
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._open_image.parameters)s"""
+        image = self._open_image(fname)
+        if image is not None:
+            if self.straditizer is None:
+                self.open_straditizer(image)
+            else:
+                self.straditizer.reset_image(image)
+
+    @docstrings.with_indent(8)
+    def import_data_image(self, fname=None):
+        """Import the data reader image from an external file
+
+        This method imports the
+        :attr:`straditize.binary.DataReader.image` from an external
+        file and sets it to the current
+        :attr:`~straditize.straditizer.Straditizer.data_reader`.
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._open_image.parameters)s
+
+        See Also
+        --------
+        import_binary_image: To import the binary file"""
+        image = self._open_image(fname)
+        if image is not None:
+            self.straditizer.data_reader.reset_image(image)
+
+    @docstrings.with_indent(8)
+    def import_binary_image(self, fname=None):
+        """Import the binary data reader image from an external file
+
+        This method imports the
+        :attr:`straditize.binary.DataReader.binary` from an external
+        file and sets it to the current
+        :attr:`~straditize.straditizer.Straditizer.data_reader`.
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._open_image.parameters)s"""
+        image = self._open_image(fname)
+        if image is not None:
+            self.straditizer.data_reader.reset_image(image, binary=True)
+
+    @docstrings.with_indent(8)
+    def import_text_image(self, fname):
+        """Import the column names reader image from an external file
+
+        This method imports the
+        :attr:`straditize.colnames.ColNamesReader.highres_image` from an
+        external file and sets it to the current
+        :attr:`~straditize.straditizer.Straditizer.colnames_reader`.
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._open_image.parameters)s"""
+        image = self._open_image(fname)
+        if image is not None:
+            self.straditizer.colnames_reader.highres_image = image
+
     def open_straditizer(self, fname=None, *args, **kwargs):
+        """Open a straditizer from an image or project file
+
+        Parameters
+        ----------
+        fname: :class:`str`, :class:`PIL.Image.Image` or ``None``
+            The path to the file to import. If None, a QFileDialog is opened
+            and the user is asked for a file name. The action then depends on
+            the ending of ``fname``:
+
+            ``'.nc'`` or ``'.nc4'``
+                we expect a netCDF file and open it with
+                :func:`xarray.open_dataset` and load the straditizer with the
+                :meth:`straditize.straditizer.Straditizer.from_dataset`
+                constructor
+            ``'.pkl'``
+                We expect a pickle file and load the straditizer with
+                :func:`pickle.load`
+            any other ending
+                We expect an image file and use the :func:`PIL.Image.open`
+                function
+
+            At the end, the loading is finished with the :meth:`finish_loading`
+            method"""
         from straditize.straditizer import Straditizer
         if fname is None or (not isinstance(fname, six.string_types) and
                              np.ndim(fname) < 2):
@@ -445,6 +571,17 @@ class StraditizerMenuActions(StraditizerControlBase):
         self._dirname_to_use = None
 
     def finish_loading(self, stradi):
+        """Finish the opening of a straditizer
+
+        This method sets the
+        :attr:`straditizer.widgets.StraditizerWidgets.straditizer`, shows the
+        straditizer image, creates the navigation sliders and sets the
+        straditizer in the console
+
+        Parameters
+        ----------
+        stradi: straditize.straditizer.Straditizer
+            The straditizer that just has been opened"""
         self.straditizer = stradi
         stradi.show_full_image()
         self.create_sliders(stradi)
@@ -453,7 +590,12 @@ class StraditizerMenuActions(StraditizerControlBase):
         self.straditizer_widgets.refresh()
 
     def create_sliders(self, stradi):
-        """Create sliders to navigate in the given axes"""
+        """Create sliders to navigate in the given axes
+
+        Parameters
+        ----------
+        stradi: straditize.straditizer.Straditizer
+            The straditizer that just has been opened"""
         ax = stradi.ax
         try:
             manager = ax.figure.canvas.manager
@@ -502,7 +644,19 @@ class StraditizerMenuActions(StraditizerControlBase):
 
     @staticmethod
     def set_ax_xlim(ax_ref):
-        """Define a function to update xlim from a given centered value"""
+        """Define a function to update xlim from a given centered value
+
+        Parameters
+        ----------
+        ax_ref: matplotlib.axes.Axes
+            The axes whose x-limits to update when the returned function is
+            called
+
+        Returns
+        -------
+        callable
+            The function that can be called with a `val` to set the x-center
+            of the `ax_ref`"""
         def update(val):
             ax = ax_ref()
             if ax in _updating or ax is None:
@@ -518,7 +672,19 @@ class StraditizerMenuActions(StraditizerControlBase):
 
     @staticmethod
     def set_ax_ylim(ax_ref):
-        """Define a function to update ylim from a given centered value"""
+        """Define a function to update ylim from a given centered value
+
+        Parameters
+        ----------
+        ax_ref: matplotlib.axes.Axes
+            The axes whose y-limits to update when the returned function is
+            called
+
+        Returns
+        -------
+        callable
+            The function that can be called with a `val` to set the y-center
+            of the `ax_ref`"""
         def update(val):
             ax = ax_ref()
             if ax in _updating or ax is None:
@@ -535,6 +701,15 @@ class StraditizerMenuActions(StraditizerControlBase):
     @staticmethod
     def update_x_navigation_sliders(ax):
         """Update the horizontal navigation slider for the given `ax``
+
+        Set the horizontal slider of the straditizer figure depending on the
+        x-limits of it's corresponding axes
+
+        Parameters
+        ----------
+        ax: matplotlib.axes.Axes
+            The :attr:`straditize.straditizer.Straditizer.ax` attribute of a
+            straditizer
         """
         w = ax.figure.canvas.manager.window.widget()
         slh = w.layout().itemAt(1).widget()
@@ -546,6 +721,15 @@ class StraditizerMenuActions(StraditizerControlBase):
     @staticmethod
     def update_y_navigation_sliders(ax):
         """Update the vertical navigation slider for the given `ax``
+
+        Set the vertical slider of the straditizer figure depending on the
+        y-limits of it's corresponding axes
+
+        Parameters
+        ----------
+        ax: matplotlib.axes.Axes
+            The :attr:`straditize.straditizer.Straditizer.ax` attribute of a
+            straditizer
         """
         w = ax.figure.canvas.manager.window.widget()
         slv = w.layout().itemAt(0).itemAt(1).widget()
@@ -554,6 +738,7 @@ class StraditizerMenuActions(StraditizerControlBase):
         slv.setValue(max(0, min(slv.maximum(), int(round(yc)))))
 
     def stack_zoom_window(self):
+        """Stack the magnifier image above the help explorer"""
         from psyplot_gui.main import mainwindow
         if mainwindow.figures:
             found = False
@@ -580,6 +765,10 @@ class StraditizerMenuActions(StraditizerControlBase):
             mainwindow.figures[-1].raise_()
 
     def from_clipboard(self):
+        """Open a straditizer from an Image in the clipboard
+
+        This method uses the :func:`PIL.ImageGrab.grabclipboard` function to
+        open a new straditizer from the clipboard."""
         from PIL import ImageGrab
         from straditize.straditizer import Straditizer
         image = ImageGrab.grabclipboard()
@@ -589,6 +778,7 @@ class StraditizerMenuActions(StraditizerControlBase):
         return self.finish_loading(stradi)
 
     def save_straditizer(self):
+        """Save the straditizer to a file"""
         try:
             fname = self.straditizer.attrs.loc['project_file', 0]
         except KeyError:
@@ -596,6 +786,22 @@ class StraditizerMenuActions(StraditizerControlBase):
         return self.save_straditizer_as(fname)
 
     def save_straditizer_as(self, fname=None):
+        """Save the straditizer to a file
+
+        Parameters
+        ----------
+        fname: str or ``None``
+            If None, a QFileDialog is opened and the user has to provide a
+            filename. The final action then depends on the ending of the
+            chose file:
+
+            ``'.pkl'``
+                We save the straditizer with :meth:`pickle.dump`
+            else
+                We use the
+                :meth:`straditize.straditizer.Straditizer.to_dataset` method
+                and save the resulting dataset using the
+                :meth:`xarray.Dataset.to_netcdf` method"""
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getSaveFileName(
                 self.straditizer_widgets, 'Straditizer file destination',
@@ -620,31 +826,17 @@ class StraditizerMenuActions(StraditizerControlBase):
 
             ds.to_netcdf(fname, encoding=encoding, engine='netcdf4')
 
-    def save_text_image(self, fname=None):
-        reader = self.straditizer.colnames_reader
-        self._save_image(reader.highres_image, fname)
-
-    def save_full_image(self, fname=None):
-        self._save_image(self.straditizer.image, fname)
-
-    def save_data_image(self, fname=None):
-        arr = np.tile(self.straditizer.data_reader.binary[:, :, np.newaxis],
-                      (1, 1, 4))
-        arr[..., 3] *= 255
-        arr[..., :3] = 0
-        image = Image.fromarray(arr.astype(np.uint8), 'RGBA')
-        self._save_image(image, fname)
-
-    def set_stradi_in_console(self):
-        from psyplot_gui.main import mainwindow
-        global straditizer
-        straditizer = self.straditizer
-        if mainwindow is not None:
-            mainwindow.console.kernel_manager.kernel.shell.run_code(
-                'from %s import straditizer as stradi' % __name__)
-        straditizer = None
-
+    @docstrings.get_sectionsf('StraditizerMenuActions._save_image')
     def _save_image(self, image, fname=None):
+        """Save an image to a file
+
+        Parameters
+        ----------
+        image: PIL.Image.Image
+            The image to save
+        fname: str or None
+            The path of the target filename where to save the `image`. If None,
+            A QFileDialog is opened and we ask the user for a filename"""
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getSaveFileName(
                 self.straditizer_widgets, 'Straditizer file destination',
@@ -666,11 +858,97 @@ class StraditizerMenuActions(StraditizerControlBase):
             image = rgba2rgb(image)
         image.save(fname)
 
+    docstrings.keep_params('StraditizerMenuActions._save_image.parameters',
+                           'fname')
+
+    @docstrings.with_indent(8)
+    def save_text_image(self, fname=None):
+        """Save the image of the colnames reader
+
+        Save the :attr:`straditize.colnames.ColNamesReader.image` of the
+        current :attr:`~straditize.straditizer.Straditizer.colnames_reader`
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._save_image.parameters.fname)s
+        """
+        reader = self.straditizer.colnames_reader
+        self._save_image(reader.highres_image, fname)
+
+    def save_full_image(self, fname=None):
+        """Save the image of the straditizer
+
+        Save the :attr:`straditize.straditizer.Straditizer.image` of the
+        current :attr:`~straditize.widgets.StraditizerWidgets.straditizer`
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._save_image.parameters.fname)s
+        """
+        self._save_image(self.straditizer.image, fname)
+
+    def save_data_image(self, fname=None):
+        """Save the binary image of the data reader
+
+        Save the :attr:`straditize.binary.DataReader.binary` of the
+        current :attr:`~straditize.straditizer.Straditizer.data_reader`
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._save_image.parameters.fname)s
+        """
+        arr = np.tile(self.straditizer.data_reader.binary[:, :, np.newaxis],
+                      (1, 1, 4))
+        arr[..., 3] *= 255
+        arr[..., :3] = 0
+        image = Image.fromarray(arr.astype(np.uint8), 'RGBA')
+        self._save_image(image, fname)
+
+    def set_stradi_in_console(self):
+        """Set the straditizer in the console of the GUI mainwindow
+
+        This sets the current
+        :attr:`~straditize.widgets.StraditizerWidgets.straditizer` in psyplots
+        :attr:`~psyplot_gui.main.MainWindow.console` as the ``stradi`` variable
+        """
+        from psyplot_gui.main import mainwindow
+        global straditizer
+        straditizer = self.straditizer
+        if mainwindow is not None:
+            mainwindow.console.kernel_manager.kernel.shell.run_code(
+                'from %s import straditizer as stradi' % __name__)
+        straditizer = None
+
+    @docstrings.get_sectionsf('StraditizerMenuActions._export_df')
     def _export_df(self, df, fname=None):
+        """Export a data frame to a file
+
+        This method opens an :class:`ExportDfDialog` to save a data frame
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            The dataframe to save
+        fname: str or None
+            The path of the target filename where to save the `df`
+            (see the :meth:`ExportDialog.export_df`)"""
         ExportDfDialog.export_df(self.straditizer_widgets, df,
                                  self.straditizer, fname)
 
+    docstrings.keep_params('StraditizerMenuActions._export_df.parameters',
+                           'fname')
+
+    @docstrings.with_indent(8)
     def export_final(self, fname=None):
+        """Export the final results
+
+        This method exports the
+        :attr:`straditize.straditizer.Straditizer.final_df` of the current
+        :attr:`~straditize.widgets.StraditizerWidgets.straditizer`
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._export_df.parameters.fname)s"""
         try:
             df = self.straditizer.final_df
         except Exception as e:
@@ -679,7 +957,17 @@ class StraditizerMenuActions(StraditizerControlBase):
         else:
             self._export_df(df, fname)
 
+    @docstrings.with_indent(8)
     def export_full(self, fname=None):
+        """Export the full digitized data
+
+        This method exports the
+        :attr:`straditize.straditizer.Straditizer.full_df` of the current
+        :attr:`~straditize.widgets.StraditizerWidgets.straditizer`
+
+        Parameters
+        ----------
+        %(StraditizerMenuActions._export_df.parameters.fname)s"""
         self._export_df(self.straditizer.full_df, fname)
 
     def refresh(self):

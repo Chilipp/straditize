@@ -64,15 +64,11 @@ templates_path = ['_templates']
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # create the api documentation
-if not osp.exists(osp.join(osp.dirname(__file__), 'api')) or on_rtd:
-    if osp.exists(osp.join(osp.dirname(__file__), 'api')):
-        shutil.rmtree(osp.join(osp.dirname(__file__), 'api'))
+if not osp.exists(osp.join(osp.dirname(__file__), 'api')):
     spr.check_call(['bash', 'apigen.bash'])
 
 gui_dir = osp.join(osp.dirname(__file__), 'gui')
-if not osp.exists(gui_dir) or on_rtd:
-    if osp.exists(gui_dir):
-        shutil.rmtree(gui_dir)
+if not osp.exists(gui_dir):
     os.mkdir(gui_dir)
     files = chain(
         glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
@@ -86,27 +82,27 @@ if not osp.exists(gui_dir) or on_rtd:
 
 tutorial_dir = osp.join(osp.dirname(__file__), 'tutorial')
 for base in ['beginner', 'hoya-del-castillo']:
-    if osp.exists(osp.join(tutorial_dir, base)):
-        shutil.rmtree(osp.join(tutorial_dir, base))
-    os.mkdir(osp.join(tutorial_dir, base))
-    files = chain(
-        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                           'widgets', 'tutorial', base, '*.rst')),
-        glob.glob(get_psy_icon('*.png')),
-        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                           'widgets', 'tutorial', base, '*.png')),
-        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                           'widgets', 'docs', '*.png')),
-        glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
-                           'widgets', 'icons', '*.png')))
-    for f in files:
-        shutil.copyfile(f, osp.join(tutorial_dir, base, osp.basename(f)))
-    with open(osp.join('tutorial', base, base + '-tutorial-intro.rst')) as f:
-        s = f.read()
-    with open(osp.join('tutorial', base,
-                       base + '-tutorial-intro.rst'), 'w') as f:
-        f.write(s.replace(':hidden:', ''))
-    del s, f
+    if not osp.exists(osp.join(tutorial_dir, base)):
+        os.mkdir(osp.join(tutorial_dir, base))
+        files = chain(
+            glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                               'widgets', 'tutorial', base, '*.rst')),
+            glob.glob(get_psy_icon('*.png')),
+            glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                               'widgets', 'tutorial', base, '*.png')),
+            glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                               'widgets', 'docs', '*.png')),
+            glob.glob(osp.join(osp.dirname(__file__), '..', 'straditize',
+                               'widgets', 'icons', '*.png')))
+        for f in files:
+            shutil.copyfile(f, osp.join(tutorial_dir, base, osp.basename(f)))
+        with open(osp.join('tutorial', base,
+                           base + '-tutorial-intro.rst')) as f:
+            s = f.read()
+        with open(osp.join('tutorial', base,
+                           base + '-tutorial-intro.rst'), 'w') as f:
+            f.write(s.replace(':hidden:', ''))
+        del s, f
 
 napoleon_use_admonition_for_examples = True
 
@@ -243,20 +239,24 @@ epub_exclude_files = ['search.html']
 intersphinx_mapping = {
     'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None),
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'PIL': ('https://pillow.readthedocs.io/en/stable/', None),
     'matplotlib': ('http://matplotlib.org/', None),
     'seaborn': ('http://seaborn.pydata.org/', None),
     'sphinx': ('http://www.sphinx-doc.org/en/stable/', None),
+    'skimage': ('https://scikit-image.org/', None),
     'xarray': ('http://xarray.pydata.org/en/stable/', None),
     'cartopy': ('http://scitools.org.uk/cartopy/docs/latest/', None),
     'mpl_toolkits': ('http://matplotlib.org/basemap/', None),
     'sphinx_nbexamples': ('http://sphinx-nbexamples.readthedocs.io/en/latest/',
                           None),
+    'funcargparse': ('http://funcargparse.readthedocs.io/en/latest/', None),
     'psy_maps': (
         'https://psyplot.readthedocs.io/projects/psy-maps/en/latest/', None),
     'psy_simple': (
         'https://psyplot.readthedocs.io/projects/psy-simple/en/latest/', None),
     'psy_reg': ('https://psyplot.readthedocs.io/projects/psy-reg/en/latest/',
                 None),
+    'psy_strat': ('https://psy-strat.readthedocs.io/en/latest/', None),
     'psyplot_gui': (
         'http://psyplot.readthedocs.io/projects/psyplot-gui/en/latest/', None),
     'psyplot': (

@@ -1,4 +1,25 @@
-"""Module for the selection ToolButtons"""
+"""Module for the selection toolbar
+
+This module defines the selection toolbar that is added to the
+:class:`psyplot_gui.main.MainWindow` for selecting features in the
+stratigraphic diagram and the data reader image.
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 from itertools import chain
 import six
 import numpy as np
@@ -32,7 +53,11 @@ class PointOrRectangleSelector(mwid.RectangleSelector):
 
 
 class SelectionToolbar(QToolBar, StraditizerControlBase):
-    """A base class for the selection"""
+    """A toolbar for selecting features in the straditizer and data image
+
+    The current data object is set in the :attr:`combo` and can be accessed
+    through the :attr:`data_obj` attribute. It's either the straditizer or the
+    data_reader that is accessed"""
 
     _idPress = None
 
@@ -50,13 +75,12 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @property
     def ax(self):
-        if self.combo.currentText() == 'Reader':
-            return self.straditizer.data_reader.ax
-        else:
-            return self.straditizer.ax
+        """The :class:`matplotlib.axes.Axes` of the :attr:`data_obj`"""
+        return self.data_obj.ax
 
     @property
     def data(self):
+        """The np.ndarray of the :attr:`data_obj` image"""
         text = self.combo.currentText()
         if text == 'Reader':
             return self.straditizer.data_reader.binary
@@ -69,6 +93,10 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @property
     def data_obj(self):
+        """The data object as set in the :attr:`combo`.
+
+        Either a :class:`~straditize.straditizer.Straditizer` or a
+        :class:`straditize.binary.DataReader` instance. """
         text = self.combo.currentText()
         if text in ['Reader', 'Reader - Greyscale']:
             return self.straditizer.data_reader
@@ -77,6 +105,10 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @data_obj.setter
     def data_obj(self, value):
+        """The data object as set in the :attr:`combo`.
+
+        Either a :class:`~straditize.straditizer.Straditizer` or a
+        :class:`straditize.binary.DataReader` instance. """
         if self.straditizer is None:
             return
         if isinstance(value, six.string_types):
@@ -100,6 +132,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @property
     def fig(self):
+        """The :class:`~matplotlib.figure.Figure` of the :attr:`data_obj`"""
         try:
             return self.ax.figure
         except AttributeError:
@@ -107,6 +140,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @property
     def canvas(self):
+        """The canvas of the :attr:`data_obj`"""
         try:
             return self.fig.canvas
         except AttributeError:
@@ -114,50 +148,65 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @property
     def toolbar(self):
+        """The toolbar of the :attr:`canvas`"""
         return self.canvas.toolbar
 
     @property
     def select_action(self):
+        """The rectangle selection tool"""
         return self._actions['select']
 
     @property
     def wand_action(self):
+        """The wand selection tool"""
         return self._actions['wand_select']
 
     @property
     def new_select_action(self):
+        """The action to make new selection with one of the selection tools"""
         return self._type_actions['new_select']
 
     @property
     def add_select_action(self):
+        """The action to add to the current selection with the selection tools
+        """
         return self._type_actions['add_select']
 
     @property
     def remove_select_action(self):
+        """
+        An action to remove from the current selection with the selection tools
+        """
         return self._type_actions['remove_select']
 
     @property
     def select_all_action(self):
+        """An action to select all features in the :attr:`data`"""
         return self._actions['select_all']
 
     @property
     def expand_select_action(self):
+        """An action to expand the current selection to the full feature"""
         return self._actions['expand_select']
 
     @property
     def invert_select_action(self):
+        """An action to invert the current selection"""
         return self._actions['invert_select']
 
     @property
     def clear_select_action(self):
+        """An action to clear the current selection"""
         return self._actions['clear_select']
 
     @property
     def select_right_action(self):
+        """An action to select everything in the data column to the right"""
         return self._actions['select_right']
 
     @property
     def select_pattern_action(self):
+        """An action to start a pattern selection"""
         return self._actions['select_pattern']
 
     @property
@@ -173,6 +222,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @property
     def labels(self):
+        """The labeled data that is displayed"""
         if self.data_obj._selection_arr is not None:
             return self.data_obj._selection_arr
         text = self.combo.currentText()
@@ -185,14 +235,53 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
 
     @property
     def rect_callbacks(self):
-        """The functions to call after the rectangle selection"""
+        """The functions to call after the rectangle selection.
+
+        If not set manually, it is the :meth:`select_rect` method. Note that
+        this is cleared at every call of the :meth:`end_selection`.
+
+        Callables in this list must accept two arguments ``(slx, sly)``:
+        the first one is the x-slice, and the second one the y-slice. They both
+        correspond to the :attr:`data` attribute."""
         return self._rect_callbacks or [self.select_rect]
+
+    @rect_callbacks.setter
+    def rect_callbacks(self, value):
+        """The functions to call after the rectangle selection.
+
+        If not set manually, it is the :meth:`select_rect` method. Note that
+        this is cleared at every call of the :meth:`end_selection`.
+
+        Callables in this list must accept two arguments ``(slx, sly)``:
+        the first one is the x-slice, and the second one the y-slice. They both
+        correspond to the :attr:`data` attribute."""
+        self._rect_callbacks = value
 
     @property
     def poly_callbacks(self):
-        """The functions to call after the polygon selection"""
+        """The functions to call after the polygon selection
+
+        If not set manually, it is the :meth:`select_poly` method. Note that
+        this is cleared at every call of the :meth:`end_selection`.
+
+        Callables in this list must accept one argument, a ``np.ndarray``
+        of shape ``(N, 2)``. This array defines the ``N`` x- and y-coordinates
+        of the points of the polygon"""
         return self._poly_callbacks or [self.select_poly]
 
+    @poly_callbacks.setter
+    def poly_callbacks(self, value):
+        """The functions to call after the polygon selection.
+
+        If not set manually, it is the :meth:`poly_callbacks` method. Note that
+        this is cleared at every call of the :meth:`end_selection`.
+
+        Callables in this list must accept one argument, a ``np.ndarray``
+        of shape ``(N, 2)``. This array defines the ``N`` x- and y-coordinates
+        of the points of the polygon"""
+        self._poly_callbacks = value
+
+    #: A :class:`PointOrRectangleSelector` to select features in the image
     selector = None
 
     _pattern_selection = None
@@ -222,6 +311,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self.auto_expand = False
 
     def create_actions(self):
+        """Define the actions for the toolbar and set everything up"""
         # Reader toolbar
         self.combo = QComboBox()
         self.combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
@@ -442,6 +532,11 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
                 a.setChecked(False)
 
     def select_all(self):
+        """Select all features in the image
+
+        See Also
+        --------
+        straditize.label_selection.LabelSelection.select_all_labels"""
         obj = self.data_obj
         if obj._selection_arr is None:
             rgba = obj.image_array() if hasattr(obj, 'image_array') else None
@@ -450,6 +545,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self.canvas.draw()
 
     def invert_selection(self):
+        """Invert the current selection"""
         obj = self.data_obj
         if obj._selection_arr is None:
             rgba = obj.image_array() if hasattr(obj, 'image_array') else None
@@ -468,6 +564,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self.canvas.draw()
 
     def clear_selection(self):
+        """Clear the current selection"""
         obj = self.data_obj
         if obj._selection_arr is None:
             return
@@ -497,10 +594,11 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         i: int
             The transparency between 0 and 100"""
         self.data_obj._select_img.set_alpha(i / 100.)
+        self.data_obj._update_magni_img()
         self.canvas.draw()
 
     def select_everything_to_the_right(self):
-        """Selects everything to the right of the selection"""
+        """Selects everything to the right of the current selection"""
         reader = self.data_obj
         if reader._selection_arr is None:
             return
@@ -525,6 +623,10 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self.canvas.draw()
 
     def start_pattern_selection(self):
+        """Open the pattern selection dialog
+
+        This method will enable the pattern selection by starting a
+        :class:`straditize.widgets.pattern_selection.PatternSelectionWidget`"""
         from straditize.widgets.pattern_selection import PatternSelectionWidget
         if self.select_pattern_action.isChecked():
             from straditize.binary import DataReader
@@ -567,6 +669,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             del self._pattern_selection
 
     def uncheck_pattern_selection(self):
+        """Disable the pattern selection"""
         self.select_pattern_action.setChecked(False)
         del self._pattern_selection
         for a in self._actions.values():
@@ -739,6 +842,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
                 self._lastCursor = cursors.POINTER
 
     def end_selection(self):
+        """Finish the selection and disconnect everything"""
         if getattr(self, '_pattern_selection', None) is not None:
             self._pattern_selection.close()
             del self._pattern_selection
@@ -752,6 +856,25 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self._wand_actions['color_select'].setEnabled(True)
 
     def get_xy_slice(self, lastx, lasty, x, y):
+        """Transform x- and y-coordinates to :class:`slice` objects
+
+        Parameters
+        ----------
+        lastx: int
+            The initial x-coordinate
+        lasty: int
+            The initial y-coordinate
+        x: int
+            The final x-coordinate
+        y: int
+            The final y-coordinate
+
+        Returns
+        -------
+        slice
+            The ``slice(lastx, x)``
+        slice
+            The ``slice(lasty, y)``"""
         all_x = np.floor(np.sort([lastx, x])).astype(int)
         all_y = np.floor(np.sort([lasty, y])).astype(int)
         extent = getattr(self.data_obj, 'extent', None)
@@ -768,11 +891,31 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         return slice(*all_x), slice(*all_y)
 
     def on_rect_select(self, e0, e1):
+        """Call the :attr:`rect_callbacks` after a rectangle selection
+
+        Parameters
+        ----------
+        e0: matplotlib.backend_bases.Event
+            The initial event
+        e1: matplotlib.backend_bases.Event
+            The final event"""
         slx, sly = self.get_xy_slice(e0.xdata, e0.ydata, e1.xdata, e1.ydata)
         for func in self.rect_callbacks:
             func(slx, sly)
 
     def select_rect(self, slx, sly):
+        """Select the data defined by a rectangle
+
+        Parameters
+        ----------
+        slx: slice
+            The x-slice of the rectangle
+        sly: slice
+            The y-slice of the rectangle
+
+        See Also
+        --------
+        rect_callbacks"""
         obj = self.data_obj
         if obj._selection_arr is None:
             arr = self.labels
@@ -801,10 +944,28 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
                 self.canvas.draw()
 
     def on_poly_select(self, points):
+        """Call the :attr:`poly_callbacks` after a polygon selection
+
+        Parameters
+        ----------
+        e0: matplotlib.backend_bases.Event
+            The initial event
+        e1: matplotlib.backend_bases.Event
+            The final event"""
         for func in self.poly_callbacks:
             func(points)
 
     def select_poly(self, points):
+        """Select the data defined by a polygon
+
+        Parameters
+        ----------
+        points: np.ndarray of shape (N, 2)
+            The x- and y-coordinates of the vertices of the polygon
+
+        See Also
+        --------
+        poly_callbacks"""
         obj = self.data_obj
         if obj._selection_arr is None:
             rgba = obj.image_array() if hasattr(obj, 'image_array') else None
@@ -890,6 +1051,14 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         return arr
 
     def _select_rows(self, slx, sly):
+        """Select the pixel rows defined by `sly`
+
+        Parameters
+        ----------
+        slx: slice
+            The x-slice (is ignored)
+        sly: slice
+            The y-slice defining the rows to select"""
         obj = self.data_obj
         arr = self.labels
         rows = np.arange(arr.shape[0])[sly]
@@ -904,6 +1073,14 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         return arr
 
     def _select_cols(self, slx, sly):
+        """Select the pixel columns defined by `slx`
+
+        Parameters
+        ----------
+        slx: slice
+            The x-slice defining the columns to select
+        sly: slice
+            The y-slice (is ignored)"""
         obj = self.data_obj
         arr = self.labels
         cols = np.arange(arr.shape[1])[slx]
@@ -961,6 +1138,35 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
     def start_selection(self, arr=None, rgba=None,
                         rect_callbacks=None, poly_callbacks=None,
                         apply_funcs=(), cancel_funcs=(), remove_on_apply=True):
+        """Start the selection in the current :attr:`data_obj`
+
+        Parameters
+        ----------
+        arr: np.ndarray
+            The labeled selection array that is used. If specified, the
+            :meth:`~straditize.label_selection.enable_label_selection` method
+            is called of the :attr:`data_obj` with the given `arr`. If this
+            parameter is ``None``, then we expect that this method has already
+            been called
+        rgba: np.ndarray
+            The RGBA image that shall be used for the color selection
+            (see the :meth:`set_color_wand_mode`)
+        rect_callbacks: list
+            A list of callbacks that shall be called after a rectangle
+            selection has been made by the user (see :attr:`rect_callbacks`)
+        poly_callbacks: list
+            A list of callbacks that shall be called after a polygon
+            selection has been made by the user (see :attr:`poly_callbacks`)
+        apply_funcs: list
+            A list of callables that shall be connected to the
+            :attr:`~straditize.widgets.StraditizerWidgets.apply_button`
+        cancel_funcs: list
+            A list of callables that shall be connected to the
+            :attr:`~straditize.widgets.StraditizerWidgets.cancel_button`
+        remove_on_apply: bool
+            If True and the
+            :attr:`~straditize.widgets.StraditizerWidgets.apply_button` is
+            clicked, the selected labels will be removed."""
         obj = self.data_obj
         if arr is not None:
             obj.enable_label_selection(

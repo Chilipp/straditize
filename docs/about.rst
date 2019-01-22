@@ -37,3 +37,4 @@ License
 -------
 straditize is published under the
 `GNU General Public License v2.0 <http://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html>`__
+under the copyright of Philipp S. Sommer, 2018-2019

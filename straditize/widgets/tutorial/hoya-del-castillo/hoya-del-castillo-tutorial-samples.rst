@@ -15,8 +15,8 @@ or you just add and edit the samples manually.
    tab. However, you can (and should!) also edit them by clicking the
    :guilabel:`Edit samples` button.
 4. Now you see one horizontal line per sample that you can drag around
-  (left-click), delete (right-click) or you can also add new samples
-  (Shift + left-click). See the :ref:`edit-samples` section for more details.
+   (left-click), delete (right-click) or you can also add new samples
+   (Shift + left-click). See the :ref:`edit-samples` section for more details.
 5. Finally, click the :guilabel:`Apply` button or the :guilabel:`Cancel`
    button to stop the editing of the samples.
 

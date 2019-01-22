@@ -1,5 +1,25 @@
 # -*- coding: utf-8 -*-
-"""Core module of the Straditizer class"""
+"""Core module of the Straditizer class
+
+This module defines the :class:`Straditizer` class, the main object to digitize
+a stratigraphic diagram
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import six
 import weakref
 from copy import copy
@@ -120,7 +140,19 @@ def _new_mark_factory(marks, mark_added, func, fignum, magnifier=None,
 
 
 class Straditizer(LabelSelection):
-    """An object to digitize a stratigraphic pollen diagram
+    """An object to digitize a stratigraphic diagram
+
+    One instance of a straditizer manages the digitization of a
+    :class:`PIL.Image.Image` hold in the :attr:`image` attribute.
+
+    To create a new Straditizer instance, you can either provide a
+    :class:`PIL.Image.Image` to the class constructor (i.e.
+    ``stradi = Straditizer(image)``) or you use the :meth:`from_dataset`
+    method.
+
+    The reader for the diagram part can be accessed through the
+    :attr:`data_reader` attribute, the reader for the column names through the
+    :attr:`colnames_reader` attribute.
     """
 
     #: A signal that is emitted if a mark has been added. Functions are

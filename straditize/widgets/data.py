@@ -1,5 +1,22 @@
 # -*- coding: utf-8 -*-
 """The main control widget for handling the data
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import division
 import warnings
@@ -16,6 +33,7 @@ from psyplot_gui.compat.qtcompat import (
     Qt, QHBoxLayout, QVBoxLayout, QWidget, QTreeWidgetItem,
     with_qt5, QIcon, QIntValidator, QTreeWidget, QToolBar, QGridLayout,
     QCheckBox, QInputDialog, QFileDialog, QMessageBox)
+from straditize.common import docstrings
 from psyplot.utils import unique_everseen
 from itertools import chain
 
@@ -65,6 +83,19 @@ def int_list2str(numbers):
 
 
 def get_reader_name(reader):
+    """Get the reader key in the :attr:`straditize.binary.readers` dictionary
+
+    Parameters
+    ----------
+    reader: straditize.binary.DataReader
+        The reader for which to get the key in the
+        :attr:`straditize.binary.readers` dictionary
+
+    Returns
+    -------
+    str
+        The key in the :attr:`straditize.binary.readers` dictionary whose value
+        corresponds to the class of the given `reader`"""
     from straditize.binary import readers
     # import stacked_area_reader to make sure StackedReader is registered
     import straditize.widgets.stacked_area_reader
@@ -74,16 +105,26 @@ def get_reader_name(reader):
 
 
 class DigitizingControl(StraditizerControlBase):
+    """An interface to :attr:`straditize.straditizer.Straditizer.data_reader`
+
+    This widgets contains the functionalities to interface with the data
+    readers for the stratigraphic diagram"""
 
     @property
     def reader(self):
+        """The :attr:`straditize.straditizer.Straditizer.data_reader`"""
         return self.straditizer.data_reader
 
     @property
     def tree(self):
+        """The :attr:`straditize.widgets.StraditizerWidgets.tree`"""
         return self.straditizer_widgets.tree
 
-    #: Button for selecting the data box
+    # --- Reader intialization ------------------------------------------------
+
+    #: Button for selecting the data box, see the
+    #: :meth:`straditize.straditizer.Straditizer.marks_for_data_selection`
+    #: method.
     btn_select_data = None
 
     #: Combobox for selecting the reader type
@@ -92,14 +133,113 @@ class DigitizingControl(StraditizerControlBase):
     #: Button for initializing the reader
     btn_init_reader = None
 
-    #: Button for selecting and modifying column separators
+    # --- Columns -------------------------------------------------------------
+
+    #: A QLineEdit to set the threshold for the column starts detection
+    txt_column_thresh = None
+
+    #: Button for selecting and modifying column starts, see the
+    #: :meth:`straditize.straditizer.Straditizer.marks_for_column_starts`
+    #: method.
     btn_column_starts = None
 
-    #: Button for removing disconnected parts in the plot
+    #: Button for selecting and modifying column ends
+    btn_column_ends = None
+
+    #: Button to reset the column starts and ends
+    btn_reset_columns = None
+
+    # --- Child readers -------------------------------------------------------
+
+    #: Button to add a new column-specific child reader
+    btn_new_child_reader = None
+
+    # --- Exaggerations -------------------------------------------------------
+
+    #: A QLineEdit for the exageration factor
+    txt_exag_factor = None
+
+    #: A QComboBox to select the reader type for exaggerations
+    cb_exag_reader_type = None
+
+    #: Button to add an exaggerations reader
+    btn_new_exaggeration = None
+
+    #: Button to select the exaggerations
+    btn_select_exaggerations = None
+
+    #: Button to digitize the exaggerations
+    btn_digitize_exag = None
+
+    # --- Feature removement --------------------------------------------------
+
+    # ---- Disconnected parts -------------------------------------------------
+
+    #: Button for removing disconnected parts in the plot. See the
+    #: :meth:`straditize.binary.DataReader.show_disconnected_parts` method
     btn_show_disconnected_parts = None
+
+    #: A QLineEdit to set the `fromlast` keyword for the
+    #: :meth:`straditize.binary.DataReader.show_disconnected_parts` method
+    txt_fromlast = None
+
+    #: A QCheckBox to enable and disable the `fromlast` keyword in the
+    #: :meth:`straditize.binary.DataReader.show_disconnected_parts` method
+    cb_fromlast = None
+
+    #: A QLineEdit to set the `from0` keyword for the
+    #: :meth:`straditize.binary.DataReader.show_disconnected_parts` method
+    txt_from0 = None
+
+    #: A QCheckBox to enable and disable the `from0` keyword in the
+    #: :meth:`straditize.binary.DataReader.show_disconnected_parts` method
+    cb_from0 = None
+
+    # ---- Cross column features ----------------------------------------------
+
+    #: A button to
+    #: :meth:`~straditize.binary.DataReader.show_cross_column_features`
+    btn_show_cross_column = None
+
+    #: A QLineEdit to select the minimum pixels (`min_px`) for a cross column
+    #: feature
+    txt_cross_column_px = None
+
+    # ---- Small features -----------------------------------------------------
+
+    #: A button to :meth:`~straditize.binary.DataReader.show_small_parts`
+    btn_show_small_parts = None
+
+    #: A QLineEdit to set the size for small parts
+    txt_max_small_size = None
+
+    #: A button to highlight small selections using the
+    #: :meth:`straditize.label_selection.LabelSelection.highlight_small_selections`
+    #: method
+    btn_highlight_small_selection = None
+
+    #: A QLineEdit to set the maximal size for
+    #: :attr:`highlighting small features <btn_highlight_small_selection>`
+    txt_min_highlight = None
+
+    # ---- Parts at column ends -----------------------------------------------
+
+    #: A button to show the parts that touch the column end
+    btn_show_parts_at_column_ends = None
+
+    # ---- Line detection -----------------------------------------------------
 
     #: LineEditor for specifying the fraction of vertical and horizontal lines
     txt_line_fraction = None
+
+    #: A QSpinBox to select the minimum linewidth
+    sp_min_lw = None
+
+    #: A QSpinBox to select the maximum linewidth
+    sp_max_lw = None
+
+    #: QCheckBox to enable and disable the maximum linewidth as a criterion
+    cb_max_lw = None
 
     #: Button for removing vertical lines
     btn_remove_vlines = None
@@ -113,11 +253,74 @@ class DigitizingControl(StraditizerControlBase):
     #: button for removing x-axes
     btn_remove_xaxes = None
 
+    # --- Digitizing ----------------------------------------------------------
+
     #: Button for digitizing the diagram
     btn_digitize = None
 
     #: Line edit for setting the tolerance for bars
     txt_tolerance = None
+
+    # --- Samples -------------------------------------------------------------
+
+    #: A button to find the samples with the
+    #: :meth:`straditize.binary.DataReader.find_samples` method
+    btn_find_samples = None
+
+    #: A QLinEdit to specify the minimum length of a potential sample to be
+    #: included in the sample finding algorithm (see :attr:`btn_find_samples`)
+    txt_min_len = None
+
+    #: A QLinEdit to specify the maximum length of a potential sample to be
+    #: included in the sample finding algorithm (see :attr:`btn_find_samples`)
+    txt_max_len = None
+
+    #: A QSpinBox to set the minimum distance between to samples in the
+    #: sample finding algorithm
+    sp_pixel_tol = None
+
+    #: A button to load samples from a file
+    btn_load_samples = None
+
+    #: A button to edit the samples (see the
+    #: :meth:`straditize.straditizer.Straditizer.marks_for_samples` and
+    #: :meth:`straditize.straditizer.Straditizer.marks_for_samples_sep`)
+    btn_edit_samples = None
+
+    #: A button to reset the samples
+    btn_reset_samples = None
+
+    #: A QCheckBox to edit the samples in a separate figure and not inside the
+    #: original diagram
+    cb_edit_separate = None
+
+    #: A QLineEdit to specify the number or rows in a plot for editing the
+    #: samples in a separate figure (see :attr:`btn_edit_samples` and
+    #: :attr:`cb_edit_separate`)
+    txt_edit_rows = None
+
+    # --- Occurences ----------------------------------------------------------
+
+    #: A button to select occurences in the data part (see the
+    #: :meth:`enable_occurences_selection` method)
+    btn_select_occurences = None
+
+    #: A button to edit the occurences with the
+    #: :meth:`straditize.straditizer.Straditizer.marks_for_occurences` method
+    btn_edit_occurences = None
+
+    #: A QLineEdit to set the value for occurences in the final data
+    txt_occurences_value = None
+
+    #: A QCheckBox to remove the occurences in the plot after selection
+    cb_remove_occurences = None
+
+    #: A :class:`BarSplitter` to split too long bars
+    tree_bar_split = None
+
+    #: A QComboBox to select whether to fill the :attr:`tree_bar_split` with
+    #: too long, overlapping, or all bars
+    cb_split_source = None
 
     _change_reader = True
 
@@ -127,7 +330,13 @@ class DigitizingControl(StraditizerControlBase):
     def selection_toolbar(self):
         return self.straditizer_widgets.selection_toolbar
 
+    @docstrings.dedent
     def __init__(self, straditizer_widgets, item):
+        """
+        Parameters
+        ----------
+        %(StraditizerControlBase.init_straditizercontrol.parameters)s
+        """
 
         # ---------------------------------------------------------------------
         # --------------------------- Buttons ---------------------------------
@@ -248,9 +457,9 @@ class DigitizingControl(StraditizerControlBase):
             'Small features')
         self.btn_show_small_parts.setToolTip(
             'Remove features smaller than 6 pixels')
-        self.txt_min_size = QLineEdit()
-        self.txt_min_size.setValidator(QIntValidator())
-        self.txt_min_size.setText('6')
+        self.txt_max_small_size = QLineEdit()
+        self.txt_max_small_size.setValidator(QIntValidator())
+        self.txt_max_small_size.setText('6')
 
         self.btn_highlight_small_selection = QPushButton(
             'Highlight selection smaller than')
@@ -382,7 +591,7 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_show_disconnected_parts, self.txt_fromlast,
             self.btn_show_cross_column, self.txt_cross_column_px,
             self.btn_show_parts_at_column_ends,
-            self.btn_show_small_parts, self.txt_min_size,
+            self.btn_show_small_parts, self.txt_max_small_size,
             self.btn_align_vertical,
             self.btn_edit_samples, self.btn_find_samples,
             self.btn_load_samples,
@@ -422,7 +631,7 @@ class DigitizingControl(StraditizerControlBase):
         self.btn_edit_samples.clicked.connect(self.edit_samples)
         self.btn_reset_samples.clicked.connect(self.reset_samples)
         self.btn_show_small_parts.clicked.connect(self.show_small_parts)
-        self.txt_min_size.textChanged.connect(
+        self.txt_max_small_size.textChanged.connect(
             self._update_btn_show_small_parts)
         self.txt_min_highlight.textChanged.connect(
             self._update_btn_highlight_small_selection)
@@ -488,15 +697,21 @@ class DigitizingControl(StraditizerControlBase):
         self.fill_cb_readers()
 
     def toggle_sp_max_lw(self, state):
+        """Toggle :attr:`sp_max_lw` based on :attr:`cb_max_lw`
+        """
         self.sp_max_lw.setEnabled(state == Qt.Checked)
 
     def toggle_txt_fromlast(self, state):
+        """Toggle :attr:`txt_fromlast` based on :attr:`cb_fromlast`
+        """
         self.txt_fromlast.setEnabled(state == Qt.Checked)
 
     def toggle_txt_edit_rows(self, state):
+        """Toggle :attr:`txt_edit_rows` based on :attr:`cb_edit_separate`"""
         self.txt_edit_rows.setEnabled(state == Qt.Checked)
 
     def toggle_txt_from0(self, state):
+        """Toggle :attr:`txt_from0` based on :attr:`cb_from0`"""
         self.txt_from0.setEnabled(state == Qt.Checked)
 
     def enable_or_disable_widgets(self, *args, **kwargs):
@@ -510,27 +725,46 @@ class DigitizingControl(StraditizerControlBase):
         self.enable_or_disable_btn_highlight_small_selection()
 
     def enable_or_disable_btn_highlight_small_selection(self):
+        """Enable the :attr:`btn_highlight_small_selection` during a selection
+        """
         enable = self.should_be_enabled(self.btn_highlight_small_selection)
         self.btn_highlight_small_selection.setEnabled(enable)
         self.btn_highlight_small_selection.setChecked(
             enable and bool(self.selection_toolbar.data_obj._ellipses))
 
     def maybe_show_btn_reset_columns(self):
+        """Show the :attr:`btn_reset_columns` if the column starts are set"""
         show = self.should_be_enabled(self.btn_reset_columns)
         self.btn_reset_columns.setVisible(show)
         self.btn_column_ends.setVisible(show)
 
     def maybe_show_btn_reset_samples(self):
+        """Show the :attr:`btn_reset_samples` if the samples are set"""
         self.btn_reset_samples.setVisible(
             self.should_be_enabled(self.btn_reset_samples))
 
     def update_tolerance(self, s):
+        """Set the readers :attr:`~straditizer.binary.BarDataReader.tolerance`
+
+        Parameters
+        ----------
+        s: str or int
+            The tolerance for the
+            :attr:`straditizer.binary.BarDataReader.tolerance` attribute
+        """
         if (self.straditizer is not None and
                 self.straditizer.data_reader is not None and
                 hasattr(self.straditizer.data_reader, 'tolerance')):
             self.straditizer.data_reader.tolerance = int(s or 0)
 
     def toggle_txt_tolerance(self, s):
+        """Set the visibility of the :attr:`txt_tolerance` based on the reader
+
+        Parameters
+        ----------
+        s: str
+            The reader name. If there is *bars* in `s`, then the
+            :attr:`txt_tolerance` is displayed"""
         enable = 'bars' in s
         try:
             self.txt_tolerance
@@ -637,24 +871,41 @@ class DigitizingControl(StraditizerControlBase):
               self.straditizer.data_reader.full_df is None):
             return False
         elif (w is self.btn_show_small_parts and
-              not self.txt_min_size.text()):
+              not self.txt_max_small_size.text()):
             return False
         elif w is self.sp_max_lw and not self.cb_max_lw.isChecked():
             return False
         return True
 
     def reset_column_starts(self):
+        """Reset the column starts
+
+        Reset the column starts by calling the
+        :meth:`straditize.binary.DataReader.reset_column_starts` method"""
         if self._ask_for_column_modification():
             self.straditizer.data_reader.reset_column_starts()
             self.maybe_show_btn_reset_columns()
             self.refresh()
 
     def reset_samples(self):
+        """Reset the samples
+
+        Reset the samples by calling the
+        :meth:`straditize.binary.DataReader.reset_samples` method"""
         self.straditizer.data_reader.reset_samples()
         self.maybe_show_btn_reset_samples()
         self.refresh()
 
     def set_occurences_value(self, value):
+        """Set the :attr:`~straditize.binary.DataReader.occurences_value`
+
+        Set the :attr:`straditize.binary.DataReader.occurence_value` of the
+        data_reader with the given value
+
+        Parameters
+        ----------
+        value: float
+            The value to use for occurences"""
         try:
             value = float(value)
         except (ValueError, TypeError):
@@ -662,7 +913,7 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.data_reader.occurences_value = value
 
     def setup_children(self, item):
-
+        """Set up the child items for a topLevelItem in the control tree"""
         self.add_info_button(item, 'straditize_steps.rst')
 
         # 0: start parts before creating the reader
@@ -854,7 +1105,7 @@ class DigitizingControl(StraditizerControlBase):
         small_child2 = QTreeWidgetItem(0)
         hbox = QHBoxLayout()
         hbox.addWidget(QLabel('Smaller than'))
-        hbox.addWidget(self.txt_min_size)
+        hbox.addWidget(self.txt_max_small_size)
         hbox.addWidget(QLabel('px'))
         w = QWidget()
         w.setLayout(hbox)
@@ -986,6 +1237,14 @@ class DigitizingControl(StraditizerControlBase):
         self.tree.setItemWidget(edit_child2, 0, w)
 
     def toggle_bar_split_source(self, i):
+        """Fill the :attr:`tree_bar_split` based on the :attr:`cb_split_source`
+
+        Parameters
+        ----------
+        i: int
+            The :meth:`BarSplitter.fill_table` is called with either
+            ``'too-long'`` (if `i` is 0), ``'overlaps'`` (if `i` is 1) or
+            ``'all'``"""
         if i == 0:
             self.tree_bar_split.fill_table('too-long')
         elif i == 1:
@@ -994,7 +1253,10 @@ class DigitizingControl(StraditizerControlBase):
             self.tree_bar_split.fill_table('all')
 
     def init_reader(self):
-        """Initialize the reader"""
+        """Initialize the reader
+
+        Initialize the data reader with the
+        :meth:`straditize.straditizer.Straditizer.init_reader` method"""
         # make sure, the StackedReader is registered
         import straditize.widgets.stacked_area_reader
         kws = self.init_reader_kws.copy()
@@ -1038,10 +1300,16 @@ class DigitizingControl(StraditizerControlBase):
         self.apply_button.setText('Select')
 
     def finish_exaggerated_features(self):
+        """Save the exaggerations in the exaggerations reader
+
+        This method finalizes the operation initialized by the
+        :meth:`select_exaggerated_features` by calling the
+        :meth:`straditize.binary.DataReader.mark_as_exaggerations` method"""
         mask = self.selection_toolbar.data_obj.selected_part
         self.straditizer.data_reader.mark_as_exaggerations(mask)
 
     def fill_cb_readers(self):
+        """Fill the :attr:`cb_readers` combo based on the current reader"""
         self._change_reader = False
         self.cb_readers.clear()
         if self.straditizer is None or self.straditizer.data_reader is None:
@@ -1057,6 +1325,17 @@ class DigitizingControl(StraditizerControlBase):
         self._change_reader = True
 
     def new_reader_for_selection(self, cls=None):
+        """Create a new child reader for the selected columns
+
+        This method finishes the process started by
+        :meth:`enable_col_selection_for_new_reader`
+
+        Parameters
+        ----------
+        cls: type
+            The subclass of the :class:`straditize.binary.DataReader` class
+            to use for the new reader. If None, a QInputDialog is opened and
+            we ask for a reader"""
         reader = self.straditizer.data_reader
         cols = sorted(reader._selected_cols)
         if not cols:
@@ -1080,6 +1359,16 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer_widgets.refresh()
 
     def change_reader(self, txt):
+        """Change the current parent reader
+
+        This changes the :attr:`straditize.straditizer.Straditizer.data_reader`
+        using the :meth:`straditize.binary.DataReader.set_as_parent` method
+
+        Parameters
+        ----------
+        s: str
+            A string matching ``'Columns (\d.*)'``, where the numbers are the
+            columns of the reader to use"""
         if not self._change_reader:
             return
         match = re.search('Columns (\d.*)', txt)
@@ -1118,6 +1407,18 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer_widgets.refresh()
 
     def load_samples(self, fname=None):
+        """Load the samples of a text file
+
+        This method askes for a filename to update the samples. The first
+        column in this file is taken as the sample locations. If the
+        y-axis translation is already done, the new data is assumed to be in
+        this transformed unit.
+
+        Parameters
+        ----------
+        fname: str
+            The path to the file to use. If None, a QFileDialog is opened and
+            we ask for a name"""
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getOpenFileName(
                 self.straditizer_widgets, 'samples', os.getcwd(),
@@ -1138,6 +1439,16 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer_widgets.refresh()
 
     def edit_samples(self):
+        """Enable the sample editing
+
+        This method opens a
+        :class:`straditize.widgets.samples_table.MultiCrossMarksEditor` or a
+        :class:`straditize.widgets.samples_table.SingleCrossMarksEditor` to
+        edit the samples in the GUI. Depending on whether the
+        :attr:`cb_edit_separate` is checked or not, we use the
+        :meth:`straditize.straditizer.Straditizer.marks_for_samples_sep` or
+        :meth:`straditize.straditizer.Straditizer.marks_for_samples`
+        method."""
         from psyplot_gui.main import mainwindow
         from straditize.widgets.samples_table import (
             MultiCrossMarksEditor, SingleCrossMarksEditor)
@@ -1217,6 +1528,10 @@ class DigitizingControl(StraditizerControlBase):
             pass
 
     def digitize(self):
+        """Digitize the data
+
+        This method uses the :meth:`straditize.binary.DataReader.digitize`
+        method to digitize the data of the current reader"""
         reader = self.reader
         if self.txt_tolerance and self.txt_tolerance.isEnabled():
             reader.tolerance = int(self.txt_tolerance.text())
@@ -1231,13 +1546,23 @@ class DigitizingControl(StraditizerControlBase):
             pc.refresh()
 
     def digitize_exaggerations(self):
+        """Digitize the data
+
+        This method uses the
+        :meth:`straditize.binary.DataReader.digitize_exaggerated` method to
+        digitize the exaggerated data of the current reader and merge it into
+        the data obtained by the :meth:`digitize` method."""
         reader = self.reader
         fraction = float(self.txt_exag_percentage.text().strip() or 0) / 100.
         absolute = int(self.txt_exag_absolute.text().strip() or 0)
         reader.digitize_exaggerated(fraction=fraction, absolute=absolute)
 
     def remove_xaxes(self):
-        """Remove xaxes in the plot"""
+        """Remove x-axes in the plot
+
+        This method uses the
+        :meth:`straditize.binary.DataReader.recognize_xaxes` method to identify
+        x-axes in the plot"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
         max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
         min_lw = int(self.sp_min_lw.text().strip() or 1)
@@ -1255,7 +1580,11 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def remove_hlines(self):
-        """Remove horizontal lines"""
+        """Remove horizontal lines
+
+        This method uses the
+        :meth:`straditize.binary.DataReader.recognize_hlines` method to
+        identify horizontal lines in the plot"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
         max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
         min_lw = int(self.sp_min_lw.text().strip() or 1)
@@ -1273,7 +1602,11 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def remove_yaxes(self):
-        """Remove horizontal lines"""
+        """Remove y-axes in the plot
+
+        This method uses the
+        :meth:`straditize.binary.DataReader.recognize_yaxes` method to identify
+        y-axes in the plot"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
         max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
         min_lw = self.sp_min_lw.value()
@@ -1291,7 +1624,11 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def remove_vlines(self):
-        """Remove horizontal lines"""
+        """Remove vertical lines
+
+        This method uses the
+        :meth:`straditize.binary.DataReader.recognize_vlines` method to
+        identify vertical lines in the plot"""
         fraction = float(self.txt_line_fraction.text().strip() or 0) / 100.
         max_lw = self.sp_max_lw.value() if self.cb_max_lw.isChecked() else None
         min_lw = self.sp_min_lw.value()
@@ -1309,7 +1646,10 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def enable_occurences_selection(self):
-        """Enable the selection of occurences"""
+        """Enable the selection of occurences
+
+        This method starts the selection of features in the data image and
+        connects the :meth:`select_occurences` to the :attr:`apply_button`."""
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
         reader = tb.data_obj
@@ -1325,13 +1665,24 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def select_occurences(self):
+        """Save (and potentially remove) the selected occurences
+
+        Save the occurences with the
+        :meth:`straditize.binary.DataReader.get_occurences` method and remove
+        them if the :attr:`cb_remove_occurences` is checked"""
         self.reader.get_occurences()
         if self.cb_remove_occurences.isChecked():
             self.reader.remove_selected_labels(disable=False)
         self.cb_remove_occurences.setVisible(False)
 
     def show_disconnected_parts(self):
-        """Remove disconnected parts"""
+        """Remove disconnected parts
+
+        This method uses the
+        :meth:`straditize.binary.DataReader.show_disconnected_parts` to
+        highlight and remove disconnected features in the diagram part. The
+        algorithm can be modified by the :attr:`txt_fromlast` and
+        :attr:`txt_from0` text editors"""
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
         if self.cb_fromlast.isChecked():
@@ -1352,7 +1703,12 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def show_cross_column_features(self):
-        """Remove cross column features"""
+        """Remove cross column features
+
+        This method highlights features that span multiple columns using the
+        :meth:`straditize.binary.DataReader.show_cross_column_features` method.
+        The algorithm can be modified with the :attr:`txt_cross_column_px`
+        line editor"""
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
         min_px = int(self.txt_cross_column_px.text().strip() or 0)
@@ -1365,7 +1721,11 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def show_parts_at_column_ends(self):
-        """Remove parts that touch the column ends"""
+        """Remove parts that touch the column ends
+
+        This method highlights features that touch the column ends using the
+        :meth:`straditize.binary.DataReader.show_parts_at_column_ends` method.
+        """
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
         self.reader.show_parts_at_column_ends()
@@ -1377,10 +1737,15 @@ class DigitizingControl(StraditizerControlBase):
         self.straditizer.draw_figure()
 
     def show_small_parts(self):
-        """Remove parts that touch the column ends"""
+        """Remove parts that touch the column ends
+
+        This method highlights small features in the data image using the
+        :meth:`straditize.binary.DataReader.show_small_parts` method.
+        The maximal size of the small features can is taken from the
+        :attr:`txt_max_small_size` line editor"""
         tb = self.selection_toolbar
         tb.data_obj = 'Reader'
-        self.reader.show_small_parts(int(self.txt_min_size.text()))
+        self.reader.show_small_parts(int(self.txt_max_small_size.text()))
         tb.start_selection(rgba=tb.data_obj.image_array())
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
@@ -1409,6 +1774,10 @@ class DigitizingControl(StraditizerControlBase):
             self.btn_highlight_small_selection.setToolTip('')
 
     def toggle_btn_highlight_small_selection(self):
+        """Enable or disable the :attr:`btn_highlight_small_selection`
+
+        This method enables the :attr:`btn_highlight_small_selection` button
+        if we are selecting something at the moment"""
         obj = self.selection_toolbar.data_obj
         if obj is not None and self.btn_highlight_small_selection.isChecked():
             obj.highlight_small_selections(
@@ -1421,6 +1790,11 @@ class DigitizingControl(StraditizerControlBase):
             obj._select_img.axes.figure.canvas.draw()
 
     def select_data_part(self):
+        """Enable the selection of the diagram part
+
+        This method uses the
+        :meth:`straditize.straditizer.Straditizer.marks_for_data_selection`
+        method to draw cross marks on the image for the diagram part"""
         self.straditizer.marks_for_data_selection()
         self.straditizer.draw_figure()
         self.connect2apply(self.straditizer.update_data_part,
@@ -1430,6 +1804,12 @@ class DigitizingControl(StraditizerControlBase):
                             self.straditizer.draw_figure)
 
     def edit_occurences(self):
+        """Enable the editing of occurences
+
+        This enables the editing of occurences using the
+        :meth:`straditize.straditizer.Straditizer.marks_for_occurences`
+        method for the occurences selected by the
+        :meth:`select_occurences` method"""
         self.straditizer.marks_for_occurences()
         self.straditizer.draw_figure()
         self.connect2apply(lambda: self.straditizer.update_occurences(True),
@@ -1439,7 +1819,12 @@ class DigitizingControl(StraditizerControlBase):
                             self.straditizer.draw_figure)
 
     def align_vertical(self):
-        """Create marks for vertical alignment of the columns"""
+        """Create marks for vertical alignment of the columns
+
+        See Also
+        --------
+        straditize.straditizer.Straditizer.marks_for_vertical_alignment
+        straditize.straditizer.Straditizer.align_columns"""
         self.straditizer.marks_for_vertical_alignment()
         self.straditizer.draw_figure()
         self.connect2apply(self.straditizer.align_columns,
@@ -1464,6 +1849,16 @@ class DigitizingControl(StraditizerControlBase):
         return answer == QMessageBox.Yes
 
     def select_column_starts(self):
+        """Estimate the column starts and draw marks
+
+        This methods estimates the column starts (if they are not yet set)
+        based on the threshold in the :attr:`txt_column_thresh` and draws
+        :class:`straditize.cross_marks.DraggableVLine` marks on the plot.
+
+        See Also
+        --------
+        straditize.straditizer.Straditizer.marks_for_column_starts
+        straditize.straditizer.Straditizer.update_column_starts"""
         if not self._ask_for_column_modification():
             return
         threshold = self.txt_column_thresh.text()
@@ -1477,6 +1872,16 @@ class DigitizingControl(StraditizerControlBase):
                             self.straditizer.draw_figure)
 
     def modify_column_ends(self):
+        """Modify the column ends
+
+        After having selected the :meth:`column starts <select_column_starts>`,
+        this method enables the modification of the column ends
+
+        See Also
+        --------
+        select_column_starts
+        straditize.straditizer.Straditizer.marks_for_column_ends
+        straditize.straditizer.Straditizer.update_column_ends"""
         if not self._ask_for_column_modification():
             return
         threshold = self.txt_column_thresh.text()
@@ -1490,16 +1895,20 @@ class DigitizingControl(StraditizerControlBase):
 
 
 class BarSplitter(QTreeWidget, StraditizerControlBase):
-    """A widget that is designed for splitting bars"""
+    """A widget for splitting bars"""
 
+    #: The QTreeWidgetItem that is currently shown in the plot
     selected_child = None
 
+    #: The action in the matplotlib toolbar to go to the previous bar to split
     prev_action = None
 
+    #: A figure to show the other columns
     suggestions_fig = None
 
     @property
     def previous_item(self):
+        """The QTreeWidgetItem for the previous bar to split"""
         child = self.selected_child
         top = child.parent()
         idx_child = top.indexOfChild(child)
@@ -1514,6 +1923,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
 
     @property
     def next_item(self):
+        """The QTreeWidgetItem for the next bar to split"""
         child = self.selected_child
         top = child.parent()
         idx_child = top.indexOfChild(child)
@@ -1556,7 +1966,20 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         return ret
 
     def fill_table(self, source='too-long'):
-        """Fill the table with the bars that should be splitted"""
+        """Fill the table with the bars that should be splitted
+
+        Parameters
+        ----------
+        source: { 'too-long' | 'overlaps' | 'all' }
+            The source with what to fill the table.
+
+            too-long
+                Only display the bars that are considered as *too long*
+            overlap
+                Only display the bars that overlap with multiple bars in
+                another column (see :meth:`get_overlapping_bars`)
+            all
+                Display all bars"""
         self.clear()
         self.filled = self._enable_doubleclick = False
         self.source = source
@@ -1600,6 +2023,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                 item.setExpanded(True)
 
     def start_splitting(self, item, *args, **kwargs):
+        """Enable the splitting for the selected item"""
         parent = item.parent()
         found = False
         for top in map(self.topLevelItem, range(self.topLevelItemCount())):
@@ -1711,6 +2135,8 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         self.suggestions_fig.canvas.draw()
 
     def set_suggestions_fig_titles(self, ax):
+        """Set the title in the suggestion figure with the displayed column
+        """
         x = np.mean(ax.get_xlim())
         col = next(
                 (i for i, (s, e) in enumerate(
@@ -1730,6 +2156,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         return suggestions
 
     def remove_lines(self):
+        """Remove the plotted lines"""
         for l in self.lines:
             try:
                 l.remove()
@@ -1762,7 +2189,24 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         elif self.selected_child.childCount():
             self.revert_split(y, y0)
 
+    @docstrings.get_sectionsf('BarSplitter.new_split')
     def new_split(self, y, y0, draw_figure=True):
+        """Mark the current item to be splitted at `y`
+
+        This method draws a horizontal line at `y` and adds a new
+        child QTreeWidgetItem to the :attr:`selected_child` to mark the split
+
+        Parameters
+        ----------
+        y: int
+            The vertical position of the split in the data image coordinate
+            system
+        y0: int
+            The vertical start of the data image (see
+            :attr:`straditize.binary.DataReader.extent`)
+        draw_figure: bool
+            If True, draw the figure
+        """
         reader = self.straditizer.data_reader
         item = self.selected_child
         draw_line = False
@@ -1807,8 +2251,15 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                 reader.draw_figure()
                 self.suggestions_fig.canvas.draw()
 
+    docstrings.delete_params('BarSplitter.new_split.parameters', 'draw_figure')
+
+    @docstrings.with_indent(8)
     def revert_split(self, y, y0):
-        """Revert the split"""
+        """Revert the split
+
+        Parameters
+        ----------
+        %(BarSplitter.new_split.parameters.no_draw_figure)s"""
         item = self.selected_child
         previous = None
         for i, child in enumerate(map(item.child,
@@ -1870,6 +2321,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                         break
 
     def remove_split_children(self):
+        """Remove all the child items that mark a split"""
         for item in map(self.topLevelItem, range(self.topLevelItemCount())):
             for child in map(item.child, range(item.childCount())):
                 nchildren = child.childCount()
@@ -1878,6 +2330,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                         child.removeChild(child2)
 
     def disconnect(self):
+        """Disconnect the events to split an item"""
         try:
             canvas = self.straditizer.data_reader.ax.figure.canvas
         except AttributeError:
@@ -1887,6 +2340,8 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         del self.selected_child, self.selected_col, self.selected_indices
 
     def add_toolbar_widgets(self):
+        """Add an action to switch between the bars to the matplotlib toolbar
+        """
         tb = self.straditizer.data_reader.ax.figure.canvas.toolbar
         if not isinstance(tb, QToolBar):
             return
@@ -1902,6 +2357,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         self.next_action.setToolTip('Move to the next bar that is too long')
 
     def remove_actions(self):
+        """Remove the actions added by :meth:`add_toolbar_widgets`"""
         if self.prev_action is not None:
             try:
                 tb = self.straditizer.data_reader.fig.canvas.toolbar
@@ -1917,9 +2373,11 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         del self.suggestions_fig, self.images
 
     def go_to_next_bar(self):
+        """Go to the :attr:`next_item`"""
         self._go_to_item(self.next_item)
 
     def go_to_prev_bar(self):
+        """Go to the :attr:`previous_item`"""
         self._go_to_item(self.previous_item)
 
     def _go_to_item(self, item):

@@ -1,5 +1,22 @@
 # -*- coding: utf-8 -*-
 """Module for text recognition
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 import re
 import xarray as xr
@@ -36,30 +53,36 @@ _Bbox = namedtuple('_Bbox', tuple('xywh'))
 
 
 class Bbox(_Bbox):
-    """A bounding box"""
+    """A bounding box for a column name"""
 
     @property
     def top(self):
+        """The top of the box"""
         return self.y
 
     @property
     def bottom(self):
+        """The bottom of the box"""
         return self.y + self.h
 
     @property
     def right(self):
+        """The right edge of the box"""
         return self.x + self.w
 
     @property
     def left(self):
+        """The left edge of the box"""
         return self.x
 
     @property
     def bounds(self):
+        """A list ``[x, y, width, height]``"""
         return list(self)
 
     @property
     def extents(self):
+        """A list ``[x0, x1, y0, y1]`` with ``x0 <= x1`` and ``y0 <= y1``"""
         return sorted([self.x0, self.x1]) + sorted([self.y0, self.y1])
 
     @property
@@ -69,6 +92,7 @@ class Bbox(_Bbox):
 
     @property
     def corners(self):
+        """A np.ndarray of shape (4, 2) with the corners of the box"""
         return np.array([
             [self.left, self.bottom],
             [self.left, self.top],
@@ -78,46 +102,70 @@ class Bbox(_Bbox):
 
     @property
     def x0(self):
+        """The left edge"""
         return self.left
 
     @property
     def height(self):
+        """The (positive) height"""
         return abs(self.h)
 
     @property
     def width(self):
+        """The (positive) width"""
         return abs(self.w)
 
     @property
     def x1(self):
+        """The right edge"""
         return self.right
 
     @property
     def y0(self):
+        """The lower (bottom) edge"""
         return self.bottom
 
     @property
     def y1(self):
+        """The upper (top) edge"""
         return self.top
 
     @classmethod
     def from_dict(cls, d):
+        """Construct a box from the dictionary"""
         return cls(**d)
 
 
 class ColNamesReader(object):
-    """A class to recognize the text in an image"""
+    """A class to recognize the text in an image
+
+    This object handles the column names in the :attr:`column_names` attribute.
+    It also implements several algorithms to automatically read in the column
+    names using the tesserocr package. In particular these are the
+    :meth:`recognize_text` method to read in one small image and the
+    :meth:`find_colnames` method to find the column names automatically."""
 
     _images = None
 
     _boxes = None
 
+    #: The RGBA :class:`PIL.Image.Image` that stores the column names
+    image = None
+
+    #: Boolean flag. If True, the data part is masked out in the
+    #: :attr:`highres_image`
     ignore_data_part = True
 
+    #: The vertical data limits of the data part that shall be exluded in the
+    #: :attr:`highres_image` if the :attr:`ignore_data_part` is True
     data_ylim = None
 
     @property
     def highres_image(self):
+        """The :attr:`image` attribute with higher resolution and with masked
+        out data part if the :attr:`ignore_data_part` attribute is True and the
+        :attr:`data_ylim` attribute is not None. The data part is then set to
+        white with 0 alpha"""
         ret = (self.image if self._highres_image is None else
                self._highres_image)
         if self.data_ylim is not None and self.ignore_data_part:
@@ -130,6 +178,10 @@ class ColNamesReader(object):
 
     @highres_image.setter
     def highres_image(self, value):
+        """The :attr:`image` attribute with higher resolution and with masked
+        out data part if the :attr:`ignore_data_part` attribute is True and the
+        :attr:`data_ylim` attribute is not None. The data part is then set to
+        white with 0 alpha"""
         self._highres_image = value
 
     _highres_image = None
@@ -145,6 +197,7 @@ class ColNamesReader(object):
 
     @column_names.setter
     def column_names(self, value):
+        """The names of the columns"""
         self._column_names = value
 
     @property
@@ -158,14 +211,41 @@ class ColNamesReader(object):
 
     @colpics.setter
     def colpics(self, value):
+        """The pictures of the column names"""
         self._colpics = value
 
     @property
     def rotated_image(self):
+        """The rotated :attr:`image` based on the :meth:`rotate_image` method
+        """
         return self.rotate_image(self.image)
 
     def __init__(self, image, bounds, rotate=45, mirror=False, flip=False,
                  highres_image=None, data_ylim=None):
+        """
+        Parameters
+        ----------
+        image: PIL.Image.Image
+            The RGBA image that has the same shape as the original
+            stratigraphic diagram
+        bounds: np.ndarray of shape (N, 2)
+            The boundaries for each column. These are essential for the
+            :meth:`find_colnames` and the :meth:`highlight_column` methods
+        rotate: float
+            An angle between 0 and 90 that corresponds to the rotation of the
+            column names
+        mirror: bool
+            If True, the image is mirrored (horizontally)
+        flip: bool
+            If True, the image is flipped (vertically)
+        highres_image: PIL.Image.Image
+            A high resolution version of the `image` with the same
+            width-to-height ratio
+        data_ylim: tuple (y0, y1)
+            The vertical data limits of the data part that should be ignored
+            in the :meth:`find_colnames` method if the :attr:`ignore_data_part`
+            is True
+        """
         from PIL import Image
 
         try:
@@ -189,7 +269,7 @@ class ColNamesReader(object):
                 if mode != 'RGBA':
                     highres_image = highres_image.convert('RGBA')
         self.highres_image = highres_image
-        self.data_ylim = data_ylim
+        self.data_ylim = None if data_ylim is None else np.asarray(data_ylim)
         self._column_names = []
         self._colpics = []
 
@@ -247,7 +327,24 @@ class ColNamesReader(object):
         return vname
 
     def get_colpic(self, x0, y0, x1, y1):
-        """Extract the picture of the column name"""
+        """Extract the picture of the column name
+
+        Parameters
+        ----------
+        x0: int
+            The left edge
+        y0: int
+            The upper edge
+        x1: int
+            The right edge
+        y1: int
+            The lower edge
+
+        Returns
+        -------
+        PIL.Image.Image
+            The part of the rotated :attr:`highres_image` cropped out from the
+            given parameters"""
         hr = self.highres_image
         image = self.rotate_image(hr)
         xs_hr, ys_hr = hr.size
@@ -298,7 +395,12 @@ class ColNamesReader(object):
 
     @classmethod
     def from_dataset(cls, ds):
-        """Create a :class:`ColNamesReader` for a xarray.Dataset"""
+        """Create a :class:`ColNamesReader` for a xarray.Dataset
+
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The dataset as obtained from the :meth:`to_dataset` method"""
         from PIL import Image
         ret = cls(ds['colnames_image'].values, ds['colnames_bounds'].values,
                   rotate=ds['rotate_colnames'].values,
@@ -319,6 +421,31 @@ class ColNamesReader(object):
         return ret
 
     def transform_point(self, x, y, invert=False, image=None):
+        """Transform a point between un-rotated and rotated coordinate system
+
+        Parameters
+        ----------
+        x: float
+            The x-coordinate of the point in the source coordinate system
+        y: float
+            The y-coordinate of the point in the source coordinate system
+        invert: bool
+            If True, the source coordinate system is the rotated one (i.e.
+            this method transform from the :attr:`rotated_image` to the
+            coordinate system of the :attr:`image`), other wise from the
+            :attr:`image` to the :attr:`rotated_image`
+        image: PIL.Image.Image
+            The unrotated source image. If None, the :attr:`image` is used.
+            This image defines the source coordinate system (or the target
+            coordinate system if `invert` is True)
+
+        Returns
+        -------
+        float
+            The transformed `x`-coordinate
+        float
+            The transformed `y`-coordinate
+        """
         import matplotlib.transforms as mt
         angle = np.deg2rad(self.rotate)
         if image is None:
@@ -337,7 +464,18 @@ class ColNamesReader(object):
             return trans.transform_point([x, y])
 
     def navigate_to_col(self, col, ax):
-        """Navigate to the specified column"""
+        """Navigate to the specified column
+
+        Change the x- and y-limits of the `ax` to display the given `col` based
+        on the :attr:`column_bounds`
+
+        Parameters
+        ----------
+        col: int
+            The column number
+        ax: matplotlib.axes.Axes
+            The matplotlib axes for which to update the limits. This `ax` is
+            expected to show the :attr:`rotated_image`"""
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
         dx = (xmax - xmin) / 2.
@@ -352,7 +490,18 @@ class ColNamesReader(object):
 
     def highlight_column(self, col, ax):
         """Highlight the column in the given axes displaying the
-        :attr:`rotated_image`"""
+        :attr:`rotated_image`
+
+        This method draws a rotated rectangle highlighting the given column
+        `col` in the given `ax`.
+
+        Parameters
+        ----------
+        col: int
+            The column number
+        ax: matplotlib.axes.Axes
+            The matplotlib axes on which to plot the rectangle. This `ax` is
+            expected to show the :attr:`rotated_image`"""
         import matplotlib.patches as patches
         import matplotlib as mpl
         xmin, xmax = self.column_bounds[col]
@@ -371,6 +520,21 @@ class ColNamesReader(object):
         return patch
 
     def rotate_image(self, image):
+        """Modify an image with :attr:`rotate`, :attr:`flip`, :attr:`mirror`
+
+        This method rotated, mirrors and/or flips the given `image` based on
+        the :attr:`rotate`, :attr:`mirror` and :attr:`flip` attributes
+
+        Parameters
+        ----------
+        image: PIL.Image.Image
+            The source image
+
+        Returns
+        -------
+        PIL.Image.Image
+            The target image
+        """
         ret = image
         if self.mirror:
             ret = ImageOps.mirror(ret)
@@ -380,7 +544,20 @@ class ColNamesReader(object):
         return ret
 
     def recognize_text(self, image):
+        """Recognize the text in an image using tesserocr
 
+        This method uses the :func:`tesserocr.image_to_text` to read in the
+        text in a given `image`
+
+        Parameters
+        ----------
+        image: PIL.Image.Image
+            The image to read in
+
+        Returns
+        -------
+        str
+            The text found in it without newline characters"""
         if tesserocr is None:
             raise ImportError("tesserocr module not found!")
 
@@ -390,7 +567,24 @@ class ColNamesReader(object):
         return tesserocr.image_to_text(image).strip().replace('\n', ' ')
 
     def find_colnames(self, extents=None):
-        """Find the names for the columns using tesserocr"""
+        """Find the names for the columns using tesserocr
+
+        Parameters
+        ----------
+        extents: list of floats (x0, y0, x1, y1)
+            The extents to crop the :attr:`rotated_image`. We only look for
+            column names in this image
+
+        Returns
+        -------
+        dict
+            A mapping from column number to a string (the column name)
+        dict
+            A mapping from column number to a :class:`PIL.Image.Image` (the
+            image of the column name)
+        dict
+            A mapping from column number to a :class:`Bbox` (the bounding box
+            of the corresponding column name)"""
 
         def get_overlap(col, box):
             s, e = bounds[col]

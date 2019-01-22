@@ -1,18 +1,61 @@
+# -*- coding: utf-8 -*-
 """Module for the :class:`LabelSelection` class
 
 This module defines the :class:`LabelSelection` class, a base class for the
 :class:`straditize.straditizer.Straditizer`
 :class:`straditize.binary.DataReader` classes. This class implements the
-features to select parts of an image and deletes them"""
+features to select parts of an image and deletes them. The
+:class:`straditize.widgets.selection_toolbar.SelectionToolbar` interfaces
+with instances of this class.
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import numpy as np
 import matplotlib.colors as mcol
-from itertools import product
+from straditize.common import docstrings
 
 
 class LabelSelection(object):
+    """Class to provide selection functionalities for an image
+
+    This class provides functionalities to select features in an image. A new
+    selection can be started through :meth:`enable_label_selection` method
+    and selected parts can be removed through the
+    :meth:`remove_selected_labels` method.
+
+    A 2D boolean mask of the selected pixels can be accessed through the
+    :attr:`selected_part` attribute.
+
+    This class generally assumes that the array for the selection is a 2D
+    integer array, e.g. obtained from the :func:`skimage.morphology.label`
+    function.
+
+    The selection of labels is handled through the colormap. The selection is
+    displayed as a matplotlib image on the :attr:`ax` attribute of this
+    instance. If the color for one label is equal to the :attr:`cselect` color,
+    it is considered as selected. Additionally every cell that has a value
+    greater than the original number of labels is considered to be selected.
+
+    Cells with a value of -1 are not selected and cells with a value of 0
+    cannot be selected."""
 
     _selection_arr = None
 
+    #: matplotlib image of the selection
     _select_img = None
 
     #: The RGBA color for selected polygons
@@ -42,7 +85,7 @@ class LabelSelection(object):
 
     @property
     def selected_labeled_part(self):
-        """The selected part of the polygons"""
+        """The selected part as a 2D boolean mask"""
         if self._selection_arr is None:
             return np.zeros_like(self.labels, dtype=bool)
         selection = self.selected_labels
@@ -50,7 +93,7 @@ class LabelSelection(object):
 
     @property
     def selected_part(self):
-        """The selected part of the polygons"""
+        """The selected part as a 2D boolean mask"""
         if self._selection_arr is None:
             return np.zeros_like(self.labels, dtype=bool)
         return self.selected_labeled_part | (
@@ -58,6 +101,7 @@ class LabelSelection(object):
 
     @property
     def selected_labels(self):
+        """A list of selected labels in the selection array"""
         bounds = self._select_img.norm.boundaries[1:] + 0.5
         bounds = bounds.astype(int)
         cmap = self._select_img.get_cmap()
@@ -79,7 +123,7 @@ class LabelSelection(object):
                  for s, e in zip(starts, ends)))
 
     def get_default_cmap(self, ncolors):
-        # The default colormap for binary images
+        """The default colormap for binary images"""
         colors = np.array([self.cunselect for i in range(ncolors)])
         cmap = mcol.LinearSegmentedColormap.from_list('invisible', colors,
                                                       ncolors)
@@ -88,6 +132,23 @@ class LabelSelection(object):
 
     @staticmethod
     def copy_cmap(cmap_src, colors):
+        """Copy a colormap with replaced colors
+
+        This function creates a method that has the same name and the same
+        *under*, *over* and *bad* values as the given `cmap_src` but with
+        replaced colors
+
+        Parameters
+        ----------
+        cmap_src: matplotlib.colors.Colormap
+            The source colormap
+        colors: np.ndarray
+            The colors for the colormap
+
+        Returns
+        -------
+        matplotlib.colors.Colormap
+            The new colormap"""
         cmap = mcol.LinearSegmentedColormap.from_list(cmap_src.name, colors,
                                                       len(colors))
         cmap.set_under(cmap_src(-0.1))
@@ -96,6 +157,7 @@ class LabelSelection(object):
         return cmap
 
     def pick_label(self, event):
+        """Pick the label selected by the given mouseevent"""
         self.event = event
         artist = event.artist
         if artist is not self._select_img:
@@ -124,6 +186,15 @@ class LabelSelection(object):
         self._select_img.axes.figure.canvas.draw()
 
     def highlight_small_selections(self, n=20):
+        """Highlight labels that cover only a small portion of cells
+
+        This method uses the :func:`skimage.morphology.remove_small_objects`
+        to detect and highlight small features in the diagram. Each feature
+        will be highlighted through an ellipsis around it.
+
+        See Also
+        --------
+        remove_small_selection_ellipses"""
         from matplotlib.patches import Ellipse
         import skimage.morphology as skim
         if self._selection_arr is None:
@@ -157,11 +228,21 @@ class LabelSelection(object):
             self._select_img.axes.add_patch(a)
 
     def remove_small_selection_ellipses(self):
+        """Remove the ellipes for small features
+
+        Removes the ellipses plotted by the :meth:`highlight_small_selections`
+        method"""
         for a in self._ellipses:
             a.remove()
         self._ellipses.clear()
 
     def select_labels(self, selected):
+        """Select a list of labels
+
+        Parameters
+        ----------
+        selected: np.ndarray
+            The numpy array of labels that should be selected"""
         if len(selected) == 0:
             self._select_img.set_cmap(self._select_cmap)
             self._select_img.set_norm(self._select_norm)
@@ -198,8 +279,28 @@ class LabelSelection(object):
             self._select_img.set_norm(mcol.BoundaryNorm(bounds, len(bounds)-1))
             self._update_magni_img()
 
+    @docstrings.get_sectionsf('LabelSelection.enable_label_selection')
     def enable_label_selection(self, arr, ncolors, img=None,
                                set_picker=False, **kwargs):
+        """Start the selection of labels
+
+        Parameters
+        ----------
+        arr: 2D np.ndarray of dtype int
+            The labeled array that contains the features to select.
+        ncolors: int
+            The maximum of the labels in `arr`
+        img: matplotlib image
+            The image for the selection. If not provided, a new image is
+            created
+        set_picker: bool
+            If True, connect the matplotlib pick_event to the
+            :meth:`pick_label` method
+
+        See Also
+        --------
+        disable_label_selection
+        remove_selected_labels"""
         if img is None:
             cmap = self.get_default_cmap(2)
             cmap.set_under('none')
@@ -229,6 +330,7 @@ class LabelSelection(object):
                 'pick_event', self.pick_label)
 
     def select_all_labels(self):
+        """Select the entire array"""
         colors = [self.cunselect, self.cselect]
         self._selection_arr = self._orig_selection_arr.copy()
         self._select_img.set_cmap(self.copy_cmap(self._select_img.get_cmap(),
@@ -244,14 +346,17 @@ class LabelSelection(object):
             magni_img.set_cmap(img.get_cmap())
             magni_img.set_array(img.get_array())
             magni_img.set_norm(img.norm)
+            magni_img.set_alpha(img.get_alpha())
             self.magni.ax.figure.canvas.draw_idle()
 
     def unselect_all_labels(self):
+        """Clear the selection"""
         self._select_img.set_cmap(self._select_cmap)
         self._select_img.set_norm(self._select_norm)
         self._update_magni_img()
 
     def select_all_other_labels(self):
+        """Invert the selection"""
         cmap = self._select_img.get_cmap()
         arr = np.linspace(0, 1., cmap.N)
         colors = cmap(arr)
@@ -268,6 +373,21 @@ class LabelSelection(object):
         self._update_magni_img()
 
     def remove_selected_labels(self, disable=False):
+        """Remove the selected parts of the diagram
+
+        This method will call the callbackes in the :attr:`remove_callbacks`
+        attribute for all the attributes in the :attr:`label_arrs` list.
+
+        Parameters
+        ----------
+        disable: bool
+            If True, call the :meth:`disable_label_selection` method at the end
+
+        See Also
+        --------
+        enable_label_selection
+        disable_label_selection
+        """
         selection = self.selected_labels
         to_big = self._selection_arr > self._select_nlabels
         if not len(selection) and not to_big.any():
@@ -303,6 +423,20 @@ class LabelSelection(object):
             self.disable_label_selection()
 
     def disable_label_selection(self, remove=None):
+        """Disable the label selection
+
+        This will disconnect the *pick_event* and remove the selection images
+
+        Parameters
+        ----------
+        remove: bool
+            Whether to remove the selection image from the plot. If None, the
+            :attr:`_remove` attribute is used
+
+        See Also
+        --------
+        enable_label_selection
+        remove_selected_labels"""
         if remove is None:
             remove = self._remove
         if remove:

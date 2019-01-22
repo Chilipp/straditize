@@ -1,6 +1,26 @@
-"""A table for manipulating samples"""
+"""A table for manipulating samples
+
+This module defines the sample editors, either for editing the samples in the
+straditizer image (:class:`SingleCrossMarksEditor`) or in a separate
+:class:`~matplotlib.figure.Figure` (:class:`MultiCrossMarksEditor`)
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 from __future__ import division
-import weakref
 import six
 import numpy as np
 import pandas as pd
@@ -10,15 +30,19 @@ from psyplot_gui.compat.qtcompat import (
     QPushButton, Qt, QMenu, QCheckBox, QTableView)
 from psyplot_gui.common import DockMixin, PyErrorMessage
 from psyplot_gui.dataframeeditor import DataFrameDock, FrozenTableView
+from straditize.common import docstrings
 from collections import defaultdict
 
 
 class MultiCrossMarksModel(QtCore.QAbstractTableModel):
+    """A table model to handle multiple connected cross marks in different axes
+    """
 
     _format = '%0.6g'
 
     @property
     def fig(self):
+        """The figure of the cross marks"""
         return self.axes[0].figure
 
     @property
@@ -29,8 +53,31 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
     def _remove_mark(self):
         return self.straditizer()._remove_mark
 
+    #: A list ``[float, list]`` where the first ``float`` is the vertical
+    #: position and the second ``list`` is a list of the corresponding
+    #: :class:`~straditize.cross_mark.CrossMarks` instances
+    marks = []
+
+    #: A list of :class:`matplotlib.lines.Line2D` that connects the cross marks
+    #: and plots a reconstruction based on them
+    lines = []
+
+    @docstrings.get_sectionsf('MultiCrossMarksModel')
     def __init__(self, marks, columns, straditizer, axes=None,
                  occurences_value=-9999):
+        """
+        Parameters
+        ----------
+        marks: list of :class:`straditize.cross_mark.CrossMarks`
+            the initial marks
+        columns: list of str
+            the column names to use
+        straditizer: straditize.straditizer.Straditizer
+            The straditizer that manages the `marks`
+        axes: list of :class:`matplotlib.axes.Axes`
+            The matplotlib axes that contain the `marks`
+        occurences_value: float
+            The value that marks an occurence"""
         super(MultiCrossMarksModel, self).__init__()
         self.occurences_value = occurences_value
         self.set_marks(marks, columns)
@@ -46,16 +93,38 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             mark.moved.connect(self.update_after_move)
 
     def set_marks(self, marks, columns):
+        """Set the :attr:`marks` attribute from the given `columns`
+
+        Parameters
+        ----------
+        marks: list of :class:`straditize.cross_mark.CrossMarks`
+            the initial marks
+        columns: list of str
+            the column names to use"""
         ncols = len(columns)
         self._column_names = columns
         arr = np.array(marks).reshape((len(marks) // ncols, ncols)).tolist()
         self.marks = list(zip((l[0].y for l in arr), arr))
 
     def get_cell_mark(self, row, column):
+        """Get the mark for a given cell in the table
+
+        Parameters
+        ----------
+        row: int
+            The row of the cell
+        column: int
+            The column of the cell
+
+        Returns
+        -------
+        straditize.cross_mark.CrossMarks
+            The corresponding mark from the :attr:`marks` attribute"""
         return self.marks[row][1][column - 1]
 
     @property
     def iter_marks(self):
+        """Iter over all marks in the :attr:`marks` attribute"""
         return chain.from_iterable(t[1] for t in self.marks)
 
     def update_after_move(self, old_pos, mark):
@@ -128,6 +197,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         return df.sort_index()
 
     def plot_lines(self):
+        """Connect the samples through visual :attr:`lines`"""
         if not self.rowCount():
             return
         self.lines.extend(chain.from_iterable(
@@ -136,6 +206,11 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         self.fig.canvas.draw_idle()
 
     def update_lines(self):
+        """Update the :attr:`lines` or plot them
+
+        See Also
+        --------
+        plot_lines"""
         if not self.lines:
             self.plot_lines()
         elif not self.rowCount():
@@ -149,6 +224,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             self.fig.canvas.draw_idle()
 
     def remove_lines(self):
+        """Remove the :attr:`lines`"""
         for l in self.lines:
             try:
                 l.remove()
@@ -170,12 +246,15 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
                 return self.get_format() % mark.xa[i]
 
     def rowCount(self, index=QtCore.QModelIndex()):
+        """The number of rows in the table"""
         return len(self.marks)
 
     def columnCount(self, index=QtCore.QModelIndex()):
+        """The number of rows in the table"""
         return len(self.axes) + 1
 
     def reset(self):
+        """Reset the model"""
         self.beginResetModel()
         self.endResetModel()
 
@@ -204,9 +283,16 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
         return (t[0], [m.x for m in t[1]])
 
     def sort_marks(self):
+        """Sort the marks based on there y-position"""
         self.marks = sorted(self.marks, key=self._sorter)
 
     def load_new_marks(self, mark):
+        """Add a new mark into the table after they have been added by the user
+
+        Parameters
+        ----------
+        mark: straditize.cross_mark.CrossMarks
+            The added mark"""
         self._new_marks.append(mark)
         mark.moved.connect(self.update_after_move)
         if len(self._new_marks) == self.columnCount() - 1:
@@ -220,6 +306,12 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
             self.update_lines()
 
     def remove_mark(self, mark):
+        """Remove a mark from the table after it has been removed by the user
+
+        Parameters
+        ----------
+        mark: straditize.cross_mark.CrossMarks
+            The removed mark"""
         found = False
         for i, (y, marks) in enumerate(self.marks):
             if mark in marks:
@@ -277,8 +369,25 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
 
 
 class SingleCrossMarksModel(MultiCrossMarksModel):
+    """A table model to handle cross marks within one single axis"""
 
+    #: A list of tuples like ``(float, mark)`` where ``float`` is the y-pixel
+    #: and ``mark`` is the corresponding
+    #: :class:`straditize.cross_mark.CrossMarks` instance
+    marks = []
+
+    @docstrings.get_sectionsf('SingleCrossMarksModel')
+    @docstrings.dedent
     def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(MultiCrossMarksModel.parameters)s
+        column_bounds: np.ndarray of shape ``(N, 2)``
+            The column boundaries
+        y0: float
+            The upper extent of the data image
+        """
         self._bounds = kwargs.pop('column_bounds')
         self._y0 = kwargs.pop('y0')
         super(SingleCrossMarksModel, self).__init__(*args, **kwargs)
@@ -287,14 +396,19 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
         self._column_names = columns
         self.marks = list(zip((m.y for m in marks), marks))
 
+    set_marks.__doc__ = MultiCrossMarksModel.set_marks.__doc__
+
     def get_cell_mark(self, row, column):
         ret = self.marks[row][1]
         if column > 0:
             ret._i_vline = column - 1
         return ret
 
+    get_cell_mark.__doc__ = MultiCrossMarksModel.get_cell_mark.__doc__
+
     @property
     def iter_marks(self):
+        """Iter over all marks in the :attr:`marks` attribute"""
         return (m for y, m in self.marks)
 
     def update_after_move(self, old_pos, mark):
@@ -353,6 +467,8 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
             for col, s in self.df.items()))
         self.fig.canvas.draw_idle()
 
+    plot_lines.__doc__ = MultiCrossMarksModel.plot_lines.__doc__
+
     def update_lines(self):
         if not self.lines:
             self.plot_lines()
@@ -367,6 +483,8 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
                 l.set_xdata(starts[col] + s.values)
                 l.set_ydata(y0 + s.index.values)
             self.fig.canvas.draw_idle()
+
+    update_lines.__doc__ = MultiCrossMarksModel.update_lines.__doc__
 
     def _get_cell_data(self, row, column):
             y, mark = self.marks[row]
@@ -451,11 +569,29 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
 
 
 class MultiCrossMarksView(QTableView):
-    """Data Frame view class"""
+    """A table view set up by cross marks from multiple axes
+
+    The model for this table is the :class:`MultiCrossMarksModel`"""
 
     _fit2selection_cid = None
 
+    docstrings.delete_params('MultiCrossMarksModel.parameters', 'marks')
+
+    #: The :class:`pandas.DataFrame` representing the full digitized data
+    #: from the :attr:`straditize.binary.DataReader.full_df` data frame
+    full_df = None
+
+    @docstrings.dedent
     def __init__(self, marks, full_df, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        marks: list of :class:`straditize.cross_mark.CrossMarks`
+            the initial marks
+        full_df: pandas.DataFrame
+            The data fame of the full digitized data
+        %(MultiCrossMarksModel.parameters.no_marks)s
+        """
         QTableView.__init__(self)
         self.full_df = full_df
         model = self.init_model(marks, *args, **kwargs)
@@ -475,7 +611,13 @@ class MultiCrossMarksView(QTableView):
 
         self.header_class = self.horizontalHeader()
 
+    @docstrings.with_indent(8)
     def init_model(self, marks, *args, **kwargs):
+        """Initialize the table :class:`MultiCrossMarksModel`
+
+        Parameters
+        ----------
+        %(MultiCrossMarksModel.parameters)s"""
         return MultiCrossMarksModel(marks, *args, **kwargs)
 
     def update_section_width(self, logical_index, old_size, new_size):
@@ -575,6 +717,7 @@ class MultiCrossMarksView(QTableView):
             model.delRow(row)
 
     def fit2data(self):
+        """Fit the selected cells to the :attr:`full_df`"""
         model = self.model()
         df = self.full_df
         mark = None
@@ -605,9 +748,18 @@ class MultiCrossMarksView(QTableView):
         event.accept()
 
     def zoom_to_selection(self):
+        """Zoom to the selected cells in the plot"""
         self.zoom_to_cells(*self._selected_rows_and_cols())
 
     def zoom_to_cells(self, rows, cols):
+        """Zoom to specific cells in the plot
+
+        Parameters
+        ----------
+        rows: list of int
+            The row indices of the cells
+        cols: list of int
+            The column indicies of the cells"""
         model = self.model()
         xvals = defaultdict(list)
         yvals = []
@@ -635,12 +787,22 @@ class MultiCrossMarksView(QTableView):
         mark.fig.canvas.draw()
 
     def show_all_marks(self):
+        """Show all marks
+
+        See Also
+        --------
+        show_selected_marks_only"""
         model = self.model()
         for m in model.iter_marks:
             m.set_visible(True)
         model.fig.canvas.draw()
 
     def show_selected_marks_only(self):
+        """Show only the marks selected in the table
+
+        See Also
+        --------
+        show_all_marks"""
         model = self.model()
         # hide all marks
         for m in model.iter_marks:
@@ -657,6 +819,11 @@ class SingleCrossMarksView(MultiCrossMarksView):
     """A table for visualizing marks from a single axes"""
 
     def init_model(self, marks, *args, **kwargs):
+        """Initialize the table :class:`SingleCrossMarksModel`
+
+        Parameters
+        ----------
+        %(SingleCrossMarksModel.parameters)s"""
         return SingleCrossMarksModel(marks, *args, **kwargs)
 
     def fit2data(self):
@@ -683,6 +850,8 @@ class SingleCrossMarksView(MultiCrossMarksView):
         if mark is not None:
             mark.fig.canvas.draw()
 
+    fit2data.__doc__ = MultiCrossMarksView.fit2data.__doc__
+
     def zoom_to_cells(self, rows, cols):
         model = self.model()
         rows = list(rows)
@@ -698,13 +867,28 @@ class SingleCrossMarksView(MultiCrossMarksView):
         ax.set_ylim(y.max() + 10, y.min() - 10)
         model.fig.canvas.draw()
 
+    zoom_to_cells.__doc__ = MultiCrossMarksView.zoom_to_cells.__doc__
+
 
 class MultiCrossMarksEditor(DockMixin, QWidget):
-    """An editor for multiple cross marks at the same y-location"""
+    """An editor for cross marks in multiple axes"""
 
+    #: The QDockWidget for the :class:`DataFrameEditor`
     dock_cls = DataFrameDock
 
+    #: A :class:`weakref` to the
+    #: :attr:`~straditize.widgets.StraditizerWidgets.straditizer`
+    straditizer = None
+
     def __init__(self, straditizer, axes=None, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        straditizer: weakref.ref
+            The reference to the straditizer
+        axes: matplotlib.axes.Axes
+            The matplotlib axes corresponding to the marks
+        """
         super(MultiCrossMarksEditor, self).__init__(*args, **kwargs)
         self.straditizer = straditizer
         straditizer = straditizer()
@@ -790,17 +974,25 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
         self.toggle_plot_lines()
 
     def create_view(self, axes=None):
+        """Create the :class:`MultiCrossMarksView` of the editor
+
+        Parameters
+        ----------
+        axes: list of :class:`matplotlib.axes.Axes`
+            The matplotlib axes for the marks"""
         stradi = self.straditizer()
         reader = stradi.data_reader
         df = getattr(stradi, '_plotted_full_df', reader._full_df).copy()
         df.columns = [
             str(i) if str(i) == colname else '%s (%i)' % (colname, i)
-            for i, colname in enumerate(stradi.colnames_reader.column_names + ['nextrema'])]
+            for i, colname in enumerate(stradi.colnames_reader.column_names +
+                                        ['nextrema'])]
         return MultiCrossMarksView(stradi.marks, df, df.columns,
                                    self.straditizer, axes=axes,
                                    occurences_value=reader.occurences_value)
 
     def save_samples(self):
+        """Save the samples to the :attr:`straditizer` without removing them"""
         self.straditizer().update_samples_sep(remove=False)
 
     def maybe_zoom_to_selection(self):
@@ -901,6 +1093,12 @@ class SingleCrossMarksEditor(MultiCrossMarksEditor):
     """The editor for cross marks on a single axes"""
 
     def create_view(self, axes=None):
+        """Create the :class:`SingleCrossMarksView` of the editor
+
+        Parameters
+        ----------
+        axes: list of :class:`matplotlib.axes.Axes`
+            The matplotlib axes for the marks"""
         stradi = self.straditizer()
         reader = stradi.data_reader
         axes = [reader.ax]

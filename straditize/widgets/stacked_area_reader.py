@@ -1,4 +1,21 @@
-"""DataReader for stacked area plots"""
+"""DataReader for stacked area plots
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 from itertools import chain
 import numpy as np
 from functools import partial
@@ -11,16 +28,44 @@ import gc
 
 
 class StackedReader(DataReader, StraditizerControlBase):
-    """A DataReader for stacked area plots"""
+    """A DataReader for stacked area plots
+
+    This reader only works within the straditizer GUI because the digitization
+    (see :meth:`digitize`) is interactive. The user has to manually distinguish
+    the stacked variables."""
 
     #: The QTreeWidgetItem that holds the digitization widgets
     digitize_child = None
+
+    #: A QPushButton to select the previous variable during the digitization
+    #: (see :meth:`decrease_current_col`)
+    btn_prev = None
+
+    #: A QPushButton to select the next variable during the digitization
+    #: (see :meth:`increase_current_col`)
+    btn_next = None
+
+    #: A QPushButton to select the features in the image for the current
+    #: variable (see :meth:`select_current_column`)
+    btn_edit = None
+
+    #: A QPushButton to add a new variable to the current ones
+    #: (see :meth:`select_and_add_current_column`)
+    btn_add = None
+
+    #: A QLabel to display the current column
+    lbl_col = None
 
     strat_plot_identifier = 'stacked'
 
     _current_col = 0
 
     def digitize(self):
+        """Digitize the data interactively
+
+        This method creates a new child item for the digitize button in the
+        straditizer control to manually distinguish the variables in the
+        stacked diagram."""
         if getattr(self, 'straditizer_widgets', None) is None:
             self.init_straditizercontrol(get_straditizer_widgets())
         digitizer = self.straditizer_widgets.digitizer
@@ -82,15 +127,18 @@ class StackedReader(DataReader, StraditizerControlBase):
         self.btn_add.clicked.connect(self.select_and_add_current_column)
 
     def reset_lbl_col(self):
+        """Reset the :attr:`lbl_col` to display the current column"""
         self.lbl_col.setText('Part %i of %i' % (
             self.columns.index(self._current_col) + 1, len(self.columns)))
 
     def increase_current_col(self):
+        """Take the next column as the current column"""
         self._current_col = min(self.columns[-1], self._current_col + 1)
         self.reset_lbl_col()
         self.enable_or_disable_navigation_buttons()
 
     def decrease_current_col(self):
+        """Take the previous column as the current column"""
         self._current_col = max(self.columns[0], self._current_col - 1)
         self.reset_lbl_col()
         self.enable_or_disable_navigation_buttons()
@@ -108,6 +156,10 @@ class StackedReader(DataReader, StraditizerControlBase):
         self.widgets2disable.clear()
 
     def enable_or_disable_navigation_buttons(self):
+        """Enable or disable :attr:`btn_prev` and :attr:`btn_next`
+
+        Depending on the current column, we disable the navigation buttons
+        :attr:`btn_prev` and :attr:`btn_next`"""
         disable_all = self.columns is None or len(self.columns) == 1
         self.btn_prev.setEnabled(not disable_all and
                                  self._current_col != self.columns[0])
@@ -115,9 +167,11 @@ class StackedReader(DataReader, StraditizerControlBase):
                                  self._current_col != self.columns[-1])
 
     def select_and_add_current_column(self):
+        """Select the features for a column and create it as a new one"""
         return self._select_current_column(True)
 
     def select_current_column(self):
+        """Select the features of the current column"""
         return self._select_current_column()
 
     def _select_current_column(self, add_on_apply=False):
@@ -144,6 +198,7 @@ class StackedReader(DataReader, StraditizerControlBase):
 
     @property
     def start_of_current_col(self):
+        """The first x-pixel of the current column"""
         if self._current_col == self.columns[0]:
             start = np.zeros(self.binary.shape[:1])
         else:
@@ -153,6 +208,11 @@ class StackedReader(DataReader, StraditizerControlBase):
         return start
 
     def update_plotted_full_df(self):
+        """Update the plotted full_df if it is shown
+
+        See Also
+        --------
+        plot_full_df"""
         pc = self.straditizer_widgets.plot_control.table
         if pc.can_plot_full_df() and pc.get_full_df_lines():
             pc.remove_full_df_plot()

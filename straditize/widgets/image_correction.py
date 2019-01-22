@@ -1,22 +1,61 @@
 """Image correction methods
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 import numpy as np
 from straditize.widgets import StraditizerControlBase
 from psyplot_gui.compat.qtcompat import (
     QWidget, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton,
     QLabel, QDoubleValidator, QMessageBox)
+from straditize.common import docstrings
 import straditize.cross_mark as cm
 from psyplot.utils import _temp_bool_prop
 
 
 class ImageRotator(StraditizerControlBase, QWidget):
-    """Object to rotate the image"""
+    """Widget to rotate the image
+
+    This control mainly adds a QLineEdit :attr:`txt_rotate` to the
+    :class:`straditize.widgets.StraditizerWidgets` to rotate the image.
+    It also enables the user to specify the rotation angle using two
+    connected :class:`~straditize.cross_mark.CrossMarks`. Here the user can
+    decide between a horizontal alignment (:attr:`btn_rotate_horizontal`) or
+    a vertical alignment (:attr:`btn_rotate_vertical`)"""
 
     _rotating = False
     _ha = False
     _va = False
 
+    #: A QPushButton for horizontal alignment
+    btn_rotate_horizontal = None
+
+    #: A QPushButton for vertical alignment
+    btn_rotate_vertical = None
+
+    #: A QLineEdit to display the rotation angle
+    txt_rotate = None
+
+    @docstrings.dedent
     def __init__(self, straditizer_widgets, item=None, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(StraditizerControlBase.init_straditizercontrol.parameters)s"""
         super(ImageRotator, self).__init__(*args, **kwargs)
         self.txt_rotate = QLineEdit()
         self.txt_rotate.setValidator(QDoubleValidator())
@@ -70,6 +109,7 @@ class ImageRotator(StraditizerControlBase, QWidget):
         return False
 
     def start_rotation(self):
+        """Start the rotation (if not already started)"""
         if not self._rotating:
             self._rotating = True
             self.connect2apply(self.rotate_image)
@@ -81,11 +121,13 @@ class ImageRotator(StraditizerControlBase, QWidget):
         self.straditizer.draw_figure()
 
     def start_horizontal_alignment(self):
+        """Start the horizontal alignment"""
         self.start_rotation()
         self._ha = True
         self._start_alignment()
 
     def start_vertical_alignment(self):
+        """Start the vertical alignment"""
         self.start_rotation()
         self._va = True
         self._start_alignment()
@@ -111,6 +153,7 @@ class ImageRotator(StraditizerControlBase, QWidget):
             'button_press_event', stradi._remove_mark_event))
 
     def update_txt_rotate(self, *args, marks=[], **kwargs):
+        """Update the :attr:`txt_rotate` from the displayed cross marks"""
         stradi = self.straditizer
         marks = marks or stradi.marks
         if len(marks) != 2:
@@ -134,12 +177,14 @@ class ImageRotator(StraditizerControlBase, QWidget):
 
     @property
     def angle(self):
+        """The rotation angle from :attr:`txt_rotate` as a float"""
         angle = self.txt_rotate.text()
         if not angle.strip():
             return
         return float(angle.strip())
 
     def rotate_image(self):
+        """Rotate the image based on the specified :attr:`angle`"""
         angle = self.angle
         if angle is None:
             return
@@ -158,16 +203,36 @@ class ImageRotator(StraditizerControlBase, QWidget):
         self._rotating = self._ha = self._va = False
 
     def remove_marks(self):
+        """Remove the cross marks used for the rotation angle"""
         self._rotating = self._ha = self._va = False
         self.straditizer.remove_marks()
         self.straditizer_widgets.apply_button.setText('Apply')
 
 
 class ImageRescaler(StraditizerControlBase, QPushButton):
-    """A widget to rescale the straditize image"""
+    """A button to rescale the straditize image"""
 
     rescaling = _temp_bool_prop(
         'rescaling', "Boolean that is true if one of the axes is rescaling")
+
+    #: A :class:`matplotlib.widgets.Slider` for specifying the size of the
+    #: rescaled image
+    slider = None
+
+    #: The matplotlib image for the rescaled diagram
+    im_rescale = None
+
+    #: The matplotlib image for the original diagram
+    im_orig = None
+
+    #: The matplotlib axes for the :attr:`im_orig`
+    ax_orig = None
+
+    #: The matplotlib axes for the :attr:`im_rescale`
+    ax_rescale = None
+
+    #: The matplotlib figure for the rescaling
+    fig = None
 
     def __init__(self, straditizer_widgets, item, *args, **kwargs):
         super(ImageRescaler, self).__init__('Rescale image')
@@ -179,6 +244,7 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
         self.clicked.connect(self.start_rescaling)
 
     def start_rescaling(self):
+        """Create the rescaling figure"""
         self._create_rescale_figure()
 
     def _create_rescale_figure(self):
@@ -215,12 +281,26 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
         self.equalize_axes()
 
     def resize_stradi_image(self, percentage):
+        """Resize the straditizer image
+
+        Parameters
+        ----------
+        percentage: float
+            A float between 0 and 100 specifying the target size of the
+            :attr:`straditize.straditizer.Straditizer.image`
+
+        Returns
+        -------
+        PIL.Image.Image
+            The resized :attr:`~straditize.straditizer.Straditizer.image`
+            of the current straditizer"""
         w, h = self.straditizer.image.size
         new_size = (int(round(w * percentage / 100.)),
                     int(round(h * percentage / 100.)))
         return self.straditizer.image.resize(new_size)
 
     def raise_figure(self):
+        """Raise the figure for rescaling"""
         from psyplot_gui.main import mainwindow
         if mainwindow.figures:
             dock = self.fig.canvas.manager.window
@@ -228,12 +308,14 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
             dock.raise_()
 
     def rescale_plot(self, percentage):
+        """Replot :attr:`im_rescale` after adjustments of the :attr:`slider`"""
         self.im_rescale.remove()
         self.im_rescale = self.ax_rescale.imshow(
             self.resize_stradi_image(percentage))
         self.adjust_rescaled_limits()
 
     def adjust_rescaled_limits(self, *args, **kwargs):
+        """Readjust :attr:`ax_rescale` after changes in :attr:`ax_orig`"""
         if self.rescaling:
             return
         with self.rescaling:
@@ -245,6 +327,7 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
             self.draw_figure()
 
     def adjust_orig_limits(self, *args, **kwargs):
+        """Readjust :attr:`ax_orig` after changes in :attr:`ax_rescale`"""
         if self.rescaling:
             return
         with self.rescaling:
@@ -256,6 +339,7 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
             self.draw_figure()
 
     def equalize_axes(self, event=None):
+        """Set both axes to the same size"""
         rescale_pos = self.ax_rescale.get_position()
         self.ax_orig.set_position((
             rescale_pos.x0, 0.55, rescale_pos.width,
@@ -265,6 +349,13 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
         self.fig.canvas.draw()
 
     def rescale(self, ask=None):
+        """Rescale and start a new straditizer
+
+        Parameters
+        ----------
+        ask: bool
+            Whether to ask with a QMessageBox. If None, it defaults to the
+            :attr:`straditize.widgets.StraditizerWidgers.always_yes`"""
         if ask is None:
             ask = not self.straditizer_widgets.always_yes
         answer = QMessageBox.Yes if not ask else QMessageBox.question(
@@ -279,6 +370,7 @@ class ImageRescaler(StraditizerControlBase, QPushButton):
                 image, attrs=attrs)
 
     def close_figs(self):
+        """Close the :attr:`fig`"""
         import matplotlib.pyplot as plt
         plt.close(self.fig.number)
         del self.fig, self.ax_orig, self.ax_rescale, self.im_rescale, \

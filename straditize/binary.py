@@ -1,5 +1,22 @@
 # -*- coding: utf-8 -*-
 """A module to read in and digitize the pollen diagram
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 import skimage.morphology as skim
 from warnings import warn
@@ -22,7 +39,7 @@ else:
 
 
 def only_parent(func):
-    """Call the given `func` only from the main project"""
+    """Call the given `func` only from the parent reader"""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         if self.parent is not self:
@@ -54,8 +71,29 @@ def groupby_arr(arr):
 
 
 class DataReader(LabelSelection):
-    """A class to read in and digitize the data files of the pollen diagram"""
+    """A class to read in and digitize the data files of the pollen diagram
 
+    The source image is stored in the :attr:`image` attribute, the binary
+    array of it is stored in the :attr:`binary` attribute. A labeled version
+    created by the :func:`skimage.morphology.label` function, is stored in the
+    :attr:`labels` attribute and can regenerated using the :meth:`reset_labels`
+    method.
+
+    Subclasses of this class should reimplement the :meth:`digitize` method
+    that digitizes the diagram, and the :meth:`find_potential_samples` method.
+
+    There is always one parent reader stored in the :attr:`parent` attribute.
+    This is then the reader that is accessible through the
+    :attr:`straditize.straditizer.Straditizer.data_reader` attribute and holds
+    the references to other readers in it's :attr:`children` attribute"""
+
+    #: PIL.Image.Image of the diagram part with mode RGBA
+    image = None
+
+    #: A 2D numpy array representing the binary version of the :attr:`image`
+    binary = None
+
+    #: A connectivity-based labeled version of the :attr:`binary` data
     labels = None
 
     #: The full dataframe of the digitized image
@@ -69,7 +107,7 @@ class DataReader(LabelSelection):
 
     magni_color_plot_im = None
 
-    #: magnifier
+    #: the :class:`straditize.magnifier.Magnifier` for the :attr:`ax`
     magni = None
 
     _sample_locs = None
@@ -127,12 +165,26 @@ class DataReader(LabelSelection):
 
     @sample_locs.setter
     def sample_locs(self, value):
+        """
+        The :class:`pandas.DataFrame` with locations and values of the
+        samples"""
         self.parent._sample_locs = value
 
     _rough_locs = None
 
     @property
     def rough_locs(self):
+        """
+        The :class:`pandas.DataFrame` with rough locations for the samples.
+        It has one row per sample in the :attr:`sample_locs` dataframe and
+        ``ncols * 2`` columns, where ``ncols`` is the number of columns
+        in the :attr:`sample_locs`.
+
+        If the potential sample :attr:`sample_locs`\ ``.iloc[i, col]`` ranges
+        ``j`` to ``k`` (see the :meth:`find_potential_samples` method), the
+        cell at ``rough_locs.iloc[i, col * 2]`` specifies the first y-pixel
+        (``j``) and ``rough_locs.iloc[i, col * 2 + 1]`` the last y-pixel (+1),
+        i.e. ``k`` where this sample might be located"""
         if self.parent._rough_locs is not None:
             return self.parent._rough_locs
         elif self.sample_locs is not None:
@@ -141,6 +193,17 @@ class DataReader(LabelSelection):
 
     @rough_locs.setter
     def rough_locs(self, value):
+        """
+        The :class:`pandas.DataFrame` with rough locations for the samples.
+        It has one row per sample in the :attr:`sample_locs` dataframe and
+        ``ncols * 2`` columns, where ``ncols`` is the number of columns
+        in the :attr:`sample_locs`.
+
+        If the potential sample :attr:`sample_locs`\ ``.iloc[i, col]`` ranges
+        ``j`` to ``k`` (see the :meth:`find_potential_samples` method), the
+        cell at ``rough_locs.iloc[i, col * 2]`` specifies the first y-pixel
+        (``j``) and ``rough_locs.iloc[i, col * 2 + 1]`` the last y-pixel (+1),
+        i.e. ``k`` where this sample might be located"""
         self._rough_locs = value
 
     #: the starts for each column
@@ -148,6 +211,14 @@ class DataReader(LabelSelection):
 
     @property
     def column_starts(self):
+        """1D numpy array with the starts for each column of this reader
+
+        See Also
+        --------
+        column_ends: The ends for each column
+        column_bounds: The (start, end)-tuple for each of the columns
+        all_column_starts: The starts for all columns, including child
+        reader"""
         starts = self.parent._column_starts
         if starts is None or self.columns is None:
             return starts
@@ -156,6 +227,12 @@ class DataReader(LabelSelection):
 
     @column_starts.setter
     def column_starts(self, value):
+        """1D numpy array with the starts for each column of this reader
+
+        See Also
+        --------
+        all_column_starts: The starts for all columns, including child
+        reader"""
         if self.parent._column_starts is None or self.columns is None:
             self.parent._column_starts = value
         else:
@@ -166,6 +243,14 @@ class DataReader(LabelSelection):
 
     @property
     def column_ends(self):
+        """1D numpy array with the ends for each column of this reader
+
+        See Also
+        --------
+        column_starts: The starts for each column
+        column_bounds: The (start, end)-tuple for each of the columns
+        all_column_ends: The ends for all columns, including child
+        reader"""
         ends = self.parent._column_ends
         if ends is None and self.parent._column_starts is not None:
             ends = np.r_[self.parent._column_starts[1:],
@@ -177,6 +262,14 @@ class DataReader(LabelSelection):
 
     @column_ends.setter
     def column_ends(self, value):
+        """1D numpy array with the ends for each column of this reader
+
+        See Also
+        --------
+        column_starts: The starts for each column
+        column_bounds: The (start, end)-tuple for each of the columns
+        all_column_ends: The ends for all columns, including child
+        reader"""
         parent = self.parent
         all_columns = np.unique(np.concatenate(
             [child.columns for child in self.iter_all_readers]))
@@ -197,7 +290,14 @@ class DataReader(LabelSelection):
 
     @property
     def all_column_ends(self):
-        """Return the ends for all columns"""
+        """1D numpy array with the ends for all column (including child reader)
+
+        See Also
+        --------
+        all_column_starts: The starts for all column
+        all_column_bounds: The (start, end)-tuple for all of the columns
+        column_ends: The ends for this specific reader
+        reader"""
         ends = self.parent._column_ends
         if ends is None and self.parent._column_starts is not None:
             ends = np.r_[self.parent._column_starts[1:],
@@ -206,14 +306,38 @@ class DataReader(LabelSelection):
 
     @all_column_ends.setter
     def all_column_ends(self, value):
+        """1D numpy array with the ends for all column (including child reader)
+
+        See Also
+        --------
+        all_column_starts: The starts for all column
+        all_column_bounds: The (start, end)-tuple for all of the columns
+        column_ends: The ends for this specific reader
+        reader"""
         self.parent._column_ends = value
 
     @property
     def all_column_starts(self):
+        """1D numpy array with the ends for all column (including child reader)
+
+        See Also
+        --------
+        all_column_ends: The ends for all column
+        all_column_bounds: The (start, end)-tuple for all of the columns
+        column_starts: The starts for this specific reader
+        reader"""
         return self.parent._column_starts
 
     @all_column_starts.setter
     def all_column_starts(self, value):
+        """1D numpy array with the ends for all column (including child reader)
+
+        See Also
+        --------
+        all_column_ends: The ends for all column
+        all_column_bounds: The (start, end)-tuple for all of the columns
+        column_starts: The starts for this specific reader
+        reader"""
         self.parent._column_starts = value
 
     #: :class:`list` or floats. The indexes of horizontal lines
@@ -222,7 +346,7 @@ class DataReader(LabelSelection):
     #: :class:`list` or floats. The indexes of vertical lines
     vline_locs = None
 
-    #: The matplotlib axes for this reader
+    #: The matplotlib axes where the :attr:`plot_im` is plotted on
     ax = None
 
     #: The number of pixels the columns have been shifted
@@ -263,13 +387,14 @@ class DataReader(LabelSelection):
 
     @property
     def full_df(self):
-        """The full dataframe of the digitized image"""
+        """The full :class:`pandas.DataFrame` of the digitized image"""
         if self.parent._full_df is None:
             return None
         return self.parent._full_df.loc[:, self.columns]
 
     @full_df.setter
     def full_df(self, value):
+        """The full :class:`pandas.DataFrame` of the digitized image"""
         parent = self.parent
         if parent._full_df is None:
             all_columns = np.unique(
@@ -283,6 +408,7 @@ class DataReader(LabelSelection):
 
     @property
     def columns(self):
+        """The indices of the columns that are handled by this reader"""
         if not self._columns:
             if self._column_starts is not None:
                 ret = list(range(len(self._column_starts)))
@@ -293,30 +419,36 @@ class DataReader(LabelSelection):
         else:
             return self._columns
 
+    @columns.setter
+    def columns(self, value):
+        """The indices of the columns that are handled by this reader"""
+        self._columns = value
+
     @property
     def extent(self):
+        """The extent of the :attr:`plot_im`"""
         if self._extent is not None:
             return self._extent
         return [0] + list(self.binary.shape)[::-1] + [0]
 
     @extent.setter
     def extent(self, value):
+        """The extent of the :attr:`plot_im`"""
         self._extent = value
-
-    @columns.setter
-    def columns(self, value):
-        self._columns = value
 
     @property
     def fig(self):
+        """The matplotlib figure of the :attr:`ax`"""
         return getattr(self.ax, 'figure')
 
     @property
     def num_labels(self):
+        """The maximum label in the :attr:`labels` array"""
         return self.labels.max()
 
     label_arrs = ['binary', 'labels', 'image_array']
 
+    @docstrings.get_sectionsf('DataReader')
     def __init__(self, image, ax=None, extent=None,
                  plot=True, children=[], parent=None, magni=None,
                  plot_background=False, binary=None):
@@ -325,6 +457,25 @@ class DataReader(LabelSelection):
         ----------
         image: PIL.Image.Image
             The image of the diagram
+        ax: matplotlib.axes.Axes
+            The matplotlib axes to plot on
+        extent: list
+            List of four number specifying the extent of the image in it's
+            source. This extent will be used for the call of
+            :func:`matplotlib.pyplot.imshow`
+        children: list of :class:`DataReader`
+            Child readers for other columns in case the newly created instance
+            is the parent reader
+        parent: :class:`DataReader`
+            The parent reader.
+        magni: straditize.magnifier.Magnifier
+            The magnifier for the given `ax`
+        plot_background: bool
+            If True (and `plot` is True), a white, opaque are is plotted below
+            the :attr:`plot_im`
+        binary: None
+            The binary version of the given `image`. If not provided, the
+            :meth:`to_binary_pil` method is used with the given `image`
         """
         from PIL import Image
         if binary is not None:
@@ -399,6 +550,7 @@ class DataReader(LabelSelection):
                 self.draw_figure()
 
     def reset_labels(self):
+        """Reset the :attr:`labels` array"""
         self.labels = self.get_labeled_array()
 
     def _get_column_starts(self, threshold=None):
@@ -413,12 +565,22 @@ class DataReader(LabelSelection):
 
     @property
     def iter_all_readers(self):
+        """Iter through the :attr:`parent` reader and it's :attr:`children`"""
         return chain([self.parent], self.parent.children)
 
     def get_labeled_array(self):
+        """Create a connectivity-based labeled array of the :attr:`binary` data
+        """
         return skim.label(self.binary, 8, return_num=False)
 
     def update_image(self, arr, amask):
+        """Update the image after having removed binary data
+
+        This method is in the :attr:`remove_callbacks` mapping and is
+        called after a pixel has been removed from the :attr:`binary` data.
+        It mainly just calls the :meth:`reset_labels` method and updates the
+        plot
+        """
         self.reset_labels()
         arr = self.labels
         self.plot_im.set_array(arr)
@@ -427,6 +589,10 @@ class DataReader(LabelSelection):
 
     def update_rgba_image(self, arr, mask):
         """Update the RGBA image from the given 3D-array
+
+        This method is in the :attr:`remove_callbacks` mapping and is
+        called after a pixel has been removed from the :attr:`binary` data.
+        It updates the :attr:`image` attribute
 
         Parameters
         ----------
@@ -441,12 +607,14 @@ class DataReader(LabelSelection):
         self.image = Image.fromarray(arr, self.image.mode)
 
     def remove_in_children(self, arr, amask):
+        """Update the child reader images after having removed binary data
+
+        Calls the :meth:`update_image` and :meth:`update_rgba_image` methods
+        for all :attr:`children`"""
         for child in self.children:
             child.binary[amask] = 0
-            child.reset_labels()
-            child.plot_im.set_array(child.labels)
-            if child.magni_plot_im is not None:
-                child.magni_plot_im.set_array(arr)
+            child.update_image(arr, amask)
+            child.update_rgba_image(arr, amask)
 
     def disable_label_selection(self, *args, **kwargs):
         super(DataReader, self).disable_label_selection(*args, **kwargs)
@@ -456,6 +624,8 @@ class DataReader(LabelSelection):
             pass
 
     def reset_column_starts(self):
+        """Reset the column starts, :attr:`full_df`, :attr:`shifted`
+        and :attr:`occurences`"""
         for child in self.iter_all_readers:
             child._column_starts = child.shifted = child._column_ends = None
             child._full_df = child._sample_locs = child._rough_locs = None
@@ -463,10 +633,22 @@ class DataReader(LabelSelection):
         self._columns = []
 
     def reset_samples(self):
+        """Reset the samples"""
         for child in self.iter_all_readers:
             child._sample_locs = child._rough_locs = None
 
     def plot_image(self, ax=None, **kwargs):
+        """Plot the :attr:`binary` data image on a matplotlib axes
+
+        Parameters
+        ----------
+        ax: matplotlib.axes.Axes
+            The matplotlib axes to plot on. If not given, the :attr:`ax`
+            attribute is used and (if this is None, too) a new figure is
+            created
+        ``**kwargs``
+            Any other keyword that is given to the
+            :func:`matplotlib.pyplot.imshow` function"""
         ax = ax or self.ax
         # plot the binary image
         if ax is None:
@@ -489,7 +671,16 @@ class DataReader(LabelSelection):
         ax.grid(False)
 
     def plot_color_image(self, ax=None, **kwargs):
+        """Plot the colored :attr:`image` on a matplotlib axes
 
+        Parameters
+        ----------
+        ax: matplotlib.axes.Axes
+            The matplotlib axes to plot on. If not given, the :attr:`ax`
+            attribute is used
+        ``**kwargs``
+            Any other keyword that is given to the
+            :func:`matplotlib.pyplot.imshow` function"""
         ax = ax or self.ax
         extent = self.extent
         kwargs.setdefault('extent', extent)
@@ -499,6 +690,16 @@ class DataReader(LabelSelection):
                 self.image, **kwargs)
 
     def plot_background(self, ax=None, **kwargs):
+        """Plot a white layer below the :attr:`plot_im`
+
+        Parameters
+        ----------
+        ax: matplotlib.axes.Axes
+            The matplotlib axes to plot on. If not given, the :attr:`ax`
+            attribute is used
+        ``**kwargs``
+            Any other keyword that is given to the
+            :func:`matplotlib.pyplot.imshow` function"""
         ax = ax or self.ax
         # plot the binary image
         if ax is None:
@@ -545,6 +746,7 @@ class DataReader(LabelSelection):
              }
             )
 
+    #: A mapping from variable name to meta information
     nc_meta = {
         'reader_image': {
             'dims': ('reader', 'ydata', 'xdata', 'rgba'),
@@ -610,7 +812,26 @@ class DataReader(LabelSelection):
         }
 
     def create_variable(self, ds, vname, data, **kwargs):
-        """Insert the data into a variable in an :class:`xr.Dataset`"""
+        """Insert the data into a variable in an :class:`xr.Dataset`
+
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The destination dataset
+        vname: str
+            The name of the variable in the :attr:`nc_meta` mapping. This name
+            might include ``{reader}`` which will then be replaced by the
+            number of the reader in the :attr:`iter_all_readers` attribute
+        data: np.ndarray
+            The numpy array to store in the variable specified by `vname`
+        ``**kwargs``
+            A mapping from dimension to slicer that should be used to slice
+            the dataset
+
+        Returns
+        -------
+        str
+            The resolved `vname` that has been used in the dataset"""
         ireader = list(self.iter_all_readers).index(self)
         final_vname = vname.format(reader=ireader)
         attrs = self.nc_meta[vname].copy()
@@ -723,6 +944,20 @@ class DataReader(LabelSelection):
 
     @classmethod
     def from_dataset(cls, ds, *args, **kwargs):
+        """Create a new :class:`DataReader` from a :class:`xarray.Dataset`
+
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The dataset that has been stored with the :meth:`to_dataset` method
+        ``*args,**kwargs``
+            Any other arguments passed to the :class:`DataReader`
+            constructor
+
+        Returns
+        -------
+        DataReader
+            The reader recreated from `ds`"""
         if ds['reader_image'].ndim == 4:
             ds = ds.isel(reader=0)
 
@@ -906,7 +1141,14 @@ class DataReader(LabelSelection):
         return ret
 
     def mark_as_exaggerations(self, mask):
-        """Mask the given array as exaggerated"""
+        """Mask the given array as exaggerated
+
+        Parameters
+        ----------
+        mask: 2D np.ndarray of dtype bool
+            A mask with the same shape as the :attr:`binary` array that is True
+            if a cell should be interpreted as the visualization of an
+            exaggeration"""
         from PIL import Image
 
         if not self.is_exaggerated:
@@ -982,7 +1224,13 @@ class DataReader(LabelSelection):
         self.draw_figure()
 
     def start_column_selection(self, use_all=False):
-        """Enable the user to select columns"""
+        """Enable the user to select columns
+
+        Parameters
+        ----------
+        use_all: bool
+            If True, all columns can be selected. Otherwise only the columns
+            in the :attr:`columns` attribute can be selected"""
         fig = self.fig
         self._selected_cols = {}
         self._use_all_cols = use_all
@@ -990,6 +1238,7 @@ class DataReader(LabelSelection):
                                                        self._select_column)
 
     def end_column_selection(self):
+        """End the column selection and rmove the artists"""
         fig = self.fig
         fig.canvas.mpl_disconnect(self._select_cols_cid)
         for p in self._selected_cols.values():
@@ -1004,6 +1253,9 @@ class DataReader(LabelSelection):
         ----------
         image: PIL.Image.Image
             The RGBA image file
+        threshold: float
+            If the multiplied RGB values in a cell are above the threshold,
+            the cell is regarded as background and will be set to 0
 
         Returns
         -------
@@ -1024,6 +1276,9 @@ class DataReader(LabelSelection):
         ----------
         image: PIL.Image.Image
             The RGBA image file
+        threshold: float
+            If the multiplied RGB values in a cell are above the threshold,
+            the cell is regarded as background and will be set to 0
 
         Returns
         -------
@@ -1267,6 +1522,11 @@ class DataReader(LabelSelection):
                                     selection=mask, **kwargs)
 
     def set_hline_locs_from_selection(self):
+        """Save the locations of horizontal lines
+
+        This methods takes every pixel row in the :attr:`hline_locs`
+        attribute where at least 30% is selected. The digitize method will
+        interpolate at these indices."""
         selection = self.selected_part
         rows = np.where(
             selection.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
@@ -1431,6 +1691,10 @@ class DataReader(LabelSelection):
                                     selection=mask, **kwargs)
 
     def set_vline_locs_from_selection(self):
+        """Save the locations of vertical lines
+
+        This methods takes every pixel column in the :attr:`hline_locs`
+        attribute where at least 30% is selected."""
         selection = self.selected_part
         cols = np.where(
             selection.sum(axis=0) / self.binary.sum(axis=0) > 0.3)[0]
@@ -1449,6 +1713,7 @@ class DataReader(LabelSelection):
                 mask = np.isin(starts, locs)
 
     def _shift_occurences(self, locs):
+        """Shift the occurences after the removement of vertical lines"""
         occurences = self.occurences
         if occurences:
             occurences = np.array(list(occurences))
@@ -1478,23 +1743,28 @@ class DataReader(LabelSelection):
         return np.asarray(self.image)
 
     def get_binary_for_col(self, col):
+        """Get the binary array for a specific column"""
         s, e = self.column_bounds[self.columns.index(col)]
         return self.binary[:, s:e]
 
-    @only_parent
-    def shift_vertical(self, pixels):
+    def shift_vertical(self, pixels, draw=True):
         """Shift the columns vertically.
 
         Parameters
         ----------
         pixels: list of floats
             The y-value for each column for which to shift the values. Note
-            that theses values have to be greater than or equal to 0"""
+            that theses values have to be greater than or equal to 0
+        draw: bool
+            If True, the :attr:`ax` is drawn at the end"""
         arr = self.binary
         df = self._full_df
-        bounds = self.all_column_bounds
+        bounds = self.column_bounds
+        pixels = np.asarray(pixels)
+        npx = len(pixels)
         for col, ((start, end), pixel) in enumerate(zip_longest(
-                bounds, pixels, fillvalue=pixels[-1])):
+                bounds, pixels[[col for col in self.columns if col < npx]],
+                fillvalue=pixels[-1])):
             if pixel:  # shift the column upwards
                 arr[:-pixel, start:end] = arr[pixel:, start:end]
                 arr[-pixel:, start:end] = 0
@@ -1505,9 +1775,21 @@ class DataReader(LabelSelection):
         self.plot_im.set_array(arr)
         if self.magni_plot_im is not None:
             self.magni_plot_im.set_array(arr)
-        self.draw_figure()
+        for child in self.children:
+            child.shift_vertical(pixels, draw=False)
+        if draw:
+            self.draw_figure()
 
     def found_extrema_per_row(self):
+        """Calculate how many columns have a potential sample in each pixel row
+
+        Returns
+        -------
+        pandas.Series
+            A series with one entry per pixel row. The values are the number of
+            columns in the diagram that have a potential sample noted in the
+            :attr:`rough_locs`
+        """
         ret = pd.Series(np.zeros(len(self.full_df)), index=self.full_df.index,
                         name='Extrema')
         rough = self.rough_locs
@@ -1533,6 +1815,7 @@ class DataReader(LabelSelection):
         return np.vstack([self.all_column_starts,
                           self.all_column_ends]).T
 
+    @docstrings.get_sectionsf('DataReader.digitize')
     def digitize(self, use_sum=False, inplace=True):
         """Digitize the binary image to create the full dataframe
 
@@ -1648,6 +1931,8 @@ class DataReader(LabelSelection):
 
     @property
     def xaxis_px(self):
+        """The x indices in column pixel coordinates that are used for x-axes
+        translations"""
         if self._xaxis_px_orig is None:
             raise ValueError("X-limits have not yet been set!")
         elif self.parent._column_starts is None:
@@ -1668,6 +1953,8 @@ class DataReader(LabelSelection):
 
     @xaxis_px.setter
     def xaxis_px(self, value):
+        """The x indices in column pixel coordinates that are used for x-axes
+        translations"""
         if value is None:
             self._xaxis_px_orig = value
         else:
@@ -1705,24 +1992,20 @@ class DataReader(LabelSelection):
         intercept = x_data[0] - slope * x_px[0]
         return intercept + slope * coord
 
-    def plot_full_df(self, ax=None, *args, **kwargs):
-        """Plot the lines for the digitized diagram"""
-        self.lines = self._plot_df(self.full_df, ax, *args, **kwargs)
-
-    def plot_samples(self, ax=None, *args, **kwargs):
-        self.sample_lines = self._plot_df(
-            self.sample_locs.loc[:, self.columns], ax, *args, **kwargs)
-
-    def plot_sample_hlines(self, ax=None, **kwargs):
-        ax = ax or self.ax
-        xmin, xmax = sorted(self.extent[:2])
-        y = self.sample_locs.index + min(self.extent[2:])
-        kwargs.setdefault('color', 'r')
-        if not len(y):
-            return
-        self.sample_hlines = [ax.hlines(y, xmin, xmax, **kwargs)]
-
+    @docstrings.get_sectionsf('DataReader._plot_df')
     def _plot_df(self, df, ax=None, *args, **kwargs):
+        """Plot a data frame as line plot in the diagram
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            The data frame to plot. The columns have to be the same as in the
+            :attr:`columns` attribute
+        ax: matplotlib.axes.Axes
+            The matplotlib axes to plot on
+        ``*args,**kwargs``
+            Any other argument and keyword argument that is passed to the
+            :func:`matplotlib.pyplot.plot` function"""
         vals = df.values
         starts = self.column_starts
         lines = []
@@ -1740,45 +2023,44 @@ class DataReader(LabelSelection):
             lines.extend(ax.plot(x, y[mask], *args, **kwargs))
         return lines
 
-    def plot_potential_samples(
-            self, excluded=False, ax=None, plot_kws={}, *args, **kwargs):
-        """Plot the ranges for potential samples"""
-        vals = self.full_df.values.copy()
-        starts = self.column_starts.copy()
-        self.sample_ranges = lines = []
-        y = np.arange(np.shape(self.image)[0]) + 0.5
+    docstrings.delete_params('DataReader._plot_df.parameters', 'df')
+
+    @docstrings.with_indent(8)
+    def plot_full_df(self, ax=None, *args, **kwargs):
+        """Plot the lines for the digitized diagram
+
+        Parameters
+        ----------
+        %(DataReader._plot_df.parameters.no_df)s"""
+        self.lines = self._plot_df(self.full_df, ax, *args, **kwargs)
+
+    @docstrings.with_indent(8)
+    def plot_samples(self, ax=None, *args, **kwargs):
+        """Plot the diagram as lines reconstructed from the samples
+
+        Parameters
+        ----------
+        %(DataReader._plot_df.parameters.no_df)s"""
+        self.sample_lines = self._plot_df(
+            self.sample_locs.loc[:, self.columns], ax, *args, **kwargs)
+
+    def plot_sample_hlines(self, ax=None, **kwargs):
+        """Plot one horizontal line per sample in the :attr:`sample_locs`
+
+        Parameters
+        ----------
+        ax: matplotlib.axes.Axes
+            The matplotlib axes to plot on
+        ``*args,**kwargs``
+            Any other keyword argument that is passed to the
+            :func:`matplotlib.pyplot.hlines` function"""
         ax = ax or self.ax
-        if self.extent is not None:
-            y += self.extent[-1]
-            starts = starts + self.extent[0]
-        plot_kws = dict(plot_kws)
-        plot_kws.setdefault('marker', '+')
-        for i, (col, arr) in enumerate(zip(self.columns, vals.T)):
-            all_indices, excluded_indices = self.find_potential_samples(
-                col, *args, **kwargs)
-            if excluded:
-                all_indices = excluded_indices
-            if not all_indices:
-                continue
-            mask = np.ones(arr.size, dtype=bool)
-            for imin, imax in all_indices:
-                mask[imin:imax] = False
-            arr[mask] = np.nan
-            for imin, imax in all_indices:
-                lines.extend(ax.plot(starts[i] + arr[imin:imax], y[imin:imax],
-                                     **plot_kws))
-
-    def plot_other_potential_samples(self, tol=1, already_found=None,
-                                     *args, **kwargs):
-        if already_found is None:
-            already_found = self.samples.index.values
-
-        def filter_func(indices):
-            return not any((np.abs(already_found - v) < tol).any()
-                           for v in indices)
-
-        self.plot_potential_samples(
-            filter_func=filter_func, *args, **kwargs)
+        xmin, xmax = sorted(self.extent[:2])
+        y = self.sample_locs.index + min(self.extent[2:])
+        kwargs.setdefault('color', 'r')
+        if not len(y):
+            return
+        self.sample_hlines = [ax.hlines(y, xmin, xmax, **kwargs)]
 
     def get_surrounding_slopes(self, indices, arr):
 
@@ -1825,7 +2107,6 @@ class DataReader(LabelSelection):
 
     @docstrings.get_sectionsf('DataReader.find_potential_samples',
                               sections=['Parameters', 'Returns'])
-    @docstrings.dedent
     def find_potential_samples(self, col, min_len=None,
                                max_len=None, filter_func=None):
         """
@@ -1987,6 +2268,81 @@ class DataReader(LabelSelection):
         included1, excluded1 = find_potential_samples()
         excluded1.extend(excluded0)
         return included1, sorted(excluded1)
+
+    docstrings.delete_params('DataReader.find_potential_samples.parameters',
+                             'col')
+
+    @docstrings.get_sectionsf('DataReader.plot_potential_samples')
+    @docstrings.with_indent(8)
+    def plot_potential_samples(
+            self, excluded=False, ax=None, plot_kws={}, *args, **kwargs):
+        """Plot the ranges for potential samples
+
+        This method plots the rough locations of potential samples (see
+        :meth:`find_potential_samples`
+
+        Parameters
+        ----------
+        excluded: bool
+            If True, plot the excluded samples instead of the included samples
+            (see the return values in :meth:`find_potential_samples`)
+        ax: matplotlib.axes.Axes
+            The matplotlib axes to plot on
+        plot_kws: dict
+            Any other keyword argument that is passed to the
+            :func:`matplotlib.pyplot.plot` function. By default, this is equal
+            to ``{'marker': '+'}``
+        %(DataReader.find_potential_samples.parameters.no_col)s"""
+        vals = self.full_df.values.copy()
+        starts = self.column_starts.copy()
+        self.sample_ranges = lines = []
+        y = np.arange(np.shape(self.image)[0]) + 0.5
+        ax = ax or self.ax
+        if self.extent is not None:
+            y += self.extent[-1]
+            starts = starts + self.extent[0]
+        plot_kws = dict(plot_kws)
+        plot_kws.setdefault('marker', '+')
+        for i, (col, arr) in enumerate(zip(self.columns, vals.T)):
+            all_indices, excluded_indices = self.find_potential_samples(
+                col, *args, **kwargs)
+            if excluded:
+                all_indices = excluded_indices
+            if not all_indices:
+                continue
+            mask = np.ones(arr.size, dtype=bool)
+            for imin, imax in all_indices:
+                mask[imin:imax] = False
+            arr[mask] = np.nan
+            for imin, imax in all_indices:
+                lines.extend(ax.plot(starts[i] + arr[imin:imax], y[imin:imax],
+                                     **plot_kws))
+
+    @docstrings.with_indent(8)
+    def plot_other_potential_samples(self, tol=1, already_found=None,
+                                     *args, **kwargs):
+        """Plot potential samples that are not yet in the :attr:`samples`
+        attribute
+
+        Parameters
+        ----------
+        tol: int
+            The pixel tolerance for a sample. If the distance between a
+            potential sample and all already existing sample is greater than
+            tolerance, the potential sample will be plotted
+        already_found: np.ndarray
+            The pixel rows of samples that have already been found. If not
+            specified, the index of the :attr:`sample_locs` is used
+        %(DataReader.plot_potential_samples.parameters)s"""
+        if already_found is None:
+            already_found = self.sample_locs.index.values
+
+        def filter_func(indices):
+            return not any((np.abs(already_found - v) < tol).any()
+                           for v in indices)
+
+        self.plot_potential_samples(
+            filter_func=filter_func, *args, **kwargs)
 
     def get_occurences(self):
         """Extract the positions of the occurences from the selection"""
@@ -2228,7 +2584,7 @@ class DataReader(LabelSelection):
 
         Parameters
         ----------
-        ``*args, **kwargs``
+        ``*args,**kwargs``
             See the :meth:`find_samples` method. Note that parameters
             are ignored if the :attr:`sample_locs` attribute is not None
 
@@ -2318,9 +2674,31 @@ class DataReader(LabelSelection):
         new = self._full_df.loc[samples]
         self.sample_locs = new.combine_first(df)
 
+    @docstrings.get_sectionsf('DataReader.get_disconnected_parts')
     def get_disconnected_parts(self, fromlast=5, from0=10,
                                cross_column=False):
-        """Identify parts in the :attr:`binary` data that are not connected"""
+        """Identify parts in the :attr:`binary` data that are not connected
+
+        Parameters
+        ----------
+        fromlast: int
+            A pixel ``x1 > x0`` is considered as disconnected, if it is at
+            least ``x1 - x0 >= fromlast``. If this is 0, it is ignored and only
+            ``from0`` is considered.
+        from0: int
+            A pixel is considered as disconnected if it is more than `from0`
+            pixels away from the column start. If this is 0, it is ignored and
+            only ``fromlast`` is considered
+        cross_column: bool
+            If False, disconnected features are only marked in the column where
+            the disconnection has been detected. Otherwise the entire feature
+            is marked
+
+        Returns
+        -------
+        np.ndarray of dtype bool
+            The 2D boolean mask with the same shape as the :attr:`binary` array
+            that is True if a data pixel is considered as to be disconnected"""
         def keep_full_labels(dist2prev, labels):
             mask = (dist2prev >= npixels)
             # now we select those cells, where the entire label is selected.
@@ -2391,8 +2769,34 @@ class DataReader(LabelSelection):
             return np.where(np.isin(labels, np.unique(selected_labels)),
                             labels, 0)
 
+    docstrings.delete_params(
+        'LabelSelection.enable_label_selection.parameters', 'arr', 'ncolors')
+
+    @docstrings.get_sectionsf('DataReader._show_parts2remove')
+    @docstrings.with_indent(8)
     def _show_parts2remove(self, arr, remove=False, select_all=True,
                            selection=None, **kwargs):
+        """Convenience method to enable the selection of parts to remove
+
+        Parameters
+        ----------
+        arr: np.ndarray
+            The labeled array that is non-zero where a pixel can be removed. It
+            needs to have the same shape as the :attr:`binary` array
+        remove: bool
+            If True, remove the data in the :attr:`binary` array, etc. If
+            False, the
+            :meth:`~straditize.label_selection.LabelSelection.enable_label_selection`
+            method is envoked and the user can select the features to remove
+        select_all: bool
+            If True and `remove` is False, all labels in `arr` will be selected
+            and the given `selection` is ignored
+        selection: np.ndarray of dtype bool
+            A boolean mask with the same shape as `arr` that is True where a
+            pixel should be selected. If `remove` is True, only this mask
+            will be used.
+        %(LabelSelection.enable_label_selection.parameters.no_arr|ncolors)s
+        """
         kwargs['extent'] = self.extent
         if remove:
             mask = (arr if selection is None else selection).astype(bool)
@@ -2414,14 +2818,30 @@ class DataReader(LabelSelection):
                 self._select_img.set_array(self._selection_arr)
                 self._update_magni_img()
 
+    docstrings.keep_params('DataReader.get_disconnected_parts.parameters',
+                           'fromlast', 'from0')
+
+    docstrings.delete_params('DataReader._show_parts2remove.parameters', 'arr')
+
     def show_disconnected_parts(self, fromlast=5, from0=10, remove=False,
                                 **kwargs):
+        """Highlight or remove disconnected parts
+
+        Parameters
+        ----------
+        %(DataReader.get_disconnected_parts.parameters.fromlast|from0)s
+        %(DataReader._show_parts2remove.parameters.no_arr)s"""
         arr = self.get_disconnected_parts(fromlast, from0)
         self._show_parts2remove(arr, remove, **kwargs)
 
     @only_parent
     def merged_binaries(self):
-        """Get the binary image from all children"""
+        """Get the binary data from all children and merge them into one array
+
+        Returns
+        -------
+        np.ndarray of dtype int
+            The binary image with the same shape as the :attr:`binary` data"""
         binary = self.binary.copy()
         for child in self.children:
             mask = child.binary.astype(bool)
@@ -2430,17 +2850,32 @@ class DataReader(LabelSelection):
 
     @only_parent
     def merged_labels(self):
+        """Get the labeled binary data from all children merged into one array
+
+        Returns
+        -------
+        np.ndarray of dtype int
+            The labeled binary image with the same shape as the
+            :attr:`label` data"""
         binary = self.merged_binaries()
         return skim.label(binary, 8, return_num=False)
 
     @only_parent
+    @docstrings.get_sectionsf('DataReader.get_cross_column_features')
     def get_cross_column_features(self, min_px=50):
         """Get features that are contained in two or more columns
 
         Parameters
         ----------
         min_px: int
-            The number of pixels that have to be contained in each column"""
+            The number of pixels that have to be contained in each column
+
+        Returns
+        -------
+        np.ndarray of dtype bool
+            The 2D boolean mask with the same shape as the :attr:`binary` array
+            that is True if a data pixel is considered as to belong to a
+            cross column feature"""
         labels = self.merged_labels()
         bins = np.arange(0.5, labels.max() + 0.6, 1.)
         bounds = self.all_column_bounds
@@ -2451,17 +2886,49 @@ class DataReader(LabelSelection):
         self.remove_callbacks['labels'].append(self.remove_in_children)
         return np.where(np.isin(labels, selection), labels, 0)
 
+    @docstrings.with_indent(8)
     def show_cross_column_features(self, min_px=50, remove=False, **kwargs):
+        """Highlight and maybe remove cross column features
+
+        Parameters
+        ----------
+        %(DataReader.get_cross_column_features.parameters)s
+        %(DataReader._show_parts2remove.parameters.no_arr)s"""
         arr = self.get_cross_column_features(min_px)
         self._show_parts2remove(arr, remove, **kwargs)
 
+    @docstrings.with_indent(8)
     def show_small_parts(self, n=10, remove=False, **kwargs):
+        """Highlight and potentially remove small features in the image
+
+        Parameters
+        ----------
+        n: int
+            The maximal size of a feature to be considered as small
+        %(DataReader._show_parts2remove.parameters.no_arr)s
+
+        See Also
+        --------
+        skimage.morphology.remove_small_objects"""
         arr = self.merged_binaries().astype(bool)
         mask = arr & (~skim.remove_small_objects(arr, n))
         self._show_parts2remove(mask.astype(int), remove, **kwargs)
 
+    @docstrings.get_sectionsf('DataReader.get_parts_at_column_ends')
     def get_parts_at_column_ends(self, npixels=2):
         """Identify parts in the :attr:`binary` data that touch the next column
+
+        Parameters
+        ----------
+        npixels: int
+            If a data pixel is less than `npixels` away from the column end, it
+            is considered to be at the column end and marked
+
+        Returns
+        -------
+        np.ndarray of dtype bool
+            A boolean mask with the same shape as the :attr:`binary` data that
+            is True where a pixel is considered to be at the column end
         """
         arr = self.binary
         arr_labels = self.labels
@@ -2493,10 +2960,17 @@ class DataReader(LabelSelection):
         return ret
 
     def show_parts_at_column_ends(self, npixels=2, remove=False, **kwargs):
+        """Highlight or remove features that touch the column ends
+
+        Parameters
+        ----------
+        %(DataReader.get_parts_at_column_ends.parameters)s
+        %(DataReader._show_parts2remove.parameters.no_arr)s"""
         arr = self.get_parts_at_column_ends(npixels)
         self._show_parts2remove(arr, remove, **kwargs)
 
     def draw_figure(self):
+        """Draw the matplotlib :attr:`fig` and the :attr:`magni` figure"""
         self.fig.canvas.draw()
         if self.magni is not None:
             self.magni.ax.figure.canvas.draw()
@@ -2504,7 +2978,32 @@ class DataReader(LabelSelection):
     strat_plot_identifier = 'percentages'
 
     def plot_results(self, df, ax=None, fig=None, transformed=True):
-        """Plot the diagram on the given axes"""
+        """Plot the reconstructed diagram
+
+        This method plots the reconstructed diagram using the psy-strat module.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            The data to plot. E.g. the :attr:`sample_locs` or the
+            :attr:`straditize.straditizer.Straditizer.final_df` data
+        ax: matplotlib.axes.Axes
+            The axes to plot on. If None, a new one is created inside the given
+            `fig`
+        fig: matplotlib.figure.Figure
+            The matplotlib figure to plot on. If not given, the current figure
+            (see :func:`matplotlib.pyplot.gcf`) is used
+        transformed: bool
+            If True, y-axes and x-axes have been translated (see the
+            :meth:`px2data_x` and
+            :meth:`~straditize.straditizer.Straditizer.px2data_y` methods)
+
+        Returns
+        -------
+        psyplot.project.Project
+            The newly created psyplot project with the plotters
+        list of :class:`psy_strat.stratplot.StratGroup` instances
+            The groupers for the different columns"""
         import matplotlib as mpl
         import matplotlib.pyplot as plt
         import matplotlib.transforms as mt
@@ -2569,8 +3068,35 @@ class DataReader(LabelSelection):
             ax0.invert_yaxis()
         return sp, groupers
 
+    @docstrings.get_sectionsf('DataReader.get_bbox_for_cols')
     def get_bbox_for_cols(self, columns, x0, y0, width, height):
-        """Get the boundary boxes for the columns of this reader"""
+        """Get the boundary boxes for the columns of this reader in the results
+        plot
+
+        This method is used by the :meth:`plot_results` method to get the
+        Bbox for a :class:`psy_strat.stratplot.StratGroup` grouper
+
+        Parameters
+        ----------
+        columns: list of int
+            The column numbers to use
+        x0: float
+            The left boundary of the larger Bbox of the stratigraphic diagram
+        y0: int
+            The upper boundary of the larger Bbox of the stratigraphic diagram
+        width: float
+            The width of the final axes between 0 and 1
+        height: float
+            The height of the final axis between 0 and 1
+
+        Returns
+        -------
+        matplotlib.transforms.Bbox
+            The boundary box for the given `columns` in the matplotlib figure
+
+        See Also
+        --------
+        plot_results"""
         import matplotlib.transforms as mt
         s0 = min(self.all_column_starts)
         total_width = max(self.all_column_ends) - s0
@@ -2582,8 +3108,40 @@ class DataReader(LabelSelection):
             x0 + (col0 - s0) / total_width * width, y0,
             orig_width / total_width * width, height)
 
+    docstrings.delete_params('DataReader.get_bbox_for_cols.parameters',
+                             'columns')
+
+    @docstrings.with_indent(8)
     def create_grouper(self, ds, columns, fig, x0, y0, width, height, ax0=None,
                        transformed=True, colnames=None, **kwargs):
+        """Create the grouper that plots the results
+
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The dataset with the data
+        columns: list of int
+            The numbers of the columns for which the grouper should be
+            created
+        fig: matplotlib.figure.Figure
+            The matplotlib figure to plot on
+        %(DataReader.get_bbox_for_cols.parameters.no_columns)s
+        ax0: matplotlib.axes.Axes
+            The larger matplotlib axes whose bounding box shall be used.
+        transformed: bool
+            If True, y-axes and x-axes have been translated (see the
+            :meth:`px2data_x` and
+            :meth:`~straditize.straditizer.Straditizer.px2data_y` methods)
+        colnames: list of str
+            The column names to use in the plot
+        ``**kwargs``
+            any other keyword argument that is passed to the
+            :meth:`psy_strat.stratplot.StratGroup.from_dataset` method
+
+        Returns
+        -------
+        psy_strat.stratplot.StratGroup
+            The grouper that visualizes the given `columns` in the `fig`"""
         from psy_strat.stratplot import strat_groupers
         import psyplot.project as psy
         mp = psy.gcp(True)
@@ -2611,6 +3169,17 @@ class DataReader(LabelSelection):
         return grouper
 
     def resize_axes(self, grouper, bounds):
+        """Resize the axes based on column boundaries
+
+        This method sets the x-limits for the different columns to the given
+        `bounds` and resizes the axes
+
+        Parameters
+        ----------
+        grouper: psy_strat.stratplot.StratGroup
+            The grouper that manages the plot
+        bounds: np.ndarray of shape (N, 2)
+            The boundaries for the columns handled by the `grouper`"""
         for plotter, (s, e) in zip(grouper.plotters, bounds):
             plotter.update(xlim=(s, e))
         grouper.resize_axes(grouper.axes)
@@ -2641,8 +3210,22 @@ class LineDataReader(DataReader):
 
 
 class BarDataReader(DataReader):
-    """A DataReader for digitizing bar pollen diagrams"""
+    """A DataReader for digitizing bar pollen diagrams
 
+    Compared to the base :class:`DataReader` class, this reader implements a
+    different strategy in digitizing and finding the samples. When digitizing
+    the full diagram, we try to find the distinct bars using the
+    :meth:`get_bars` method. These bars might have to be splitted manually
+    if they are not easy to distinguish. One key element to distinguish to
+    adjacent bars is the specified `tolerance`.
+
+    The base class works for rectangular bars. If you require rounded bars,
+    use the :class:`RoundedBarDataReader`"""
+
+    #: Tolerance to distinguish bars. If x0 is the value in a pixel row y and
+    #: x1 the value in the next pixel row y+1, then the two pixel rows are
+    #: considered as belonging to different bars if
+    #: ``abs(x1 - x0) > tolerance``
     tolerance = 2
 
     min_len = None
@@ -2653,6 +3236,8 @@ class BarDataReader(DataReader):
 
     _splitted = None
 
+    #: True if the bars are rounded (see the :class:`RoundedBarDataReader` and
+    #: the implementation in the :meth:`get_bars` method
     _rounded = False
 
     #: There should not be samples at the boundaries because the first
@@ -2663,7 +3248,18 @@ class BarDataReader(DataReader):
     #: same sample (see :meth:`unique_bars`)
     min_fract = 0.9
 
+    @docstrings.dedent
     def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(DataReader.parameters)s
+        tolerance: int
+            If x0 is the value in a pixel row y and x1 the value in the next
+            pixel row y+1, then the two pixel rows are considered as belonging
+            to different bars if ``abs(x1 - x0) > tolerance`` (see the
+            :meth:`get_bars` method and the :attr:`tolerance` attribute)
+        """
         self.tolerance = kwargs.pop('tolerance', self.tolerance)
         super(BarDataReader, self).__init__(*args, **kwargs)
 
@@ -2783,6 +3379,7 @@ class BarDataReader(DataReader):
 
         return ret
 
+    @docstrings.get_sectionsf('BarDataReader.get_bars')
     def get_bars(self, arr, do_split=False):
         """Find the distinct bars in an array
 
@@ -2792,7 +3389,7 @@ class BarDataReader(DataReader):
             The array to find the bars in
         do_split: bool
             If True and a bar is 1.7 times longer than the mean, it is splitted
-            into two
+            into two.
 
         Returns
         -------
@@ -2895,8 +3492,18 @@ class BarDataReader(DataReader):
         remove_too_short(fraction=0.4)
         return all_indices, heights, splitted
 
+    docstrings.keep_params('BarDataReader.get_bars.parameters', 'do_split')
+    docstrings.keep_params('DataReader.digitize.parameters', 'inplace')
+
+    @docstrings.with_indent(8)
     def digitize(self, do_split=False, inplace=True):
-        """Reimplemented to ignore the rows between the bars"""
+        """Reimplemented to ignore the rows between the bars
+
+        Parameters
+        ----------
+        %(BarDataReader.get_bars.parameters.do_split)s
+        %(DataReader.digitize.parameters.inplace)s
+        """
         df = super(BarDataReader, self).digitize(inplace=False)
         # now we only keep those values that are the same as their surroundings
         if inplace:
@@ -2927,7 +3534,12 @@ class BarDataReader(DataReader):
         super(BarDataReader, self).shift_vertical(pixels)
         if not self._all_indices:
             return
-        for col, pixel in enumerate(pixels):
+        pixels = np.asarray(pixels)
+        npx = len(pixels)
+        for col, pixel in zip_longest(
+                self.columns,
+                pixels[[col for col in self.columns if col < npx]],
+                fillvalue=pixels[-1]):
             if pixel:  # shift the column upwards
                 for l in chain(self._all_indices[col], self._splitted[col]):
                     for j in range(len(l)):
@@ -2970,6 +3582,8 @@ class BarDataReader(DataReader):
         group = 'Columns %i - %i' % (min(columns), max(columns))
         return super().create_grouper(ds, columns, *args, use_bars=[group],
                                       **kwargs)
+
+    create_grouper.__doc__ = DataReader.create_grouper.__doc__
 
 
 class _Bar(object):
@@ -3090,6 +3704,7 @@ class _Bar(object):
 
 
 class RoundedBarDataReader(BarDataReader):
+    """A bar data reader that can be used for rounded bars"""
 
     _rounded = True
 

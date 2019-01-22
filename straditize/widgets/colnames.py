@@ -1,9 +1,27 @@
 # -*- coding: utf-8 -*-
-"""Widget for handling column names"""
+"""Widget for handling column names
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import numpy as np
 import os
 from straditize.widgets import StraditizerControlBase
 from straditize.widgets.pattern_selection import EmbededMplCanvas
+from straditize.common import docstrings
 from psyplot_gui.common import DockMixin
 from psyplot.utils import _temp_bool_prop
 from matplotlib.backend_bases import NavigationToolbar2
@@ -31,15 +49,82 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
     refreshing = _temp_bool_prop(
         'refreshing', doc="True if the widget is refreshing")
 
+    #: The matplotlib image of the
+    #: :attr:`straditize.colnames.ColNamesReader.rotated_image`
     im_rotated = None
 
+    #: The rectangle to highlight a column (see :meth:`highlight_selected_col`)
     rect = None
 
-    fig_w = fig_h = None
+    #: The canvas to display the :attr:`im_rotated`
+    main_canvas = None
 
-    highres_image = None
+    #: The :class:`matplotlib.axes.Axes` to display the :attr:`im_rotated`
+    main_ax = None
 
-    colpic_im = colpic_extents = selector = colpic = None
+    #: The original width of the :attr:`main_canvas`
+    fig_w = None
+
+    #: The original height of the :attr:`main_canvas`
+    fig_h = None
+
+    #: The matplotlib image of the :attr:`colpic`
+    colpic_im = None
+
+    #: The canvas to display the :attr:`colpic_im`
+    colpic_canvas = None
+
+    #: The :class:`matplotlib.axes.Axes` to display the :attr:`colpic_im`
+    colpic_ax = None
+
+    #: The extents of the :attr:`colpic` in the :attr:`im_rotated`
+    colpic_extents = None
+
+    #: A QTableWidget to display the column names
+    colnames_table = None
+
+    #: The :class:`matplotlib.widgets.RectangleSelector` to select the
+    #: :attr:`colpic`
+    selector = None
+
+    #: The :class:`PIL.Image.Image` of the column name (see also
+    #: :attr:`straditize.colnames.ColNamesReader.colpics`)
+    colpic = None
+
+    #: A QPushButton to load the highres image
+    btn_load_image = None
+
+    #: A QPushButton to find column names in the visible part of the
+    #: :attr:`im_rotated`
+    btn_find = None
+
+    #: A QPushButton to recognize text in the :attr:`colpic`
+    btn_recognize = None
+
+    #: A checkable QPushButton to initialize a :attr:`selector` to select the
+    #: :attr:`colpic`
+    btn_select_colpic = None
+
+    #: The QPushButton in the :class:`straditize.widgets.StraditizerWidgets`
+    #: to toggle the column names dialog
+    btn_select_names = None
+
+    #: A QCheckBox to find the column names (see :attr:`btn_find`) for all
+    #: columns and not just the one selected in the :attr:`colnames_table`
+    cb_find_all_cols = None
+
+    #: A QCheckBox to ignore the part within the
+    #: :attr:`straditize.colnames.ColNamesReader.data_ylim`
+    cb_ignore_data_part = None
+
+    #: A QLineEdit to set the :attr:`straditize.colnames.ColNamesReader.rotate`
+    txt_rotate = None
+
+    #: A QCheckBox to set the :attr:`straditize.colnames.ColNamesReader.mirror`
+    cb_fliph = None
+
+    #: A QCheckBox to set the :attr:`straditize.colnames.ColNamesReader.flip`
+    cb_flipv = None
 
     NAVIGATION_LABEL = ("Use left-click of your mouse to move the image below "
                         "and right-click to zoom in and out.")
@@ -55,9 +140,17 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
 
     @property
     def colnames_reader(self):
+        """The :attr:`straditize.straditizer.Straditizer.colnames_reader`
+        of the current straditizer"""
         return self.straditizer.colnames_reader
 
+    @docstrings.dedent
     def __init__(self, straditizer_widgets, item=None, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(StraditizerControlBase.init_straditizercontrol.parameters)s
+        """
         # Create the button for the straditizer_widgets tree
         self.btn_select_names = QtWidgets.QPushButton('Edit column names')
         self.btn_select_names.setCheckable(True)
@@ -185,17 +278,35 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.change_ignore_data_part)
 
     def colname_changed(self, row, column):
-        """Function that is called when a cell has been changed"""
+        """Update the column name in the :attr:`colnames_reader`
+
+        This method is called when a cell in the :attr:`colnames_table` has
+        been changed and updates the corresponding name in the
+        :attr:`colnames_reader`
+
+        Parameters
+        ----------
+        row: int
+            The row of the cell in the :attr:`colnames_table` that changed
+        column: int
+            The column of the cell in the :attr:`colnames_table` that changed
+        """
         self.colnames_reader._column_names[row] = self.colnames_table.item(
             row, column).text()
 
     def read_colpic(self):
+        """Recognize the text in the :attr:`colpic`
+
+        See Also
+        --------
+        straditize.colnames.ColNamesReader.recognize_text"""
         text = self.colnames_reader.recognize_text(self.colpic)
         self.colnames_table.item(self.current_col, 0).setText(text)
         self.colnames_reader._column_names[self.current_col] = text
         return text
 
     def load_image(self):
+        """Load a high resolution image"""
         if self.btn_load_image.isChecked():
             fname = QtWidgets.QFileDialog.getOpenFileName(
                 self.straditizer_widgets, 'Straditizer project',
@@ -227,6 +338,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.refresh()
 
     def cancel_colpic_selection(self):
+        """Stop the colpic selection in the :attr:`im_rotated`"""
         self.colnames_reader._colpics = self._colpics_save
         if self.current_col is not None:
             self.colpic = self.colnames_reader.colpics[self.current_col]
@@ -234,7 +346,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.toggle_colpic_selection()
 
     def toggle_colpic_selection(self):
-        """Enable or disable the template selection"""
+        """Enable or disable the colpic selection"""
         if (not self.btn_select_colpic.isChecked() and
                 self.selector is not None):
             self.remove_selector()
@@ -259,6 +371,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.main_canvas.draw()
 
     def remove_selector(self):
+        """Remove and disconnect the :attr:`selector`"""
         self.selector.disconnect_events()
         for a in self.selector.artists:
             try:
@@ -270,6 +383,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.main_canvas.mpl_disconnect(self.key_press_cid)
 
     def reset_control(self):
+        """Reset the dialog"""
         if self.is_shown:
             self.hide_plugin()
             self.btn_select_names.setChecked(False)
@@ -286,6 +400,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.txt_rotate.blockSignals(False)
 
     def create_selector(self):
+        """Create the :attr:`selector` to enable :attr:`colpic` selection"""
         self.selector = RectangleSelector(
             self.main_ax, self.update_image, interactive=True)
         if self.colpic_extents is not None:
@@ -294,6 +409,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             'key_press_event', self.update_image)
 
     def plot_colpic(self):
+        """Plot the :attr:`colpic` in the :attr:`colpic_ax`"""
         try:
             self.colpic_im.remove()
         except (AttributeError, ValueError):
@@ -302,6 +418,10 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.colpic_canvas.draw()
 
     def update_image(self, *args, **kwargs):
+        """Update the :attr:`colpic` with the extents of the :attr:`selector`
+
+        ``*args`` and ``**kwargs`` are ignored
+        """
         self.colpic_extents = np.round(self.selector.extents).astype(int)
         x, y = self.colpic_extents.reshape((2, 2))
         x0, x1 = sorted(x)
@@ -315,6 +435,11 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.should_be_enabled(self.btn_recognize))
 
     def highlight_selected_col(self):
+        """Highlight the column selected in the :attr:`colnames_tables`
+
+        See Also
+        --------
+        straditize.colnames.ColNamesReader.highlight_column"""
         draw = False
         if self.rect is not None:
             self.rect.remove()
@@ -365,6 +490,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         return ret
 
     def toggle_dialog(self):
+        """Close the dialog when the :attr:`btn_select_names` button is clicked
+        """
         from psyplot_gui.main import mainwindow
         if not self.refreshing:
             if not self.btn_select_names.isChecked() or (
@@ -437,6 +564,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.remove_images()
 
     def remove_images(self):
+        """Remove the :attr:`im_rotated` and the :attr:`colpic_im`"""
         try:
             self.im_rotated.remove()
         except (AttributeError, ValueError):
@@ -448,24 +576,35 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.im_rotated = self.colpic_im = self.xc = self.yc = None
 
     def set_xc_yc(self):
+        """Set the x- and y-center before rotating or flipping"""
         xc = np.mean(self.main_ax.get_xlim())
         yc = np.mean(self.main_ax.get_ylim())
         self.xc, self.yc = self.colnames_reader.transform_point(xc, yc, True)
 
     def flip(self, checked):
+        """TFlip the image"""
         self.set_xc_yc()
         self.colnames_reader.flip = checked == Qt.Checked
         self.replot_figure()
 
     def mirror(self, checked):
+        """Mirror the image"""
         self.set_xc_yc()
         self.colnames_reader.mirror = checked == Qt.Checked
         self.replot_figure()
 
     def change_ignore_data_part(self, checked):
+        """Change :attr:`straditize.colnames.ColNamesReader.ignore_data_part`
+        """
         self.colnames_reader.ignore_data_part = checked == Qt.Checked
 
     def rotate(self, val):
+        """Rotate the image
+
+        Parameters
+        ----------
+        float
+            The angle for the rotation"""
         if not str(val).strip():
             return
         try:
@@ -477,6 +616,7 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         self.replot_figure()
 
     def replot_figure(self):
+        """Remove and replot the :attr:`im_rotated`"""
         adjust_lims = self.im_rotated is None
         ax = self.main_ax
         if not self.is_shown:
@@ -505,6 +645,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             self.adjust_lims()
 
     def adjust_lims(self):
+        """Adjust the limits of the :attr:`main_ax` to fill the entire figure
+        """
         size = xs, ys = np.array(self.im_rotated.get_size())
         ax = self.main_ax
         figw, figh = ax.figure.get_figwidth(), ax.figure.get_figheight()
@@ -542,6 +684,8 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             main.tabifyDockWidget(main.help_explorer.dock, self.dock)
 
     def adjust_lims_after_resize(self, event):
+        """Adjust the limits of the :attr:`main_ax` after resize of the figure
+        """
         h = event.height
         w = event.width
         if self.fig_w is None:
@@ -565,7 +709,11 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
         return self.find_colnames()
 
     def find_colnames(self, warn=True, full_image=False, all_cols=None):
-        """Find the column names automatically"""
+        """Find the column names automatically
+
+        See Also
+        --------
+        straditize.colnames.ColNamesReader.find_colnames"""
         ys, xs = self.im_rotated.get_size()
         x0, x1 = self.main_ax.get_xlim() if not full_image else (0, xs)
         y0, y1 = sorted(self.main_ax.get_ylim()) if not full_image else (0, ys)

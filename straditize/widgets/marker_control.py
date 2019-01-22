@@ -1,5 +1,26 @@
 # -*- coding: utf-8 -*-
 """A widget for controlling the appearance of markers
+
+This module defines the :class:`MarkerControl` to control the appearance and
+behaviour of :class:`~straditize.cross_mark.CrossMarks` instances in the
+:attr:`straditize.straditizer.Straditizer.marks` attribute
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import division
 import numpy as np
@@ -7,6 +28,7 @@ from itertools import chain
 import matplotlib as mpl
 import matplotlib.colors as mcol
 from straditize.widgets import StraditizerControlBase, get_icon
+from straditize.common import docstrings
 from psyplot_gui.compat.qtcompat import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QCheckBox,
     QComboBox, QLineEdit, QDoubleValidator, QtGui, QTableWidget,
@@ -96,7 +118,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
     """Widget to control the appearance of the marks
 
     This widget controls the appearance of the
-    :class:`straditize.cross_mark.CrossMark` instances in the
+    :class:`straditize.cross_mark.CrossMarks` instances in the
     :attr:`~straditize.straditizer.Straditizer.marks` attribute of the
     :attr:`~straditize.widgets.StraditizerControlBase.straditizer`"""
 
@@ -104,9 +126,17 @@ class MarkerControl(StraditizerControlBase, QWidget):
 
     @property
     def marks(self):
+        """The :class:`~straditize.cross_mark.CrossMarks` of the straditizer
+        """
         return chain(self.straditizer.marks, self.straditizer.magni_marks)
 
+    @docstrings.dedent
     def __init__(self, straditizer_widgets, item, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        %(StraditizerControlBase.init_straditizercontrol.parameters)s
+        """
         super(MarkerControl, self).__init__(*args, **kwargs)
         self.init_straditizercontrol(straditizer_widgets, item)
         vbox = QVBoxLayout()
@@ -228,10 +258,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.cb_show_hlines.stateChanged.connect(self.change_show_hlines)
 
     def draw_figs(self):
+        """Draw the figures of the :attr:`marks`"""
         for canvas in {m.fig.canvas for m in self.marks}:
             canvas.draw_idle()
 
     def fill_linestyles(self):
+        """Fill the :attr:`combo_line_style` combobox"""
         self.line_styles = [
             ('-', 'solid'),
             ('--', 'dashed'),
@@ -242,6 +274,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.combo_line_style.addItems([t[0] for t in self.line_styles])
 
     def fill_markerstyles(self):
+        """Fill the :attr:`combo_marker_style` combobox"""
         self.marker_styles = [
             ('point', (".", )),
             ('pixel', (",", )),
@@ -370,6 +403,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.draw_figs()
 
     def change_selection_line_widths(self, lw):
+        """Change the linewidth for selected marks
+
+        Parameters
+        ----------
+        lw: float
+            The linewidth for selected marks"""
         lw = float(lw or 0)
         for mark in self.marks:
             key = 'lw' if 'lw' in mark._select_props else 'linewidth'
@@ -406,6 +445,14 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.draw_figs()
 
     def change_show_connected_artists(self, show):
+        """Change the visibility of connected artists
+
+        Parameters
+        ----------
+        show: bool
+            The visibility for the
+            :meth:`straditize.cross_mark.CrossMarks.set_connected_artists_visible`
+            method"""
         if show is Qt.Checked:
             show = True
         elif show is Qt.Unchecked:
@@ -516,6 +563,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
 
     @property
     def line_props(self):
+        """The properties of the lines as a :class:`dict`"""
         return {
             'ls': self.combo_line_style.currentText(),
             'marker': self.marker_styles[
@@ -527,6 +575,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
 
     @property
     def select_props(self):
+        """The properties of selected marks as a :class:`dict`"""
         return {
             'c': self.lbl_color_select.color.getRgbF(),
             'lw': float(self.txt_line_width_select.text().strip() or 0)}
@@ -597,6 +646,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
             l.set_visible(show_vertical)
 
     def change_hline_draggable(self, state):
+        """Enable or disable the dragging of horizontal lines
+
+        Parameters
+        ----------
+        state: Qt.Checked or Qt.Unchecked
+            If Qt.Checked, the horizontal lines can be dragged and dropped"""
         if state == Qt.Checked:
             for mark in self.marks:
                 mark.draggable = np.unique(np.r_[['h'], mark.draggable])
@@ -605,6 +660,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
                 mark.draggable = np.array(list(set(mark.draggable) - {'h'}))
 
     def change_hline_selectable(self, state):
+        """Enable or disable the selection of horizontal lines
+
+        Parameters
+        ----------
+        state: Qt.Checked or Qt.Unchecked
+            If Qt.Checked, the horizontal lines can be selected"""
         if state == Qt.Checked:
             for mark in self.marks:
                 mark.selectable = np.unique(np.r_[['h'], mark.selectable])
@@ -613,6 +674,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
                 mark.selectable = np.array(list(set(mark.selectable) - {'h'}))
 
     def change_vline_draggable(self, state):
+        """Enable or disable the dragging of vertical lines
+
+        Parameters
+        ----------
+        state: Qt.Checked or Qt.Unchecked
+            If Qt.Checked, the vertical lines can be dragged and dropped"""
         if state == Qt.Checked:
             for mark in self.marks:
                 mark.draggable = np.unique(np.r_[['v'], mark.draggable])
@@ -621,6 +688,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
                 mark.draggable = np.array(list(set(mark.draggable) - {'v'}))
 
     def change_vline_selectable(self, state):
+        """Enable or disable the selection of vertical lines
+
+        Parameters
+        ----------
+        state: Qt.Checked or Qt.Unchecked
+            If Qt.Checked, the vertical lines can be selected"""
         if state == Qt.Checked:
             for mark in self.marks:
                 mark.selectable = np.unique(np.r_[['v'], mark.selectable])
@@ -629,6 +702,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
                 mark.selectable = np.array(list(set(mark.selectable) - {'v'}))
 
     def change_show_hlines(self, state):
+        """Enable of disable the visibility of horizontal lines
+
+        Parameters
+        ----------
+        state: Qt.Checked or Qt.Unchecked
+            If Qt.Checked, all horizontal lines are hidden"""
         if state == Qt.Checked:
             for mark in self.marks:
                 mark.hide_horizontal = False
@@ -640,6 +719,12 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.draw_figs()
 
     def change_show_vlines(self, state):
+        """Enable of disable the visibility of vertical lines
+
+        Parameters
+        ----------
+        state: Qt.Checked or Qt.Unchecked
+            If Qt.Checked, all vertical lines are hidden"""
         if state == Qt.Checked:
             for mark in self.marks:
                 mark.hide_vertical = False
@@ -660,6 +745,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
             self.refresh()
 
     def go_to_right_mark(self):
+        """Move the plot to the next right cross mark"""
         ax = self.straditizer.marks[0].ax
         if ax.xaxis_inverted():
             return self.go_to_smaller_x_mark(min(ax.get_xlim()))
@@ -667,6 +753,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
             return self.go_to_greater_x_mark(max(ax.get_xlim()))
 
     def go_to_left_mark(self):
+        """Move the plot to the previous left cross mark"""
         ax = self.straditizer.marks[0].ax
         if ax.xaxis_inverted():
             return self.go_to_greater_x_mark(max(ax.get_xlim()))
@@ -674,6 +761,13 @@ class MarkerControl(StraditizerControlBase, QWidget):
             return self.go_to_smaller_x_mark(min(ax.get_xlim()))
 
     def go_to_greater_x_mark(self, x):
+        """Move the plot to the next mark with a x-position greater than `x`
+
+        Parameters
+        ----------
+        x: float
+            The reference x-position that shall be smaller than the new
+            centered mark"""
         def is_visible(mark):
             return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
                 np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
@@ -723,6 +817,13 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.straditizer.draw_figure()
 
     def go_to_smaller_x_mark(self, x):
+        """Move the plot to the next mark with a x-position smaller than `x`
+
+        Parameters
+        ----------
+        x: float
+            The reference x-position that shall be greater than the new
+            centered mark"""
         def is_visible(mark):
             return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
                 np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
@@ -772,6 +873,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.straditizer.draw_figure()
 
     def go_to_upper_mark(self):
+        """Go to the next mark above the current y-limits"""
         ax = self.straditizer.marks[0].ax
         if ax.xaxis_inverted():
             return self.go_to_greater_y_mark(max(ax.get_ylim()))
@@ -779,6 +881,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
             return self.go_to_smaller_y_mark(min(ax.get_ylim()))
 
     def go_to_lower_mark(self):
+        """Go to the next mark below the current y-limits"""
         ax = self.straditizer.marks[0].ax
         if ax.xaxis_inverted():
             return self.go_to_smaller_y_mark(min(ax.get_ylim()))
@@ -786,6 +889,13 @@ class MarkerControl(StraditizerControlBase, QWidget):
             return self.go_to_greater_y_mark(max(ax.get_ylim()))
 
     def go_to_greater_y_mark(self, y):
+        """Move the plot to the next mark with a y-position greater than `y`
+
+        Parameters
+        ----------
+        y: float
+            The reference y-position that shall be smaller than the new
+            centered mark"""
         def is_visible(mark):
             return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
                 np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
@@ -834,6 +944,13 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.straditizer.draw_figure()
 
     def go_to_smaller_y_mark(self, y):
+        """Move the plot to the next mark with a y-position smaller than `x`
+
+        Parameters
+        ----------
+        y: float
+            The reference y-position that shall be smaller than the new
+            centered mark"""
         def is_visible(mark):
             return (np.searchsorted(np.sort(xlim), mark.xa) == 1).any() and (
                 np.searchsorted(np.sort(ylim), mark.ya) == 1).any()
@@ -882,6 +999,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self.straditizer.draw_figure()
 
     def add_toolbar_widgets(self, mark):
+        """Add the navigation actions to the toolbar"""
         tb = self.straditizer.marks[0].ax.figure.canvas.toolbar
         if not isinstance(tb, QToolBar):
             return
@@ -928,6 +1046,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
         self._toolbar = tb
 
     def remove_actions(self):
+        """Remove the navigation actions from the toolbar"""
         if self._toolbar is None:
             return
         tb = self._toolbar

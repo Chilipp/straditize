@@ -1,4 +1,22 @@
 # -*- coding: utf-8 -*-
+"""Plot control widgets for straditize
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+"""
 from itertools import chain
 from collections import OrderedDict
 from straditize.widgets import StraditizerControlBase
@@ -14,7 +32,20 @@ else:
 
 
 class PlotControlTable(StraditizerControlBase, QTableWidget):
-    """A widget to control the plots"""
+    """A widget to control the plots
+
+    This control widget is a table to plot, remove and toggle the
+    visiblity of visual diagnostics for the straditizer. It has two columns:
+    the first to toggle the visibility of the plot, the second to plot and
+    remove the matplotlib artists. The vertical header are the items in the
+    corresponding :attr:`plot_funcs`, :attr:`can_be_plotted_funcs` and/or
+    :attr:`hide_funcs`.
+
+    Rows are added to this table using the :meth:`add_item` method which stores
+    the plotting functions in the :attr:`plot_funcs` and the functions to
+    hide the plot in the :attr:`hide_funcs`. Whether an item can be plotted or
+    not depends on the results of the corresponding callable in the
+    :attr:`can_be_plotted_funcs`."""
 
     @property
     def widgets2disable(self):
@@ -23,6 +54,19 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             for row in range(self.rowCount()))))
 
     col_lines = []
+
+    #: A mapping from plot identifier to a callable that returns ``True`` if
+    #: the corresponding function in the :attr:`plot_funcs` mapping can be
+    #: called
+    can_be_plotted_funcs = {}
+
+    #: A mapping from plot identifier to a callable to plot the corresponding
+    #: artists
+    plot_funcs = {}
+
+    #: A mapping from plot identifier to a callable to hide the corresponding
+    #: artists
+    hide_funcs = {}
 
     def __init__(self, straditizer_widgets, *args, **kwargs):
         super(PlotControlTable, self).__init__(*args, **kwargs)
@@ -71,6 +115,12 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         self.adjust_height()
 
     def draw_figs(self, artists):
+        """Draw the figures of the given `artists`
+
+        Parameters
+        ----------
+        artists: list of :class:`matplotlib.artist.Artist`
+            The artists to draw the canvas from"""
         for canvas in {a.axes.figure.canvas for a in artists}:
             canvas.draw_idle()
 
@@ -149,14 +199,20 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
 
             self.setCellWidget(row, 1, btn)
 
+    # -------- straditizer data image --------------
+
     def get_straditizer_image(self):
+        """Get the :attr:`straditize.straditizer.Straditizer.plot_im`"""
         try:
             ret = self.straditizer.plot_im
         except AttributeError:
             ret = None
         return [ret] if ret else []
 
+    # -------- white data reader background ---------
+
     def get_data_reader_background(self):
+        """Get the :attr:`straditize.binary.DataReader.background`"""
         try:
             ret = self.straditizer.data_reader.background
         except AttributeError:
@@ -167,7 +223,10 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             else:
                 return [ret]
 
+    # -------- binary data image --------------
+
     def get_data_reader_image(self):
+        """Get the :attr:`straditize.binary.DataReader.plot_im`"""
         try:
             ret = self.straditizer.data_reader.plot_im
         except AttributeError:
@@ -178,21 +237,24 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             else:
                 return [ret]
 
+    # -------- reader color image --------------
+
     def plot_data_reader_color_image(self):
+        """Plot the data reader color image
+
+        See Also
+        --------
+        straditize.binary.DataReader.plot_color_image
+        remove_data_reader_color_image
+        can_plot_data_reader_color_image"""
         self.straditizer.data_reader.plot_color_image()
 
-    def get_data_reader_color_image(self):
-        try:
-            ret = self.straditizer.data_reader.color_plot_im
-        except AttributeError:
-            return []
-        else:
-            if self.straditizer.data_reader.magni_color_plot_im is not None:
-                return [ret, self.straditizer.data_reader.magni_color_plot_im]
-            else:
-                return [ret]
-
     def remove_data_reader_color_image(self):
+        """Remove the :attr:`straditize.binary.DataReader.color_plot_im`
+
+        See Also
+        --------
+        plot_data_reader_color_image"""
         for a in self.get_data_reader_color_image():
             try:
                 a.remove()
@@ -207,11 +269,59 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         except AttributeError:
             pass
 
+    def get_data_reader_color_image(self):
+        """Get the :attr:`straditize.binary.DataReader.color_plot_im`
+
+        See Also
+        --------
+        plot_data_reader_color_image"""
+        try:
+            ret = self.straditizer.data_reader.color_plot_im
+        except AttributeError:
+            return []
+        else:
+            if self.straditizer.data_reader.magni_color_plot_im is not None:
+                return [ret, self.straditizer.data_reader.magni_color_plot_im]
+            else:
+                return [ret]
+
     def can_plot_data_reader_color_image(self):
+        """Test if the reader color image can be plotted
+
+        See Also
+        --------
+        plot_data_reader_color_image"""
         return (self.straditizer is not None and
                 self.straditizer.data_reader is not None)
 
+    # -------- data box --------------
+
+    def plot_data_box(self):
+        """Plot the data box around the diagram part
+
+        See Also
+        --------
+        straditize.straditizer.Straditizer.draw_data_box
+        remove_data_box
+        get_data_box
+        can_plot_data_box"""
+        self.straditizer.draw_data_box()
+
+    def remove_data_box(self):
+        """Remove the box around the diagram part
+
+        See Also
+        --------
+        plot_data_box"""
+        self.straditizer.remove_data_box()
+
     def get_data_box(self):
+        """Get the plotted :attr:`straditize.straditizer.Straditizer.data_box`
+
+        See Also
+        --------
+        plot_data_box
+        """
         try:
             ret = [self.straditizer.data_box]
         except AttributeError:
@@ -222,13 +332,27 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             pass
         return ret if ret else []
 
-    def plot_data_box(self):
-        self.straditizer.draw_data_box()
+    def can_plot_data_box(self):
+        """Test whether the box around the diagram part can be plotted
+
+        See Also
+        --------
+        plot_data_box"""
+        return (self.straditizer is not None and
+                self.straditizer.data_xlim is not None and
+                self.straditizer.data_ylim is not None)
 
     # -------- plot full df ---------
 
     def plot_full_df(self):
         """Plot the :attr:`~straditize.binary.DataReader.full_df` of the reader
+
+        See Also
+        --------
+        straditize.binary.DataReader.plot_full_df
+        remove_full_df_plot
+        get_full_df_lines
+        can_plot_full_df
         """
         stradi = self.straditizer
         stradi.data_reader.plot_full_df()
@@ -238,6 +362,11 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             stradi.data_reader.lines += lines
 
     def remove_full_df_plot(self):
+        """Remove the plot of the full_df
+
+        See Also
+        --------
+        plot_full_df"""
         stradi = self.straditizer
         for l in stradi.data_reader.lines[:]:
             try:
@@ -247,12 +376,22 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         stradi.data_reader.lines.clear()
 
     def get_full_df_lines(self):
+        """Get the artists of the full_df plot
+
+        See Also
+        --------
+        plot_full_df"""
         try:
             return self.straditizer.data_reader.lines
         except AttributeError:
             return []
 
     def can_plot_full_df(self):
+        """Test whether the full_df can be plotted
+
+        See Also
+        --------
+        plot_full_df"""
         return (self.straditizer is not None and
                 self.straditizer.data_reader is not None and
                 self.straditizer.data_reader.full_df is not None)
@@ -260,7 +399,14 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
     # --------- plot samples ------------
 
     def plot_samples(self):
-        """Plot the :attr:`~straditize.binary.DataReader.full_df` of the reader
+        """Plot the samples of the reader
+
+        See Also
+        --------
+        straditize.binary.DataReader.plot_samples
+        remove_samples_plot
+        get_samples_lines
+        can_plot_samples
         """
         stradi = self.straditizer
         stradi.data_reader.plot_samples()
@@ -270,6 +416,11 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             stradi.data_reader.sample_lines += lines
 
     def remove_samples_plot(self):
+        """Remove the plotted samples
+
+        See Also
+        --------
+        plot_samples"""
         stradi = self.straditizer
         for l in stradi.data_reader.sample_lines[:]:
             try:
@@ -279,12 +430,22 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         stradi.data_reader.sample_lines.clear()
 
     def get_samples_lines(self):
+        """Get the artists of the plotted samples
+
+        See Also
+        --------
+        plot_samples"""
         try:
             return self.straditizer.data_reader.sample_lines
         except AttributeError:
             return []
 
     def can_plot_samples(self):
+        """Test whether the samples can be plotted
+
+        See Also
+        --------
+        plot_samples"""
         return (self.straditizer is not None and
                 self.straditizer.data_reader is not None and
                 self.straditizer.data_reader.full_df is not None and
@@ -293,7 +454,14 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
     # --------- plot horizontal sample lines ------------
 
     def plot_sample_hlines(self):
-        """Plot the :attr:`~straditize.binary.DataReader.full_df` of the reader
+        """Plot the horizontal sample lines of the reader
+
+        See Also
+        --------
+        straditize.binary.DataReader.plot_sample_hlines
+        remove_sample_hlines_plot
+        get_sample_hlines
+        can_plot_sample_hlines
         """
         stradi = self.straditizer
         stradi.data_reader.plot_sample_hlines()
@@ -303,6 +471,11 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             stradi.data_reader.sample_hlines += lines
 
     def remove_sample_hlines_plot(self):
+        """Remove the sample lines
+
+        See Also
+        --------
+        plot_sample_hlines"""
         stradi = self.straditizer
         for l in stradi.data_reader.sample_hlines[:]:
             try:
@@ -312,12 +485,22 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         stradi.data_reader.sample_hlines.clear()
 
     def get_sample_hlines(self):
+        """Get the plotted the sample lines
+
+        See Also
+        --------
+        plot_sample_hlines"""
         try:
             return self.straditizer.data_reader.sample_hlines
         except AttributeError:
             return []
 
     def can_plot_sample_hlines(self):
+        """Test whether the sample lines can be plotted
+
+        See Also
+        --------
+        plot_sample_hlines"""
         return (self.straditizer is not None and
                 self.straditizer.data_reader is not None and
                 self.straditizer.data_reader.full_df is not None and
@@ -326,6 +509,14 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
     # --------- plot potential samples ------------
 
     def plot_potential_samples(self):
+        """Highlight the regions with potential samples in the plot
+
+        See Also
+        --------
+        straditize.binary.DataReader.plot_potential_samples
+        remove_potential_samples_plot
+        get_potential_samples_lines
+        can_plot_potential_samples"""
         stradi = self.straditizer
         stradi.data_reader.plot_potential_samples()
         if stradi.magni is not None:
@@ -334,6 +525,11 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
             stradi.data_reader.sample_ranges += lines
 
     def remove_potential_samples_plot(self):
+        """Remove the plot of potential samples
+
+        See Also
+        --------
+        plot_potential_samples"""
         stradi = self.straditizer
         for l in stradi.data_reader.sample_ranges[:]:
             try:
@@ -343,52 +539,77 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         stradi.data_reader.sample_ranges.clear()
 
     def get_potential_samples_lines(self):
+        """Get the artists of the plot of potential samples
+
+        See Also
+        --------
+        plot_potential_samples"""
         try:
             return self.straditizer.data_reader.sample_ranges
         except AttributeError:
             return []
 
     def can_plot_potential_samples(self):
+        """Test whether potential sample regions can be plotted
+
+        See Also
+        --------
+        plot_potential_samples"""
         return self.can_plot_full_df()
 
-    def can_plot_data_box(self):
-        return (self.straditizer is not None and
-                self.straditizer.data_xlim is not None and
-                self.straditizer.data_ylim is not None)
-
-    def can_plot_column_starts(self):
-        return (self.straditizer is not None and
-                self.straditizer.data_reader is not None and
-                self.straditizer.data_reader._column_starts is not None)
+    # -------- column starts ----------------
 
     def plot_column_starts(self):
+        """Plot horizontal lines for the column starts
+
+        See Also
+        --------
+        remove_column_starts
+        get_column_start_lines
+        can_plot_column_starts"""
         reader = self.straditizer.data_reader
         cols = reader._column_starts
         if reader.extent is not None:
             cols = cols + reader.extent[0]
         ymin, ymax = self.straditizer.data_ylim
-        self.col_lines = [reader.ax.vlines(cols, ymax, ymin,
-                                           color='r')]
+        reader.__col_lines = [reader.ax.vlines(cols, ymax, ymin, color='r')]
         if reader.magni is not None:
-            self.col_lines.append(reader.magni.ax.vlines(cols, ymax, ymin,
-                                                         color='r'))
+            reader.__col_lines.append(reader.magni.ax.vlines(cols, ymax, ymin,
+                                                             color='r'))
 
     def remove_column_starts(self):
-        for l in self.col_lines:
+        """Remove the plotted lines of the column starts
+
+        See Also
+        --------
+        plot_column_starts"""
+        for l in self.straditizer.data_reader.__col_lines:
             try:
                 l.remove()
             except ValueError:
                 pass
-        self.col_lines.clear()
+        self.straditizer.data_reader.__col_lines.clear()
 
     def get_column_start_lines(self):
-        return self.col_lines
+        """Get the artists of the column starts
 
-    def remove_data_box(self):
-        self.straditizer.remove_data_box()
+        See Also
+        --------
+        plot_column_starts"""
+        try:
+            return self.straditizer.data_reader.__col_lines
+        except AttributeError:
+            return []
 
-    def always_true(self):
-        return True
+    def can_plot_column_starts(self):
+        """Test whether the column starts can be visualized
+
+        See Also
+        --------
+        plot_column_starts"""
+        return (self.straditizer is not None and
+                self.straditizer.data_reader is not None and
+                self.straditizer.data_reader._column_starts is not None)
 
     def refresh(self):
         for row, (what, func) in enumerate(self.get_artists_funcs.items()):
@@ -441,7 +662,21 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
 
 
 class ResultsPlot(StraditizerControlBase):
-    """A widget for plotting the final results"""
+    """A widget for plotting the final results
+
+    This widgets contains a QPushButton :attr:`btn_plot` to plot the results
+    using the :meth:`straditize.binary.DataReader.plot_results` method"""
+
+    #: The QPushButton to call the :meth:`plot_results` method
+    btn_plot = None
+
+    #: A QCheckBox whether x- and y-axis should be translated from pixel to
+    #: data units
+    cb_transformed = None
+
+    #: A QCheckBox whether the samples or the full digitized data shall be
+    #: plotted
+    cb_final = None
 
     def __init__(self, straditizer_widgets):
         self.init_straditizercontrol(straditizer_widgets)
@@ -498,6 +733,19 @@ class ResultsPlot(StraditizerControlBase):
             self.btn_plot.setEnabled(False)
 
     def plot_results(self):
+        """Plot the results
+
+        What is plotted depends on the :attr:`cb_transformed` and the
+        :attr:`cb_final`
+
+        :attr:`cb_transformed` and :attr:`cb_final` are checked
+            Plot the :attr:`straditize.straditizer.Straditizer.final_df`
+        :attr:`cb_transformed` is checked but not :attr:`cb_final`
+            Plot the :attr:`straditize.straditizer.Straditizer.full_df`
+        :attr:`cb_transformed` is not checked but :attr:`cb_final`
+            Plot the :attr:`straditize.binary.DataReader.sample_locs`
+        :attr:`cb_transformed` and :attr:`cb_final` are both not checked
+            Plot the :attr:`straditize.binary.DataReader.full_df`"""
         transformed = self.cb_transformed.isEnabled() and \
             self.cb_transformed.isChecked()
         if self.cb_final.isEnabled() and self.cb_final.isChecked():
@@ -511,7 +759,26 @@ class ResultsPlot(StraditizerControlBase):
 
 
 class PlotControl(StraditizerControlBase, QWidget):
-    """A widget for controlling the plot"""
+    """A widget for controlling the plot
+
+    This widgets holds a :class:`PlotControlTable` to display visual
+    diagnostics in the plot. Additionally it contains zoom buttons
+    (:attr:`btn_view_global` and :attr:`btn_view_data`) and a widget to plot
+    the results (:attr:`results_plot`)"""
+
+    #: A :class:`PlotControlTable` to display visual diagnostics
+    table = None
+
+    #: A button to zoom out to the entire stratigraphic diagram
+    #: (see :meth:`zoom_global`)
+    btn_view_global = None
+
+    #: A button to zoom to the data
+    #: (see :meth:`zoom_data`)
+    btn_view_data = None
+
+    #: A :class:`ResultsPlot` to plot the digitized data in a new diagram
+    results_plot = None
 
     def __init__(self, straditizer_widgets, item, *args, **kwargs):
         super(PlotControl, self).__init__(*args, **kwargs)
@@ -551,10 +818,20 @@ class PlotControl(StraditizerControlBase, QWidget):
         self.results_plot.setup_children(child)
 
     def zoom_global(self):
+        """Zoom out to the full straditgraphic diagram
+
+        See Also
+        --------
+        straditize.straditizer.Straditizer.show_full_image"""
         self.straditizer.show_full_image()
         self.straditizer.draw_figure()
 
     def zoom_data(self):
+        """Zoom to the data part
+
+        See Also
+        --------
+        straditize.straditizer.Straditizer.show_data_diagram"""
         self.straditizer.show_data_diagram()
         self.straditizer.draw_figure()
 
