@@ -38,7 +38,7 @@ programs available that allow the digitization of scientific data in a simple
 x-y graph format, we know of no semi-automated program that can deal with data
 plotted with multiple horizontal axes that share the same vertical axis, such
 as pollen diagrams (see image below) and other stratigraphic figures that are
-common in the Earth sciences. straditize (Stratigraphic Diagram Digitizer)
+common in the Earth sciences. `Straditize` (Stratigraphic Diagram Digitizer)
 [@Sommer2019] fills this gap. It is an open-source program that allows
 stratigraphic figures to be digitized in a single semi-automated operation. It
 is designed to detect multiple plots of variables analyzed along the same
@@ -47,13 +47,13 @@ series.
 
 The program supports mixtures of many different
 diagram types, such as bar plots, line plots, as well as shaded, stacked, and
-filled area plots. Other features of straditize include text recognition to
+filled area plots. Other features of `straditize` include text recognition to
 interpret the names of the different plotted variables, the automatic and
 semi-automatic recognition of picture artifacts, as well an automatic
 measurement finder to exactly reproduce the data that has been used to create
 the diagram.
 
-Straditize is written in the programming language Python and is available for
+`Straditize` is written in the programming language Python and is available for
 Windows, Linux and MacOS. Being implemented in the visualization framework
 psyplot [@Sommer2017] it provides an extensively documented graphical
 user interface for a point-and-click handling of the semi-automatic process,
