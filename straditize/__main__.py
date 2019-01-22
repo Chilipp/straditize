@@ -19,6 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import sys
 from psyplot_gui import docstrings
+import straditize
 import os
 import os.path as osp
 
@@ -155,6 +156,11 @@ def get_parser(create=True):
     parser.update_arg('ylim', type=int, nargs=2, metavar='val',
                       group=stradi_grp)
     parser.update_arg('full', group=stradi_grp, short='f')
+
+    parser.update_arg('version', short='V', long='version', action='version',
+                      version=straditize.__version__, if_existent=False,
+                      group=stradi_grp)
+
     if create:
         parser.create_arguments()
     parser.epilog = docstrings.dedents("""
