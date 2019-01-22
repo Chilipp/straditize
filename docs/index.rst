@@ -101,6 +101,7 @@ Documentation
     about
     installing
     tutorial/index
+    contribute
     command_line
     gui/straditize
     api/straditize
