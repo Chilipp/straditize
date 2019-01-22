@@ -15,7 +15,7 @@ class StackedAreaReaderTest(bt.StraditizeWidgetsTestCase):
         return self.straditizer_widgets.selection_toolbar
 
     def tearDown(self):
-        if hasattr(self.reader, 'btn_prev'):
+        if getattr(self.reader, 'btn_prev', None) is not None:
             self.reader._remove_digitze_child(self.digitizer)
             del self.reader.straditizer_widgets
         super().tearDown()
