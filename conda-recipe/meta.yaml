@@ -1,5 +1,5 @@
 {% set name = "straditize" %}
-{% set version = "0.0.1.dev0" %}
+{% set version = "0.1.0" %}
 
 package:
   name: {{ name|lower }}
@@ -13,6 +13,12 @@ build:
   script: python -m pip install . --no-deps --ignore-installed -vvv
   entry_points:
     - straditize = straditize.__main__:main
+
+app:
+  entry: straditize
+  icon: logo.png
+  summary: Stratigraphic Diagram Digitization software
+  type: desk
 
 requirements:
   build:
