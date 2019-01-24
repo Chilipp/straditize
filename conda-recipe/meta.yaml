@@ -67,8 +67,9 @@ about:
   summary: 'Python package for digitizing pollen diagrams'
 
   description: |
-    This program tackles this problem by providing a python package to digitize
-    especially pollen diagrams, but also any other type of stratigraphic diagram.
+    A software for a semi-automatic digitization of pollen diagrams or
+    other types of stratigraphic diagram using the command line or a
+    graphical user interface.
   doc_url: http://straditize.readthedocs.io/
   dev_url: https://github.com/Chilipp/straditize
 
