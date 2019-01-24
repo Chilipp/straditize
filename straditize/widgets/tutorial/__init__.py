@@ -1,5 +1,29 @@
 # -*- coding: utf-8 -*-
-"""Tutorials for straditize"""
+"""Tutorials for straditize
+
+The :mod:`~straditize.widgets.tutorial.beginner` tutorial serves as a first
+look into the software. The
+:mod:`~straditize.widgets.tutorial.hoya_del_castillo` tutorial on the other
+hand is a true pollen diagram with more than 20 taxa. Both tutorials can be
+started from the GUI through the :guilabel:`Tutorial` button.
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
 from straditize.widgets.tutorial.beginner import Tutorial
 from straditize.widgets.tutorial.hoya_del_castillo import (
     HoyaDelCastilloTutorial)

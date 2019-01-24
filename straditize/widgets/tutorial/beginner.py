@@ -1,7 +1,25 @@
 # -*- coding: utf-8 -*-
 """The tutorial of straditize
 
-This module contains a guided tour through straditize"""
+This module contains a guided tour to get started with straditize
+
+**Disclaimer**
+
+Copyright (C) 2018-2019  Philipp S. Sommer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
 import os.path as osp
 import shutil
 import glob
@@ -16,6 +34,11 @@ import pandas as pd
 
 
 class TutorialDocs(UrlHelp, DockMixin):
+    """A documentation viewer for the tutorial docs
+
+    This viewer is accessible through the :attr:`Tutorial.tutorial_docs`
+    attribute and shows the :attr:`~TutorialPage.src_file` for the
+    tutorial :attr:`~Tutorial.pages`"""
 
     dock_position = QtCore.Qt.RightDockWidgetArea
 
@@ -54,6 +77,16 @@ class TutorialNavigation(QtWidgets.QWidget):
     current_step = 0
 
     def __init__(self, nsteps, validate, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        nsteps: int
+            The total number of steps in the :class:`Tutorial`
+        validate: callable
+            A callable that takes the :attr:`current_step` as an argument and
+            returns a :class:`bool` whether the current step is valid and
+            finished, or not
+        """
         super().__init__(*args, **kwargs)
         self.enabled = True
         self.nsteps = nsteps
@@ -108,6 +141,12 @@ class TutorialNavigation(QtWidgets.QWidget):
         self.btn_info.clicked.connect(self.show_info)
 
     def setEnabled(self, enable):
+        """Enable or disable the navigation buttons
+
+        Parameters
+        ----------
+        enable: bool
+            Whether to enable or disable the buttons"""
         for w in [self.btn_prev, self.btn_next, self.btn_skip, self.btn_info]:
             w.setEnabled(enable)
         if enable:
@@ -115,6 +154,7 @@ class TutorialNavigation(QtWidgets.QWidget):
         self.enabled = enable
 
     def maybe_enable_widgets(self):
+        """Enable the buttons based on the :attr:`current_step`"""
         i = self.current_step
         if i == 0:
             self.btn_next.setEnabled(True)
@@ -131,12 +171,20 @@ class TutorialNavigation(QtWidgets.QWidget):
         self.btn_prev.setEnabled(i > 0)
 
     def show_info(self):
+        """Trigger the :attr:`step_changed` signal with the current step"""
         self.step_changed.emit(self.current_step, self.current_step)
 
     def display_hint(self):
+        """Trigger the :attr:`hint_requested` signal with the current step"""
         self.hint_requested.emit(self.current_step)
 
     def set_current_step(self, i):
+        """Change the :attr:`current_step`
+
+        Parameters
+        ----------
+        i: int
+            The :attr:`current_step` to switch to"""
         self.current_step = i
         self.progress_bar.setValue(i)
         self.btn_next.setText('Next')
@@ -152,6 +200,7 @@ class TutorialNavigation(QtWidgets.QWidget):
         self.maybe_enable_widgets()
 
     def goto_next_step(self):
+        """Increase the :attr:`current_step` by one"""
         if self.validate(self.current_step):
             if self.current_step <= self.nsteps:
                 self.set_current_step(self.current_step + 1)
@@ -161,11 +210,14 @@ class TutorialNavigation(QtWidgets.QWidget):
                 self.set_current_step(self.current_step)
 
     def goto_prev_step(self):
+        """Decrease the :attr:`current_step` by one"""
         if self.current_step > 0:
             self.set_current_step(self.current_step - 1)
             self.step_changed.emit(self.current_step + 1, self.current_step)
 
     def skip(self):
+        """Skip the :attr:`current_step` and emit the :attr:`skipped` signal
+        """
         self.skipped.emit(self.current_step)
         self.goto_next_step()
 
@@ -176,10 +228,14 @@ class TutorialPage(object):
     Subclasses show implement the :meth:`show_hint` method and the
     :meth:`is_finished` property"""
 
+    #: The source directory for the docs
     src_dir = osp.join(osp.dirname(__file__), 'beginner')
 
+    #: The basename of the stratigraphic diagram image for this tutorial
     src_base = 'beginner-tutorial.png'
 
+    #: The complete path to the of the stratigraphic diagram image for this
+    #: tutorial
     src_file = osp.join(src_dir, src_base)
 
     #: str. The tooltip that has been shown. This attribute is mainly for
@@ -187,6 +243,14 @@ class TutorialPage(object):
     _last_tooltip_shown = None
 
     def __init__(self, filename, tutorial):
+        """
+        Parameters
+        ----------
+        filename: str
+            The basename (without ending) of the RST file corresponding to this
+            tutorial page
+        tutorial: Tutorial
+            The tutorial instance"""
         self.filename = filename
         self.tutorial = tutorial
         self.straditizer_widgets = self.tutorial.straditizer_widgets
@@ -229,6 +293,8 @@ class TutorialPage(object):
             pass
 
     def show(self):
+        """Show the page and browse the :attr:`filename` in the tutorial docs
+        """
         try:
             self.lock_viewer(False)
             self.tutorial.tutorial_docs.browse(self.filename)
@@ -309,13 +375,26 @@ class Tutorial(StraditizerControlBase, TutorialPage):
 
     @property
     def current_page(self):
+        """The current page of the tutorial (corresponding to the
+        :attr:`TutorialNavigation.current_step`)"""
         return self.pages[self.navigation.current_step]
 
     @property
     def load_image_step(self):
+        """The number of the page that loads the diagram image (i.e. the index
+        of the :class:`LoadImage` instance in the :attr:`pages` attribute"""
         return next(
             (i for i, p in enumerate(self.pages) if isinstance(p, LoadImage)),
             1)
+
+    #: A list of the :class:`TutorialPages` for this tutorial
+    pages = []
+
+    #: A :class:`TutorialDocs` to display the RST-files of the tutorial
+    tutorial_docs = None
+
+    #: A :class:`TutorialNavigation` to navigate through the tutorial
+    navigation = None
 
     def __init__(self, straditizer_widgets):
         from psyplot_gui.main import mainwindow
@@ -374,6 +453,8 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         self.tutorial_docs.show_rst(rst, name, files=files)
 
     def setup_tutorial_pages(self):
+        """Setup the :attr:`pages` attribute and initialize the tutorial pages
+        """
         self.pages = [
             self,
             ControlIntro('beginner-tutorial-control', self),
@@ -402,6 +483,12 @@ class Tutorial(StraditizerControlBase, TutorialPage):
             self.navigation.set_current_step(self.load_image_step)
 
     def _get_tutorial_stradi(self):
+        """Get the straditizer for this tutorial
+
+        Returns
+        -------
+        straditize.straditizer.Straditizer
+            The straditizer for this tutorial or None if it is closed"""
         src_file = self.src_base
         get_attr = self.straditizer_widgets.get_attr
         for stradi in self.straditizer_widgets._straditizers:
@@ -424,15 +511,50 @@ class Tutorial(StraditizerControlBase, TutorialPage):
             del self.pages
 
     def goto_page(self, old, new):
+        """Go to another page
+
+        Parameters
+        ----------
+        old: int
+            The index of the old page in the :attr:`pages` attribute that is
+            subject to be deactivated (see :meth:`TutorialPage.deactivate`)
+        new: int
+            The index of the new page in the :attr:`pages` attribute that is
+            subject to be activated (see :meth:`TutorialPage.activate`)
+
+        See Also
+        --------
+        TutorialPage.activate
+        TutorialPage.deactivate"""
         self.pages[old].deactivate()
         page = self.pages[new]
         page.show()
         page.activate()
 
     def skip_page(self, i):
+        """Skip a tutorial page
+
+        Parameters
+        ----------
+        i: int
+            The index of the page in the :attr:`pages` attribute
+
+        See Also
+        --------
+        TutorialPage.skip"""
         self.pages[i].skip()
 
     def display_hint(self, i):
+        """Display the hint for a tutorial page
+
+        Parameters
+        ----------
+        i: int
+            The index of the page in the :attr:`pages` attribute
+
+        See Also
+        --------
+        TutorialPage.hint"""
         stradi = self._get_tutorial_stradi()
         if stradi is None and i > self.load_image_step:
             self.navigation.set_current_step(self.load_image_step)
@@ -444,6 +566,20 @@ class Tutorial(StraditizerControlBase, TutorialPage):
             self.pages[i].hint()
 
     def validate_page(self, i, silent=False):
+        """Validate a tutorial page
+
+        Parameters
+        ----------
+        i: int
+            The index of the page in the :attr:`pages` attribute
+        silent: bool
+            If True, and the page is not yet finished (see
+            :attr:`TutorialPage.is_finished`), the hint is displayed
+
+        Returns
+        -------
+        bool
+            True, if the page :attr:`~TutorialPage.is_finished`"""
         ret = self.pages[i].is_finished
         if not silent and not ret:
             self.navigation.display_hint()
@@ -773,6 +909,7 @@ class ColumnNames(TutorialPage):
 
     select_names_button_clicked = False
 
+    #: The column names in the diagram
     column_names = [
         'Pinus', 'Juniperus', 'Quercus ilex-type', 'Chenopodiaceae']
 
