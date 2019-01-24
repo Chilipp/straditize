@@ -68,7 +68,7 @@ about:
 
   description: |
     A software for a semi-automatic digitization of pollen diagrams or
-    other types of stratigraphic diagram using the command line or a
+    other types of stratigraphic diagrams using the command line or a
     graphical user interface.
   doc_url: http://straditize.readthedocs.io/
   dev_url: https://github.com/Chilipp/straditize
