@@ -874,7 +874,7 @@ class CleanImagePage(TutorialPage):
         stradi = self.straditizer_widgets.straditizer
         reader = stradi.data_reader
         reader.recognize_yaxes(remove=True)
-        reader.binary[:, 1797 - stradi.data_xlim[0]:] = 0
+        reader.binary[:, 1797 - int(stradi.data_xlim[0]):] = 0
         reader.recognize_xaxes(remove=True)
         stradi.draw_figure()
         self.clicked_btn_remove_xaxes()
