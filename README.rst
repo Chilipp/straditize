@@ -103,5 +103,5 @@ A more detailed description is provided in the docs_.
 License
 -------
 straditize is published under the
-`GNU General Public License v2.0 <http://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html>`__
+`GNU General Public License v3.0 <https://www.gnu.org/licenses/>`__
 under the copyright of Philipp S. Sommer, 2018-2019
