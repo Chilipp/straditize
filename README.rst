@@ -11,7 +11,7 @@ Digitizing stratigraphic diagrams
     * - docs
       - |docs|
     * - tests
-      - |travis| |appveyor| |requires| |codecov|
+      - |travis| |appveyor| |codecov|
     * - package
       - |version| |conda| |github|
     * - implementations
@@ -32,10 +32,6 @@ Digitizing stratigraphic diagrams
 .. |codecov| image:: https://codecov.io/gh/Chilipp/straditize/branch/master/graph/badge.svg
     :alt: Coverage
     :target: https://codecov.io/gh/Chilipp/straditize
-
-.. |requires| image:: https://requires.io/github/Chilipp/straditize/requirements.svg?branch=master
-    :alt: Requirements Status
-    :target: https://requires.io/github/Chilipp/straditize/requirements/?branch=master
 
 .. |version| image:: https://img.shields.io/pypi/v/straditize.svg?style=flat
     :alt: PyPI Package latest release
