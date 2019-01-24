@@ -15,6 +15,7 @@ authors:
       orcid: 0000-0001-6171-7716
       affiliation: 1
     - name: Dilan Rech
+      orcid: 0000-0002-2961-4271
       affiliation: 1
     - name: Manuel Chevalier
       orcid: 0000-0002-8183-9881
@@ -58,7 +59,7 @@ Windows, Linux and MacOS. Being implemented in the visualization framework
 psyplot [@Sommer2017] it provides an extensively documented graphical
 user interface for a point-and-click handling of the semi-automatic process,
 but can also be scripted or used from the command line. The visualization is
-mainly based on matplotlib [@Hunter2007] and most of the detection algorithms
+based on matplotlib [@Hunter2007] and most of the detection algorithms
 use image recognition functions from the scikit-image package [@Walt2014] and
 numeric routines from scipy [@Jones2001] and numpy [@Oliphant2006].
 
@@ -67,7 +68,6 @@ numeric routines from scipy [@Jones2001] and numpy [@Oliphant2006].
 # Acknowledgements
 
 We gratefully acknowledge funding by the Swiss National Science Foundation
-(SNF) through the HORNET project (200021_169598) and Dilan Rech acknowledges
-funding by the IDYST institute.
+(SNF) through the HORNET project (200021_169598).
 
 # References
