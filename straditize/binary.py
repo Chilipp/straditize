@@ -1990,7 +1990,8 @@ class DataReader(LabelSelection):
         diff_data = np.diff(x_data)[0]
         slope = diff_data / diff_px
         intercept = x_data[0] - slope * x_px[0]
-        return intercept + slope * coord
+        return np.where(coord == self.occurences_value, self.occurences_value,
+                        intercept + slope * coord)
 
     @docstrings.get_sectionsf('DataReader._plot_df')
     def _plot_df(self, df, ax=None, *args, **kwargs):
