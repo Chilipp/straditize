@@ -1959,7 +1959,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         for col, l in enumerate(all_indices):
             for (imin, imax) in l:
                 for col2, l2 in enumerate(all_indices):
-                    if col2 != col and \
+                    if col2 != col and len(l2) and \
                             ((l2 > imin) & (l2 < imax)).any(axis=1).sum() >= 2:
                         ret[col].append([imin, imax])
                         break

@@ -3450,7 +3450,10 @@ class BarDataReader(DataReader):
 
         all_indices = []
         heights = []
-        last_start = np.where(~isnan_or_0(arr))[0][0]
+        try:
+            last_start = np.where(~isnan_or_0(arr))[0][0]
+        except IndexError:  # no data in here
+            return [], [], []
         last_end = last_start
         last_val = last_start_val = arr[last_end]
         last_state = state = 1  #: state for increasing (1) or decreasing (-1)
