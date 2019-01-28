@@ -1375,10 +1375,10 @@ class DataReader(LabelSelection):
         except ValueError:  # probably none of the lines is thick enough
             if all(len(indices) < min_lw for indices in np.split(
                     locs, np.where(np.diff(locs) != 1)[0]+1)):
-                return np.array([])
+                selection = np.array([], dtype=int)
             else:
                 raise
-        return selection
+        return np.asarray(selection, dtype=int)
 
     def recognize_xaxes(self, fraction=0.3, min_lw=1, max_lw=None,
                         remove=False, **kwargs):
