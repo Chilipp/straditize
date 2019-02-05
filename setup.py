@@ -1,3 +1,4 @@
+import os
 import os.path as osp
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
@@ -29,6 +30,26 @@ with open(osp.join('straditize', 'version.py')) as f:
     exec(f.read())
 
 
+dependencies = [
+    'psyplot-gui>=1.2.2',
+    'psyplot>=1.2.0',
+    'scipy',
+    'scikit-image',
+    'openpyxl',
+    'netCDF4',
+]
+
+# Test for PyQt5 dependency. During a conda build, this is handled by the
+# meta.yaml so we can skip this dependency
+if not os.getenv('CONDA_BUILD'):
+    # The package might nevertheless be installed, just registered with a
+    # different name
+    try:
+        import PyQt5
+    except ImportError:
+        dependencies.append('pyqt5')
+
+
 setup(name='straditize',
       version=__version__,
       description='Python package for digitizing pollen diagrams',
@@ -51,15 +72,7 @@ setup(name='straditize',
       author_email='philipp.sommer@unil.ch',
       license="GPLv3",
       packages=find_packages(exclude=['docs', 'tests*', 'examples']),
-      install_requires=[
-          'psyplot-gui>=1.2.2',
-          'psyplot>=1.2.0',
-          'scipy',
-          'scikit-image',
-          'openpyxl',
-          'netCDF4',
-          'PyQt5',
-      ],
+      install_requires=dependencies,
       package_data={'straditize': [
           osp.join('straditize', 'widgets', 'icons', '*.png'),
           osp.join('straditize', 'widgets', 'docs', '*.rst'),
