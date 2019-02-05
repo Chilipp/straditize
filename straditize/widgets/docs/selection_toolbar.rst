@@ -47,10 +47,10 @@ select a rectangle or point |rect|
     a single point
 select a polygon |poly|
     This tool can be accessed through the context menu of the |rect|
-    tool. If activated and you click on the image, hold the mouse
-    button and drag it around the features you want to select.
-    Everything that is in the shape you draw while pressing the mouse
-    button will be selected.
+    tool (click and hold this button to open the menu). If activated and you
+    click on the image, hold the mouse button and drag it around the features
+    you want to select. Everything that is in the shape you draw while pressing
+    the mouse button will be selected.
 select based on connectivity or functionality |wand|
     This tool selects entire features in the image. The exact
     behaviour depends on what you are doing at the moment. If you
@@ -64,12 +64,19 @@ select based on connectivity or functionality |wand|
     binary image.
 select based on color |color-wand|
     This tool can be accessed through the context menu of the |wand|
-    tool. If activated and you click on the image, all connected cells
-    that have the same color are selected. You can also relax this a bit,
-    such that all colors that are close to the selected color will be
-    selected. Furthermore, you can choose the select the colors in the
-    `whole plot`, i.e. all pixels that have the same (or similar) color
-    as the selected cell will be selected.
+    tool (click and hold this button to open the menu). If activated and you
+    click on the image, all connected cells that have the same color are
+    selected. You can also relax this a bit, such that all colors that are
+    close to the selected color will be selected. Furthermore, you can choose
+    the select the colors in the `whole plot`, i.e. all pixels that have the
+    same (or similar) color as the selected cell will be selected.
+select the entire pixel row |row-wand|
+    This tool also can be accessed through the context menu of the |wand|
+    tool (click and hold this button to open the menu). If you click on the
+    image, all selectable features on this horizontal level (i.e. on this
+    pixel row in the image) are selected.
+select the entire pixel column |col-wand|
+    The same as the |row-wand| tool but for the vertical columns.
 
 .. |rect| image:: select.png
     :width: 1.3em
@@ -81,6 +88,12 @@ select based on color |color-wand|
     :width: 1.3em
 
 .. |color-wand| image:: color_select.png
+    :width: 1.3em
+
+.. |row-wand| image:: row_select.png
+    :width: 1.3em
+
+.. |col-wand| image:: col_select.png
     :width: 1.3em
 
 .. _selection-mode:

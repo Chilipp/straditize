@@ -21,7 +21,9 @@ the automatic recognition functionalities.
 
    For this, we use the selection toolbar:
 
-   i. from the |wand| menu, select the `column selection` tool
+   i. from the |wand| menu, select the `column selection` tool (click and hold
+      the button to the right of the |rect_select| button in the selection
+      toolbar to open the menu)
 
       .. image:: column-selection-tool.png
 
@@ -35,6 +37,9 @@ the automatic recognition functionalities.
 
 
 .. |wand| image:: wand_select.png
+    :width: 1.3em
+
+.. |rect_select| image:: select.png
     :width: 1.3em
 
 .. |new-select| image:: new_selection.png
