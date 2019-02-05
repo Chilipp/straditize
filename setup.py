@@ -58,6 +58,7 @@ setup(name='straditize',
           'scikit-image',
           'openpyxl',
           'netCDF4',
+          'PyQt5',
       ],
       package_data={'straditize': [
           osp.join('straditize', 'widgets', 'icons', '*.png'),

@@ -89,6 +89,8 @@ package is built upon multiple other packages, mainly
 
 - :ref:`psyplot-gui <psyplot_gui:psyplot-gui>`>1.2.0: The graphical user
   interface for psyplot
+- PyQt5_: Pythons Qt bindings that are required by psyplot-gui (note that
+  PyQt4 is **not** supported!)
 - `numpy, scipy`_ and pandas_: for the data management and compuations
 - matplotlib_>=2.0: **The** python visualiation package
 - pillow_: for reading and writing images
@@ -117,6 +119,7 @@ We furthermore recommend to use
 .. _chilipp channel: https://anaconda.org/chilipp
 .. _conda-forge channel: https://conda-forge.org/
 .. _matplotlib: http://matplotlib.org
+.. _PyQt5: https://www.riverbankcomputing.com/software/pyqt/intro
 .. _numpy, scipy: https://docs.scipy.org/doc/
 .. _pandas: http://pandas.pydata.org/
 .. _scikit-image: https://scikit-image.org/
