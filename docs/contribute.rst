@@ -134,7 +134,7 @@ these steps:
 Pull Requests
 ~~~~~~~~~~~~~
 
--  Fill in `the required template <.github/PULL_REQUEST_TEMPLATE.md>`__
+-  Fill in `the required template <https://github.com/Chilipp/straditize/blob/master/.github/pull_request_template.md>`__
 -  Do not include issue numbers in the PR title
 -  Include screenshots and animated GIFs in your pull request whenever
    possible.
