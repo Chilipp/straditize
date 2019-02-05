@@ -50,10 +50,10 @@ test:
     - straditize.widgets
   commands:
     - straditize --help
-    - pytest -sv --cov=straditize
+    - pytest -v --cov=straditize
       --ignore=tests/widgets/test_selection_toolbar.py
       --ignore=tests/widgets/test_samples_table.py
-    - pytest -sv --cov=straditize --cov-append
+    - pytest -v --cov=straditize --cov-append
       tests/widgets/test_selection_toolbar.py
       tests/widgets/test_samples_table.py
     - codecov
