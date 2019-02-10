@@ -33,6 +33,7 @@ with open(osp.join('straditize', 'version.py')) as f:
 dependencies = [
     'psyplot-gui>=1.2.2',
     'psyplot>=1.2.0',
+    'psy-strat',
     'scipy',
     'scikit-image',
     'openpyxl',
@@ -81,7 +82,7 @@ setup(name='straditize',
           osp.join('straditize', 'widgets', 'tutorial', '*', '*.png'),
           ]},
       include_package_data=True,
-      tests_require=['pytest'],
+      tests_require=['pytest', 'psutil'],
       cmdclass={'test': PyTest},
       entry_points={
           'console_scripts': ['straditize=straditize.__main__:main'],

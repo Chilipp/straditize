@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
+import os
 import os.path as osp
 import shutil
 import glob
@@ -502,13 +503,16 @@ class Tutorial(StraditizerControlBase, TutorialPage):
             self.straditizer_widgets._close_stradi(stradi)
         if hasattr(self, 'navigation'):
             self.straditizer_widgets.layout().removeWidget(self.navigation)
+            del self.straditizer_widgets.tutorial
+            for p in self.pages:
+                del p.tutorial, p.straditizer_widgets
+            self.pages.clear()
+            del self.pages
             self.navigation.close()
+            self.tutorial_docs.close()
             self.tutorial_docs.remove_plugin()
             del self.navigation
-            del self.straditizer_widgets.tutorial
-            del self.straditizer_widgets
             del self.tutorial_docs
-            del self.pages
 
     def goto_page(self, old, new):
         """Go to another page
@@ -593,7 +597,7 @@ class ControlIntro(TutorialPage):
         dest = osp.join(self.tutorial.tutorial_docs.build_dir,
                         '_static', 'straditizer-control.png')
         if not osp.exists(osp.dirname(dest)):
-            osp.makedirs(dest)
+            os.makedirs(osp.dirname(dest))
         shutil.copyfile(
             osp.join(self.src_dir, 'straditizer-control.png'), dest)
 

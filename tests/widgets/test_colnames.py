@@ -11,13 +11,13 @@ from PIL import Image
 class ColNamesTest(bt.StraditizeWidgetsTestCase):
     """Test for managing column names"""
 
-    data_xlim = np.array([293., 2098.])
+    data_xlim = np.array([73., 526.])
 
-    data_ylim = np.array([209., 1541.])
+    data_ylim = np.array([48., 386.])
 
-    column_starts = np.array([0, 198, 914, 1336, 1432, 1531, 1627])
+    column_starts = np.array([0,  50, 229, 333, 359, 383, 407])
 
-    column_ends = np.array([198, 914, 1336, 1432, 1531, 1627, 1805])
+    column_ends = np.array([50, 229, 333, 359, 383, 407, 455])
 
     @property
     def colnames_reader(self):
@@ -137,9 +137,9 @@ class ColNamesTest(bt.StraditizeWidgetsTestCase):
         self.assertTrue(sw.colnames_manager.btn_select_colpic.isEnabled())
 
         QTest.mouseClick(sw.colnames_manager.btn_select_colpic, Qt.LeftButton)
-        self.colnames_manager.selector.extents = (1451, 1509, 474, 492)
+        self.colnames_manager.selector.extents = (361, 378, 117, 123)
         self.colnames_manager.update_image()
-        self.assertEqual(self.colnames_manager.colpic_im.get_size(), (54, 174))
+        self.assertEqual(self.colnames_manager.colpic_im.get_size(), (72, 204))
 
 
 if __name__ == '__main__':

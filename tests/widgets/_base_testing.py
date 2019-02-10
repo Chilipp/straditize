@@ -71,10 +71,14 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
     def setUpClass(cls):
         import psyplot_gui.main as main
         from straditize.widgets import get_straditizer_widgets
+        from PyQt5.QtCore import QTimer
         if not running_in_gui:
             cls.window = main.MainWindow.run(show=False)
         else:
             cls.window = main.mainwindow
+            timer = QTimer(cls.window)
+            timer.setSingleShot(True)
+            timer.start(1000)
         cls.straditizer_widgets = get_straditizer_widgets(cls.window)
         cls.straditizer_widgets.always_yes = True
         cls.straditizer_widgets.switch_to_straditizer_layout()
@@ -318,7 +322,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
     def open_img(self, fname='basic_diagram.png'):
         fname = self.get_fig_path(fname)
         self.straditizer_widgets.menu_actions.open_straditizer(fname)
-        self.assertEqual(self.straditizer.image.filename, fname,
+        self.assertEqual(self.straditizer.get_attr('image_file'), fname,
                          msg='Image not opened correctly!')
 
     def set_data_lims(self, xlim=None, ylim=None):
@@ -326,8 +330,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         y0, y1 = ylim if ylim is not None else self.data_ylim
         self.assertTrue(
             self.straditizer_widgets.digitizer.btn_select_data.isEnabled())
-        QTest.mouseClick(self.straditizer_widgets.digitizer.btn_select_data,
-                         Qt.LeftButton)
+        self.straditizer_widgets.digitizer.btn_select_data.click()
         magni_marks = self.straditizer.magni_marks or []
         for m in self.straditizer.marks + magni_marks:
             m.remove()

@@ -330,7 +330,9 @@ class Straditizer(LabelSelection):
             self.attrs = attrs
         if isinstance(image, six.string_types):
             self.set_attr('image_file', image)
-            image = Image.open(image)
+            with Image.open(image) as _image:
+                image = Image.fromarray(np.array(_image.convert('RGBA')),
+                                        'RGBA')
         try:
             mode = image.mode
         except AttributeError:
@@ -662,7 +664,7 @@ class Straditizer(LabelSelection):
 
         return np.array([xmin, xmax+1]), np.array([ymin, ymax+1])
 
-    def marks_for_data_selection(self, nums=2, fraction=0.7):
+    def marks_for_data_selection(self, nums=2, fraction=0.7, guess_lims=True):
         def new_mark(pos):
             if len(self.marks) == nums:
                 raise ValueError("Cannot use more than %i marks!" % nums)
@@ -673,8 +675,11 @@ class Straditizer(LabelSelection):
         if self.data_xlim is not None and self.data_ylim is not None:
             x0, x1 = self.data_xlim
             y0, y1 = self.data_ylim
-        else:
+        elif guess_lims:
             (x0, x1), (y0, y1) = self.guess_data_lims(fraction)
+        else:
+            x0 = x1 = np.mean(self.ax.get_xlim())
+            y0 = y1 = np.mean(self.ax.get_ylim())
         Ny, Nx = np.shape(self.image)[:2]
         xlim = (0, Nx)
         ylim = (Ny, 0)
@@ -683,13 +688,15 @@ class Straditizer(LabelSelection):
         idx_h = indexes['x']
         idx_v = indexes['y']
         self.remove_marks()
-
-        self.marks = [
-            cm.CrossMarks(positions[i], ax=self.ax, idx_h=idx_h,
-                          idx_v=idx_v, zorder=2, c='b',
-                          xlim=xlim, ylim=ylim)
-            for i in range(nums)]
-        self.marks[0].connect_marks(self.marks)
+        if x0 != x1:
+            self.marks = [
+                cm.CrossMarks(positions[i], ax=self.ax, idx_h=idx_h,
+                              idx_v=idx_v, zorder=2, c='b',
+                              xlim=xlim, ylim=ylim)
+                for i in range(nums)]
+            self.marks[0].connect_marks(self.marks)
+        else:
+            self.marks = []
         self.create_magni_marks(self.marks)
 
         self.mark_cids.add(self.fig.canvas.mpl_connect(
@@ -762,6 +769,8 @@ class Straditizer(LabelSelection):
                 self.magni_data_box.remove()
             except ValueError:
                 pass
+            else:
+                del self.magni_data_box
 
     def marks_for_x_values(self, at_col_start=True):
         """Create two marks for selecting the x-values
@@ -953,6 +962,12 @@ class Straditizer(LabelSelection):
     def init_reader(self, reader_type='area', ax=None, **kwargs):
         x0, x1 = map(int, self.data_xlim)
         y0, y1 = map(int, self.data_ylim)
+        xs, ys = self.image.size
+        x0 = max(0, min(xs, x0))
+        x1 = max(0, min(xs, x1))
+        y0 = max(0, min(ys, y0))
+        y1 = max(0, min(ys, y1))
+
         kwargs.setdefault('plot_background', True)
         ax = ax or self.ax
         self.data_reader = binary.readers[reader_type](
@@ -1405,10 +1420,14 @@ class Straditizer(LabelSelection):
     def close(self):
         import matplotlib.pyplot as plt
         self.remove_marks()
+        self.remove_data_box()
+        try:
+            self.plot_im.remove()
+        except (AttributeError, ValueError):
+            pass
         plt.close(self.ax.figure)
         if self.magni is not None:
-            plt.close(self.magni.ax.figure)
-            del self.magni.plot_image, self.magni.ax, self.magni
+            self.magni.close()
         self.image.close()
         # close signals
         self.mark_added.disconnect()
@@ -1420,14 +1439,16 @@ class Straditizer(LabelSelection):
                 pass
         # close reader
         if getattr(self, 'data_reader', None) is not None:
-            self.data_reader.image.close()
-            self.data_reader.remove_callbacks.clear()
+            self.data_reader.close()
+        if getattr(self, '_colnames_reader', None) is not None:
+            self._colnames_reader.close()
         # remove data intensive attributes
-        for obj in [self.data_reader, self]:
-            for attr in ['ax', 'image', 'plot_im', 'data_reader',
-                         'remove_callbacks']:
+        for attr in ['ax', 'image', 'plot_im', 'data_reader',
+                     'remove_callbacks', '_colnames_reader',
+                     '_orig_format_coord', '_ax_pos', '_indexes',
+                     '_mark_added', '_mark_removed', 'magni']:
                 try:
-                    delattr(obj, attr)
+                    delattr(self, attr)
                 except AttributeError:
                     pass
 
