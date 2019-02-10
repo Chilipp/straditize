@@ -43,6 +43,7 @@ test:
     - codecov
     - pytest-cov>=2.6.1
     - tesserocr  # [not win]
+    - psutil
   source_files:
     - tests
   imports:
