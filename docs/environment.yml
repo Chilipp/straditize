@@ -12,11 +12,10 @@ dependencies:
     - psyplot>=1.2.0
     - netcdf4
     - openpyxl
-    - sphinx-argparse
-    - autodocsumm
     - scikit-image
     - scipy
     - psy-strat
     - pip:
         - autodocsumm
+        - sphinx-argparse
         - sphinx-nbexamples
