@@ -28,7 +28,7 @@ matrix:
               USE_PIP=true
           os: osx
     allow_failures:
-        - env: USE_PIP=true
+        - env: PYTHON_VERSION=3.7 USE_PIP=true
 
 before_install:
     # Remove homebrew.
@@ -99,6 +99,7 @@ install:
     - conda info -a
     - conda list
     - if [[ $USE_PIP == true ]]; then
+          pip install .;
           TEST_CMD="
               python setup.py test -a '
                   --ignore=tests/widgets/test_selection_toolbar.py
@@ -117,7 +118,7 @@ install:
 script:
     - unset_secure
     # install conda
-    - travis_wait 30 $TEST_CMD
+    - travis_wait 30 "$TEST_CMD"
     # export the pw to make it available for the deploy
     - reset_secure
     # deploy here (don't use travis deploy because it requires homebrew)
