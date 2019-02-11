@@ -330,12 +330,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         y0, y1 = ylim if ylim is not None else self.data_ylim
         self.assertTrue(
             self.straditizer_widgets.digitizer.btn_select_data.isEnabled())
-        self.straditizer_widgets.digitizer.btn_select_data.click()
-        magni_marks = self.straditizer.magni_marks or []
-        for m in self.straditizer.marks + magni_marks:
-            m.remove()
-        self.straditizer.marks.clear()
-        magni_marks.clear()
+        self.straditizer_widgets.digitizer.select_data_part(guess_lims=False)
         self.straditizer._new_mark(x0, y0)
         self.straditizer._new_mark(x1, y1)
         QTest.mouseClick(self.straditizer_widgets.apply_button,
