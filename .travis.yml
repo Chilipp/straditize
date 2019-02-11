@@ -100,7 +100,7 @@ install:
     - conda list
     - if [[ $USE_PIP == true ]]; then
           pip install .;
-          TEST_CMD=
+          TEST_CMD="
               python setup.py test -a \'
                   --ignore=tests/widgets/test_selection_toolbar.py
                   --ignore=tests/widgets/test_samples_table.py
