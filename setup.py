@@ -31,7 +31,7 @@ with open(osp.join('straditize', 'version.py')) as f:
 
 
 dependencies = [
-    'psyplot-gui>=1.2.2',
+    'psyplot-gui>=1.2.3',
     'psyplot>=1.2.0',
     'psy-strat',
     'scipy',
@@ -48,7 +48,8 @@ if not os.getenv('CONDA_BUILD'):
     try:
         import PyQt5
     except ImportError:
-        dependencies.append('pyqt5')
+        dependencies.append('pyqt5!=5.12')
+        dependencies.append('pyqt5-sip')
 
 
 setup(name='straditize',
