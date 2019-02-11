@@ -100,16 +100,16 @@ install:
     - conda list
     - if [[ $USE_PIP == true ]]; then
           pip install .;
-          TEST_CMD="
-              python setup.py test -a '
+          TEST_CMD=
+              python setup.py test -a \'
                   --ignore=tests/widgets/test_selection_toolbar.py
                   --ignore=tests/widgets/test_samples_table.py
                   --ignore=tests/widgets/test_beginner.py
-                  --ignore=tests/widgets/test_hoya_del_castillo.py' &&
-              python setup.py test -a 'tests/widgets/test_selection_toolbar.py
-                  tests/widgets/test_samples_table.py' &&
-              python setup.py test -a 'tests/widgets/test_beginner.py' &&
-              python setup.py test -a 'tests/widgets/test_hoya_del_castillo.py'";
+                  --ignore=tests/widgets/test_hoya_del_castillo.py\' &&
+              python setup.py test -a \'tests/widgets/test_selection_toolbar.py
+                  tests/widgets/test_samples_table.py\' &&
+              python setup.py test -a \'tests/widgets/test_beginner.py\' &&
+              python setup.py test -a \'tests/widgets/test_hoya_del_castillo.py\'";
       else
           TEST_CMD="conda build conda-recipe --python $PYTHON_VERSION --clobber-file ci/recipe_clobber_${TRAVIS_OS_NAME}.yaml";
       fi
@@ -118,7 +118,7 @@ install:
 script:
     - unset_secure
     # install conda
-    - travis_wait 30 "$TEST_CMD"
+    - travis_wait 30 $TEST_CMD
     # export the pw to make it available for the deploy
     - reset_secure
     # deploy here (don't use travis deploy because it requires homebrew)
