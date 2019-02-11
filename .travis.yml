@@ -86,14 +86,14 @@ install:
         conda install conda-build anaconda-client
     - 'echo "backend : module://psyplot_gui.backend" > matplotlibrc'
     - 'export MATPLOTLIBRC=`pwd`/matplotlibrc'
+    - export PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245'
     - conda info -a
     - conda list
     - reset_secure
 script:
     - unset_secure
     # install conda
-    - PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245'
-      conda build conda-recipe --python $PYTHON_VERSION
+    - travis_wait 30 conda build conda-recipe --python $PYTHON_VERSION
     # export the pw to make it available for the deploy
     - reset_secure
     # deploy here (don't use travis deploy because it requires homebrew)
