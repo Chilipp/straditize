@@ -147,17 +147,15 @@ which will also run the test suite.
 
 .. warning::
 
-    Running the entire test suite in one single process (such as ``python setup.py test``) might be quite memory consumptive because it involves the creation and closing of many PyQt widgets and unfortunately some memory is leaked from one test to another. Therefore we recommend to split the tests into multiple processes, e.g.
+    Running the entire test suite in one single process (such as ``python setup.py test``) might be quite memory consumptive because it involves the creation and closing of many PyQt widgets and unfortunately some memory is leaked from one test to another. Therefore we recommend to split the tests into multiple processes, e.g.::
 
-    ```bash
-    # run the test suite but ignore some modules
-    python setup.py test -a '--ignore=tests/widgets/test_selection_toolbar.py --ignore=tests/widgets/test_samples_table.py --ignore=tests/widgets/test_beginner.py --ignore=tests/widgets/test_hoya_del_castillo.py'
-    # run the tests for the previously ignored modules
-    python setup.py test -a 'tests/widgets/test_selection_toolbar.py
-    tests/widgets/test_samples_table.py'
-    python setup.py test -a 'tests/widgets/test_beginner.py'
-    python setup.py test -a 'tests/widgets/test_hoya_del_castillo.py'
-    ```
+        # run the test suite but ignore some modules
+        python setup.py test -a '--ignore=tests/widgets/test_selection_toolbar.py --ignore=tests/widgets/test_samples_table.py --ignore=tests/widgets/test_beginner.py --ignore=tests/widgets/test_hoya_del_castillo.py'
+        # run the tests for the previously ignored modules
+        python setup.py test -a 'tests/widgets/test_selection_toolbar.py
+        tests/widgets/test_samples_table.py'
+        python setup.py test -a 'tests/widgets/test_beginner.py'
+        python setup.py test -a 'tests/widgets/test_hoya_del_castillo.py'
 
     or equivalently with `py.test` instead of `python setup.py test -a`. Note that `conda build conda-recipe` already splits the session into multiple processes.
 
