@@ -24,18 +24,17 @@ default conda-channels via::
 
     $ conda config --add channels conda-forge
 
-Then you can choose. Either you install straditize into your base environment
-via::
-
-    $ conda install -c chilipp straditize
-
-or you create a new virtual environment via::
+Then you can choose. We recommend to install straditize into it's own environment via::
 
     $ conda create -n straditize -c chilipp straditize
 
-and then activate it via::
+and then activate this environment via::
 
     $ conda activate straditize
+
+In that way you do not mess up your base environment. Nevertheless you can also install it into an existing environment via::
+
+    $ conda install -c chilipp straditize
 
 In the same terminal, now type ``straditize`` to start the software.
 
@@ -115,7 +114,7 @@ We furthermore recommend to use
 
 .. _netCDF4: https://github.com/Unidata/netcdf4-python
 .. _conda: http://conda.io/
-.. _anaconda: https://www.continuum.io/downloads
+.. _anaconda: https://conda.io/en/latest/miniconda.html
 .. _chilipp channel: https://anaconda.org/chilipp
 .. _conda-forge channel: https://conda-forge.org/
 .. _matplotlib: http://matplotlib.org
@@ -131,7 +130,7 @@ We furthermore recommend to use
 
 Running the tests
 -----------------
-We us pytest_ to run our tests. So you can either run clone out the github_
+We use pytest_ to run our tests. So you can either run clone out the github_
 repository and run::
 
     $ python setup.py test
@@ -145,6 +144,24 @@ Alternatively you can build the recipe in the `conda-recipe` directory via
     $ conda build conda-recipe
 
 which will also run the test suite.
+
+.. warning::
+
+    Running the entire test suite in one single process (such as ``python setup.py test``) might be quite memory consumptive because it involves the creation and closing of many PyQt widgets and unfortunately some memory is leaked from one test to another. Therefore we recommend to split the tests into multiple processes, e.g.
+
+    ```bash
+    # run the test suite but ignore some modules
+    python setup.py test -a '--ignore=tests/widgets/test_selection_toolbar.py --ignore=tests/widgets/test_samples_table.py --ignore=tests/widgets/test_beginner.py --ignore=tests/widgets/test_hoya_del_castillo.py'
+    # run the tests for the previously ignored modules
+    python setup.py test -a 'tests/widgets/test_selection_toolbar.py
+    tests/widgets/test_samples_table.py'
+    python setup.py test -a 'tests/widgets/test_beginner.py'
+    python setup.py test -a 'tests/widgets/test_hoya_del_castillo.py'
+    ```
+
+    or equivalently with `py.test` instead of `python setup.py test -a`. Note that `conda build conda-recipe` already splits the session into multiple processes.
+
+    Nevertheless, you should expect about ~180 tests to be ran and a total memory usage of about 3 to 4GB RAM.
 
 
 Building the docs

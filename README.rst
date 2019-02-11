@@ -80,10 +80,11 @@ been used to create the diagram.
 
 Installation
 ------------
-We highly recommend to use anaconda_ and install straditize::
+We highly recommend to use anaconda_ and install straditize into an own environment::
 
     conda config --add channels conda-forge
-    conda install -c chilipp straditize
+    conda create -n straditize -c chilipp straditize
+    conda activate straditize
 
 or install it from the source files via::
 
@@ -97,7 +98,7 @@ It can then be started from the command line via::
 
 A more detailed description is provided in the docs_.
 
-.. _anaconda: https://www.continuum.io/downloads
+    .. _anaconda: https://conda.io/en/latest/miniconda.html
 .. _docs: https://straditize.readthedocs.io/en/latest/installing.html
 
 License
