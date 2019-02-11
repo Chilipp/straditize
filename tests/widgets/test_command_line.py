@@ -5,7 +5,6 @@ import _base_testing as bt
 import unittest
 import pandas as pd
 from straditize.__main__ import start_app, get_parser
-from straditize.widgets import get_straditizer_widgets
 
 
 class CommandLineTest(bt.StraditizeWidgetsTestCase):
@@ -13,10 +12,10 @@ class CommandLineTest(bt.StraditizeWidgetsTestCase):
 
     def test_open_image(self, *args, **kwargs):
         fname = self.get_fig_path('basic_diagram.png')
+        old_window = self.window
         self.window = start_app(fname, exec_=False, new_instance=self.window,
                                 **kwargs)
-        self.assertIsNotNone(self.window)
-        self.straditizer_widgets = get_straditizer_widgets(self.window)
+        self.assertIs(self.window, old_window)
         self.init_reader()
         self.assertIsNotNone(self.straditizer)
         self.assertEqual(self.straditizer.get_attr('image_file'), fname,
