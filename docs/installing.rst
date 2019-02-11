@@ -72,7 +72,7 @@ installed. Download (or clone) the github_ repository, e.g. via::
 
 and install it via::
 
-    python setup.py install
+    pip install .  # or python setup.py install, but pip is recommended
 
 from your terminal. To open the software, type ``straditize`` in the same
 terminal.

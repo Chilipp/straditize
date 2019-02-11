@@ -90,7 +90,7 @@ or install it from the source files via::
 
     git clone https://github.com/Chilipp/straditize.git
     cd straditize
-    python setup.py install
+    pip install .  # or python setup.py install, but pip is recommended
 
 It can then be started from the command line via::
 
