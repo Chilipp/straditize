@@ -43,6 +43,7 @@ test:
     - codecov
     - pytest-cov>=2.6.1
     - tesserocr  # [not win]
+    - psutil
   source_files:
     - tests
   imports:
@@ -53,9 +54,15 @@ test:
     - pytest -v --cov=straditize
       --ignore=tests/widgets/test_selection_toolbar.py
       --ignore=tests/widgets/test_samples_table.py
+      --ignore=tests/widgets/test_beginner.py
+      --ignore=tests/widgets/test_hoya_del_castillo.py
     - pytest -v --cov=straditize --cov-append
       tests/widgets/test_selection_toolbar.py
       tests/widgets/test_samples_table.py
+    - pytest -v --cov=straditize --cov-append
+      tests/widgets/test_beginner.py
+    - pytest -v --cov=straditize --cov-append
+      tests/widgets/test_hoya_del_castillo.py
     - codecov
 
 

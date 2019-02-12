@@ -1,0 +1,9 @@
+test:
+  commands:
+    - straditize --help
+    - pytest -v --cov=straditize
+      --ignore=tests/widgets/test_selection_toolbar.py
+      --ignore=tests/widgets/test_samples_table.py
+      --ignore=tests/widgets/test_beginner.py
+      --ignore=tests/widgets/test_hoya_del_castillo.py
+    - codecov
