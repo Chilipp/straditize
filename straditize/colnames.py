@@ -283,6 +283,16 @@ class ColNamesReader(object):
              '_highres_image': self._highres_image,
              'data_ylim': self.data_ylim})
 
+    def close(self):
+        """Close the column names reader"""
+        self._colpics.clear()
+        self._column_names.clear()
+        self.image.close()
+        del self.image
+        if self._highres_image is not None:
+            self._highres_image.close()
+            del self._highres_image
+
     nc_meta = {
         'colnames_image': {
             'dims': ('ycolname', 'xcolname', 'rgba'),

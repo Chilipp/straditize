@@ -410,7 +410,8 @@ class StraditizerMenuActions(StraditizerControlBase):
             return fname
         else:
             from PIL import Image
-            return Image.open(fname)
+            with Image.open(fname) as _image:
+                return Image.fromarray(np.array(_image.convert('RGBA')))
 
     @docstrings.with_indent(8)
     def import_full_image(self, fname=None):
@@ -545,7 +546,9 @@ class StraditizerMenuActions(StraditizerControlBase):
             stradi.set_attr('loaded', str(dt.datetime.now()))
         else:
             from PIL import Image
-            image = Image.open(fname)
+            with Image.open(fname) as _image:
+                image = Image.fromarray(np.array(_image.convert('RGBA')),
+                                        'RGBA')
             w, h = image.size
             im_size = w * h
             if im_size > 20e6:

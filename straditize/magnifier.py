@@ -111,6 +111,25 @@ class Magnifier(object):
         self.cid_motion = canvas.mpl_connect('motion_notify_event',
                                              self.onmotion)
 
+    def close(self):
+        """Close the magnifier and the associated plots"""
+        import matplotlib.pyplot as plt
+        try:
+            self.plot_image.remove()
+        except (AttributeError, ValueError):
+            pass
+        try:
+            self.point.remove()
+        except (AttributeError, ValueError):
+            pass
+        self.disconnect()
+        fig = self.ax.figure
+        fig.delaxes(self.ax)
+        self.slider.disconnect_events()
+        fig.delaxes(self.slider.ax)
+        plt.close(self.ax.figure)
+        del self.plot_image, self.ax, self.ax_src, self.slider
+
     def onleave(self, event):
         canvas = self.ax_src.figure.canvas
         canvas.mpl_disconnect(self.cid_leave)

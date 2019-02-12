@@ -1022,6 +1022,7 @@ class DataReader(LabelSelection):
         self.children = [old] + [c for c in old.children if c is not self]
         for c in [self] + self.children:
             c.parent = self
+        old.children.clear()
 
     @only_parent
     def new_child_for_cols(self, columns, cls, plot=True):
@@ -1179,6 +1180,28 @@ class DataReader(LabelSelection):
         else:
             self.image = Image.fromarray(
                 np.where(mask3d, non_exag_image, exag_image), self.image.mode)
+
+    def close(self):
+        if self.image is not None:
+            self.image.close()
+        self.remove_callbacks.clear()
+        self._full_df = None
+        for attr in ['plot_im', 'magni_plot_im', 'magni_color_plot_im',
+                     'color_plot_im', 'background', 'magni_background',
+                     'magni', '_full_df', '_sample_locs', '_rough_locs',
+                     'image', 'binary', 'labels', '_column_starts',
+                     '_column_ends']:
+            try:
+                getattr(self, attr).remove()
+            except (AttributeError, ValueError):
+                pass
+            setattr(self, attr, None)
+        self._occurences = set()
+        for child in self.children:
+            child.close()
+        self.children.clear()
+        self.parent = self
+        self.ax = None
 
     def _select_column(self, event=None, x=None, y=None, col=None):
         import matplotlib.patches as mpatch

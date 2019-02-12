@@ -46,10 +46,10 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
     def test_save_and_load_05_colnames(self):
         """Test the saving and loading of column names reader"""
         from PIL import Image
-        self.init_reader('colnames_diagram.png', xlim=np.array([293., 2098.]),
-                         ylim=np.array([209., 1541.]))
-        self.reader.column_starts = np.array(
-            [0, 198, 914, 1336, 1432, 1531, 1627])
+        from test_colnames import ColNamesTest
+        self.init_reader('colnames_diagram.png', xlim=ColNamesTest.data_xlim,
+                         ylim=ColNamesTest.data_ylim)
+        self.reader.column_starts = ColNamesTest.column_starts
         self.straditizer.colnames_reader.highres_image = hr_image = Image.open(
             self.get_fig_path('colnames_diagram-colnames.png'))
         sw = self.straditizer_widgets
@@ -128,7 +128,7 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
         self.open_img()
         fname = self.get_random_filename(suffix='.png')
         self.straditizer_widgets.menu_actions.save_full_image(fname)
-        self.assertImageEquals(fname, self.straditizer.image.filename)
+        self.assertImageEquals(fname, self.straditizer.get_attr('image_file'))
 
     def test_save_binary_image(self):
         """Test the saving of the binary image"""

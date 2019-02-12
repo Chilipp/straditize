@@ -23,13 +23,22 @@ class TutorialTest(bt.StraditizeWidgetsTestCase):
     def page(self):
         return self.tutorial.pages[self.page_number]
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         from straditize.widgets.tutorial import HoyaDelCastilloTutorial
-        super().setUp()
-        self.straditizer_widgets.start_tutorial(True, HoyaDelCastilloTutorial)
-        for i in range(self.page_number):
+        super().setUpClass()
+        cls.straditizer_widgets.start_tutorial(True, HoyaDelCastilloTutorial)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.straditizer_widgets.start_tutorial(False)
+        super().tearDownClass()
+
+    def skip_until(self, page_number):
+        for i in range(self.navigation.current_step, page_number):
             self.navigation.skip()
-        self.assertEqual(self.navigation.current_step, self.page_number)
+        self.page_number = page_number
+        self.assertEqual(self.navigation.current_step, page_number)
         self.assertIs(self.tutorial.current_page, self.page)
 
     def _test_hint(self, regex):
@@ -38,33 +47,18 @@ class TutorialTest(bt.StraditizeWidgetsTestCase):
         QTest.mouseClick(self.navigation.btn_hint, Qt.LeftButton)
         self.assertRegex(self.page._last_tooltip_shown, regex)
 
-    def test_page(self):
-        """Test the tutorial page"""
+    def _test_finish(self):
         self.assertTrue(self.page.is_finished)
         self._test_hint(self.navigation.btn_next.text())
 
-    def tearDown(self):
-        super().tearDown()
-        self.straditizer_widgets.start_tutorial(False)
-
-
-class StraditizerInitTest(TutorialTest):
-    """Test case for the first tutorial page to initialize the straditizer"""
-
-    page_number = 1
-
-    def test_page(self):
+    def test_01_init_stradi(self):
+        self.skip_until(1)
         self._test_hint('hoya-del-castillo.png')
         self.page.skip()
-        super().test_page()
+        self._test_finish()
 
-
-class SelectDataPartTest(TutorialTest):
-    """Test case for the first tutorial page to initialize the straditizer"""
-
-    page_number = 2
-
-    def test_page(self):
+    def test_02_select_data(self):
+        self.skip_until(2)
         sw = self.straditizer_widgets
         self._test_hint(self.digitizer.btn_select_data.text())
         # Test the 'wrong button' message'
@@ -73,9 +67,8 @@ class SelectDataPartTest(TutorialTest):
         QTest.mouseClick(sw.cancel_button, Qt.LeftButton)
         # Now click the correct button
         self._test_hint(self.digitizer.btn_select_data.text())
-        self.digitizer.btn_select_data.click()
-        for m in self.straditizer.marks + self.straditizer.magni_marks:
-            m.remove()
+        self.page.clicked_correct_button()
+        self.digitizer.select_data_part(guess_lims=False)
         self.straditizer.marks.clear()
         self.straditizer.magni_marks.clear()
         # this should display a hint to shift+leftclick one of the corners
@@ -96,24 +89,16 @@ class SelectDataPartTest(TutorialTest):
         sw.straditizer.marks[1].set_pos(self.page.ref_lims[:, 1])
         self._test_hint(sw.apply_button.text())
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
-        super().test_page()
+        self._test_finish()
 
-
-class InitReaderTest(TutorialTest):
-
-    page_number = 3
-
-    def test_page(self):
+    def test_03_init_reader(self):
+        self.skip_until(3)
         self._test_hint(self.digitizer.btn_init_reader.text())
         self.digitizer.btn_init_reader.click()
-        super().test_page()
+        self._test_finish()
 
-
-class ColumnStartTest(TutorialTest):
-
-    page_number = 4
-
-    def test_page(self):
+    def test_04_column_starts(self):
+        self.skip_until(4)
         sw = self.straditizer_widgets
         self._test_hint(self.digitizer.btn_column_starts.text())
         # Test the 'wrong button' message'
@@ -135,14 +120,10 @@ class ColumnStartTest(TutorialTest):
         self._test_hint(self.digitizer.btn_column_starts.text())
         self.digitizer.btn_column_starts.click()
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
-        super().test_page()
+        self._test_finish()
 
-
-class RemoveLinesTest(TutorialTest):
-
-    page_number = 6
-
-    def test_page(self):
+    def test_05_remove_lines(self):
+        self.skip_until(6)
         sw = self.straditizer_widgets
         digitizer = self.digitizer
         # first expand the necessary items
@@ -166,25 +147,16 @@ class RemoveLinesTest(TutorialTest):
         digitizer.btn_remove_vlines.click()
         self._test_hint(sw.apply_button.text())
         sw.apply_button.click()
+        self._test_finish()
 
-        super().test_page()
-
-
-class DigitizeTest(TutorialTest):
-
-    page_number = 7
-
-    def test_page(self):
+    def test_06_digitize(self):
+        self.skip_until(7)
         self._test_hint(self.digitizer.btn_digitize.text())
         self.digitizer.digitize()
-        super().test_page()
+        self._test_finish()
 
-
-class SamplesTest(TutorialTest):
-
-    page_number = 8
-
-    def test_page(self):
+    def test_07_samples(self):
+        self.skip_until(8)
         digitizer = self.digitizer
         sw = self.straditizer_widgets
         self._test_hint(digitizer.edit_samples_child.text(0))
@@ -195,15 +167,10 @@ class SamplesTest(TutorialTest):
         digitizer.btn_edit_samples.click()
         self._test_hint(sw.apply_button.text())
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
+        self._test_finish()
 
-        super().test_page()
-
-
-class TranslateYAxisTest(TutorialTest):
-
-    page_number = 9
-
-    def test_page(self):
+    def test_08_translate_y(self):
+        self.skip_until(9)
         sw = self.straditizer_widgets
         digitizer = self.digitizer
         self._test_hint(sw.axes_translations_item.text(0))
@@ -222,15 +189,10 @@ class TranslateYAxisTest(TutorialTest):
         self.straditizer._new_mark(308, 777, value=250)
         self._test_hint(sw.apply_button.text())
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
+        self._test_finish()
 
-        super().test_page()
-
-
-class TranslateXAxisTest(TutorialTest):
-
-    page_number = 10
-
-    def test_page(self):
+    def test_09_translate_x(self):
+        self.skip_until(10)
         sw = self.straditizer_widgets
         digitizer = self.digitizer
         self._test_hint(digitizer.current_reader_item.text(0))
@@ -318,15 +280,10 @@ class TranslateXAxisTest(TutorialTest):
         self.straditizer._new_mark(583, 777, value=40)
         self._test_hint(sw.apply_button.text())
         QTest.mouseClick(sw.apply_button, Qt.LeftButton)
+        self._test_finish()
 
-        super().test_page()
-
-
-class AttributesTest(TutorialTest):
-
-    page_number = 11
-
-    def test_page(self):
+    def test_10_attributes(self):
+        self.skip_until(11)
         sw = self.straditizer_widgets
         self._test_hint(sw.attrs_button.text())
         QTest.mouseClick(sw.attrs_button, Qt.LeftButton)
@@ -334,14 +291,10 @@ class AttributesTest(TutorialTest):
 
         sw.straditizer.attrs.iloc[0, 0] = 'me'
 
-        super().test_page()
+        self._test_finish()
 
-
-class FinishTest(TutorialTest):
-
-    page_number = 12
-
-    def test_page(self):
+    def test_11_finish(self):
+        self.skip_until(12)
         self.assertTrue(self.navigation.btn_prev.isEnabled())
         self.assertFalse(self.navigation.btn_hint.isEnabled())
         self.assertFalse(self.navigation.btn_next.isEnabled())
