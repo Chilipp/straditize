@@ -94,8 +94,11 @@ def start_app(fname=None, output=None, xlim=None, ylim=None,
             stradi = Straditizer.load(fname, plot=False)
         else:
             from PIL import Image
-            image = Image.open(fname)
+            with Image.open(fname) as _image:
+                image = Image.fromarray(np.array(_image.convert('RGBA')),
+                                        'RGBA')
             stradi = Straditizer(image)
+            stradi.set_attr('image_file', fname)
             set_x_and_ylim(stradi)
     if xlim:
         stradi.data_xlim = xlim

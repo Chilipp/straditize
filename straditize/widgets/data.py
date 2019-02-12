@@ -607,7 +607,7 @@ class DigitizingControl(StraditizerControlBase):
         # --------------------------- Connections -----------------------------
         # ---------------------------------------------------------------------
 
-        self.btn_select_data.clicked.connect(self.select_data_part)
+        self.btn_select_data.clicked.connect(lambda: self.select_data_part())
         self.btn_column_starts.clicked.connect(self.select_column_starts)
         self.btn_column_ends.clicked.connect(self.modify_column_ends)
         self.btn_reset_columns.clicked.connect(self.reset_column_starts)
@@ -1789,13 +1789,13 @@ class DigitizingControl(StraditizerControlBase):
         if obj._select_img is not None:
             obj._select_img.axes.figure.canvas.draw()
 
-    def select_data_part(self):
+    def select_data_part(self, guess_lims=True):
         """Enable the selection of the diagram part
 
         This method uses the
         :meth:`straditize.straditizer.Straditizer.marks_for_data_selection`
         method to draw cross marks on the image for the diagram part"""
-        self.straditizer.marks_for_data_selection()
+        self.straditizer.marks_for_data_selection(guess_lims=guess_lims)
         self.straditizer.draw_figure()
         self.connect2apply(self.straditizer.update_data_part,
                            self.straditizer.draw_figure,

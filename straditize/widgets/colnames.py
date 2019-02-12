@@ -328,9 +328,9 @@ class ColumnNamesManager(StraditizerControlBase, DockMixin,
             fname = fname[0]
             if fname:
                 from PIL import Image
-                image = Image.open(fname)
-                if image.mode != 'RGBA':
-                    image = image.convert('RGBA')
+                with Image.open(fname) as _image:
+                    image = Image.fromarray(np.array(_image.convert('RGBA')),
+                                            'RGBA')
                 self.colnames_reader.highres_image = image
 
         else:

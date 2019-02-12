@@ -2,24 +2,20 @@ language: generic
 sudo: false # use container based build
 
 env:
+    matrix:
+        - PYTHON_VERSION=3.7 USE_PIP=false
+        - PYTHON_VERSION=3.7 USE_PIP=true
+        - PYTHON_VERSION=3.6 USE_PIP=false
     global:
-        - PYTHON_VERSION=3.6
         - secure: "m3hFOyDrNPNT+UfC3jbn9QY4ZYK2DBgZDmF5Nf1jy7+gpERLWLy+BuG+bO7WifliZe6BUD5DNG9qkHewaRnYKiLJhyMK3yaS1iLSV6NLjfxG9bsnPzC8FCF/aB8EgYpA5pH2Wk6NEM/e+3QjwKHWMgia2HLeZ1AXmRQuzNzGUb0Ayad+EogZetygmVDiTiDbMOJ1hNQb9racYeGRgyyjY+wrQ11yjXqhwDRlAR6sHo98VDwPav+ecjyc7YY+y7bmoJ5TbpMg/VCY3wSgZPSdLEwsBAuTejI/U5bAzqo5lYy+tzqYLgWvRTHPwJ1aRfWdRd9LYJY0IfpPBYeZhuHi0K/yME0Kx4Dm+zZBpKrUF/mLrd6dfGLd3nc8xp6NtuEuaSKVcumtrRImbQOvnWx9fZxLKc0qwa0mZhWxZuWgNPpXBCcb6bgHAutK7To+eiCUJ6Swe/YZIHNK/t6Ag+cUisBY3AJpz6GVZIkgTY7GZCGCnYBWO/4USR840HBy5oDH1LUPxTiCcpFvWyOTC8w6n3mwoGQi2g6hZ11HtDE3DFYan1hntYk9aU2nE+705e9Hi/rRNvWpzzS/o1fqmEq6Pn3vA3RHUrKzpEl4coKpf0Wa9ZGRj3v267X+eY0r+uijigZC3eW2gG0x2pfEnNEsahHzAynr1Pxi3FJnys8a+nw="
 
+os:
+    - linux
+    - osx
+
 matrix:
-    include:
-        - env:
-            - PYTHON_VERSION=3.7
-          os: linux
-        - env:
-            - PYTHON_VERSION=3.6
-          os: linux
-        - env:
-            - PYTHON_VERSION=3.7
-          os: osx
-        - env:
-            - PYTHON_VERSION=3.6
-          os: osx
+    allow_failures:
+        - env: PYTHON_VERSION=3.7 USE_PIP=true
 
 before_install:
     # Remove homebrew.
@@ -87,16 +83,29 @@ install:
     - 'echo "backend : module://psyplot_gui.backend" > matplotlibrc'
     - 'export MATPLOTLIBRC=`pwd`/matplotlibrc'
     - export PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245'
+    - if [[ $USE_PIP == true ]]; then pip install .; fi
     - conda info -a
     - conda list
     - reset_secure
 script:
     - unset_secure
     # install conda
-    - travis_wait 30 conda build conda-recipe --python $PYTHON_VERSION
+    - if [[ $USE_PIP == true ]]; then
+          python setup.py test -a '
+              --ignore=tests/widgets/test_selection_toolbar.py
+              --ignore=tests/widgets/test_samples_table.py
+              --ignore=tests/widgets/test_beginner.py
+              --ignore=tests/widgets/test_hoya_del_castillo.py' &&
+          python setup.py test -a 'tests/widgets/test_selection_toolbar.py
+              tests/widgets/test_samples_table.py' &&
+          python setup.py test -a 'tests/widgets/test_beginner.py' &&
+          python setup.py test -a 'tests/widgets/test_hoya_del_castillo.py';
+      else
+          travis_wait 30 conda build conda-recipe --python $PYTHON_VERSION --clobber-file ci/recipe_clobber_${TRAVIS_OS_NAME}.yaml;
+      fi
     # export the pw to make it available for the deploy
     - reset_secure
     # deploy here (don't use travis deploy because it requires homebrew)
-    - if [[ $TRAVIS_PULL_REQUEST == "false" && $TRAVIS_REPO_SLUG == "Chilipp/straditize" ]]; then
+    - if [[ $USE_PIP == "false" && $TRAVIS_PULL_REQUEST == "false" && $TRAVIS_REPO_SLUG == "Chilipp/straditize" ]]; then
           ci/deploy_anaconda.py;
       fi
