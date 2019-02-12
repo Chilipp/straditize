@@ -41,8 +41,6 @@ test:
   requires:
     - pytest
     - codecov
-    # HACK: Fix to libgfortran 3 on osx due to https://github.com/conda-forge/numpy-feedstock/issues/126
-    - libgfortran=3  # [osx]
     - pytest-cov>=2.6.1
     - tesserocr  # [not win]
     - psutil
