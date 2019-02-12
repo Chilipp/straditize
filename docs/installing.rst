@@ -24,7 +24,7 @@ default conda-channels via::
 
     $ conda config --add channels conda-forge
 
-Then you can choose. We recommend to install straditize into it's own environment via::
+Then you can choose. We recommend to install straditize into its own environment via::
 
     $ conda create -n straditize -c chilipp straditize
 
