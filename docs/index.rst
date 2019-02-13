@@ -101,6 +101,7 @@ Documentation
     command_line
     gui/straditize
     api/straditize
+    changelog
 
 
 Indices and tables
