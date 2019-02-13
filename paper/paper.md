@@ -46,6 +46,8 @@ is designed to detect multiple plots of variables analyzed along the same
 vertical axis, whether this is a sediment core or any similar depth/time
 series.
 
+![A standard pollen diagram from Hoya del Castillo with data from @Davis2007](hoya-del-castillo.png){ width=80% }
+
 The program supports mixtures of many different
 diagram types, such as bar plots, line plots, as well as shaded, stacked, and
 filled area plots. Other features of `straditize` include text recognition to
@@ -62,8 +64,6 @@ but can also be scripted or used from the command line. The visualization is
 based on matplotlib [@Hunter2007] and most of the detection algorithms
 use image recognition functions from the scikit-image package [@Walt2014] and
 numeric routines from scipy [@Jones2001] and numpy [@Oliphant2006].
-
-![A standard pollen diagram from Hoya del Castillo with data from @Davis2007](hoya-del-castillo.png)
 
 # Acknowledgements
 
