@@ -28,13 +28,13 @@ This project and everyone participating in it is governed by the [straditize Cod
 
 This section guides you through submitting a bug report for straditize. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
 
-Before creating bug reports, please check existing issues and pull requests as you might find out that you don't need to create one. When you are creating a bug report, please [include as many details as possible](#how-do-i-submit-a-good-bug-report). Fill out [the required template](.github/ISSUE_TEMPLATE.md), the information it asks for helps us resolve issues faster.
+Before creating bug reports, please check existing issues and pull requests as you might find out that you don't need to create one. When you are creating a bug report, please [include as many details as possible](#how-do-i-submit-a-good-bug-report). Fill out [the required template](.github/issue_template.md), the information it asks for helps us resolve issues faster.
 
 > **Note:** If you find a **Closed** issue that seems like it is the same thing that you're experiencing, open a new issue and include a link to the original issue in the body of your new one.
 
 #### How Do I Submit A (Good) Bug Report?
 
-Bugs are tracked as [GitHub issues](https://guides.github.com/features/issues/). Create an issue on straditize repository and provide the following information by filling in [the template](ISSUE_TEMPLATE.md).
+Bugs are tracked as [GitHub issues](https://guides.github.com/features/issues/). Create an issue on straditize repository and provide the following information by filling in [the template](.github/issue_template.md).
 
 Explain the problem and include additional details to help maintainers reproduce the problem:
 
@@ -73,7 +73,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://guides.github.com
 
 ### Pull Requests
 
-* Fill in [the required template](.github/PULL_REQUEST_TEMPLATE.md)
+* Fill in [the required template](.github/pull_request_template.md)
 * Do not include issue numbers in the PR title
 * Include screenshots and animated GIFs in your pull request whenever possible.
 * Document new code based on the [Documentation Styleguide](#documentation-styleguide)

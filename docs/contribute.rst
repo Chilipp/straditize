@@ -15,8 +15,10 @@ Code of Conduct
 ---------------
 
 This project and everyone participating in it is governed by the
-`straditize Code of Conduct <CODE_OF_CONDUCT.md>`__. By participating,
+`straditize Code of Conduct`_. By participating,
 you are expected to uphold this code.
+
+.. _straditize Code of Conduct: https://github.com/Chilipp/straditize/blob/master/CODE_OF_CONDUCT.md
 
 How Can I Contribute?
 ---------------------
@@ -33,8 +35,8 @@ Before creating bug reports, please check existing issues and pull
 requests as you might find out that you don't need to create one. When
 you are creating a bug report, please `include as many details as
 possible <#how-do-i-submit-a-good-bug-report>`__. Fill out `the required
-template <.github/ISSUE_TEMPLATE.md>`__, the information it asks for
-helps us resolve issues faster.
+template <https://github.com/Chilipp/straditize/blob/master/.github/issue_template.md>`__,
+the information it asks for helps us resolve issues faster.
 
     **Note:** If you find a **Closed** issue that seems like it is the
     same thing that you're experiencing, open a new issue and include a
@@ -46,7 +48,7 @@ How Do I Submit A (Good) Bug Report?
 Bugs are tracked as `GitHub
 issues <https://guides.github.com/features/issues/>`__. Create an issue
 on straditize repository and provide the following information by
-filling in `the template <ISSUE_TEMPLATE.md>`__.
+filling in `the template <https://github.com/Chilipp/straditize/blob/master/.github/issue_template.md>`__.
 
 Explain the problem and include additional details to help maintainers
 reproduce the problem:
@@ -132,7 +134,7 @@ these steps:
 Pull Requests
 ~~~~~~~~~~~~~
 
--  Fill in `the required template <.github/PULL_REQUEST_TEMPLATE.md>`__
+-  Fill in `the required template <https://github.com/Chilipp/straditize/blob/master/.github/pull_request_template.md>`__
 -  Do not include issue numbers in the PR title
 -  Include screenshots and animated GIFs in your pull request whenever
    possible.
