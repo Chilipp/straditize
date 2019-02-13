@@ -65,6 +65,7 @@ setup(name='straditize',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Operating System :: OS Independent',
       ],
       keywords=('visualization earth-sciences paleo climate paleoclimate '
