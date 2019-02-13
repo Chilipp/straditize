@@ -12,7 +12,10 @@ is provided by matplotlib
 .. image:: matplotlib-navigation-toolbar.png
 
 Especially the Pan/Zoom button |pan| and the zoom-to-rectangle button |zoom|
-are of interest for you. The `matplotlib docs`_ provide guidance:
+are of interest for you. You can enable and disable them by clicking on the
+corresponding button in the toolbar.
+
+The `matplotlib docs`_ provide further guidance:
 
 .. image:: move_large.png
 
