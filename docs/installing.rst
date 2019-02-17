@@ -19,14 +19,11 @@ We highly recommend to use conda_ for installing straditize. Here you can
 install it via manually via the `chilipp channel`_
 
 After having downloaded and installed  anaconda_, open a terminal (or the
-*Anaconda Prompt* on windows) and add the `conda-forge channel`_ to your
-default conda-channels via::
+*Anaconda Prompt* on windows) and install straditize from the
+`conda-forge channel`_. You can choose: We recommend to install straditize into
+its own environment via::
 
-    $ conda config --add channels conda-forge
-
-Then you can choose. We recommend to install straditize into its own environment via::
-
-    $ conda create -n straditize -c chilipp straditize
+    $ conda create -n straditize -c conda-forge straditize
 
 and then activate this environment via::
 
@@ -34,7 +31,7 @@ and then activate this environment via::
 
 In that way you do not mess up your base environment. Nevertheless you can also install it into an existing environment via::
 
-    $ conda install -c chilipp straditize
+    $ conda install -c conda-forge straditize
 
 In the same terminal, now type ``straditize`` to start the software.
 
@@ -45,7 +42,10 @@ In the same terminal, now type ``straditize`` to start the software.
 
         $ conda install -c chilipp/label/master straditize
 
-    to install the latest version from the master branch.
+    to install the latest version from the master branch. Note that you then
+    have to add the `conda-forge` channel to your default channels via::
+
+        $ conda config --add channels conda-forge
 
 .. _install-pip:
 
