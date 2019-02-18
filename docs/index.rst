@@ -23,7 +23,7 @@ Digitizing stratigraphic diagrams
         * - tests
           - |travis| |appveyor| |codecov|
         * - package
-          - |version| |conda| |github|
+          - |version| |conda| |joss| |github|
         * - implementations
           - |supported-versions| |supported-implementations|
 
@@ -47,9 +47,9 @@ Digitizing stratigraphic diagrams
         :alt: PyPI Package latest release
         :target: https://pypi.python.org/pypi/straditize
 
-    .. |conda| image:: https://anaconda.org/chilipp/straditize/badges/version.svg
+    .. |conda| image:: https://anaconda.org/conda-forge/straditize/badges/version.svg
         :alt: conda
-        :target: https://anaconda.org/chilipp/straditize
+        :target: https://anaconda.org/conda-forge/straditize
 
     .. |supported-versions| image:: https://img.shields.io/pypi/pyversions/straditize.svg?style=flat
         :alt: Supported versions
@@ -59,9 +59,9 @@ Digitizing stratigraphic diagrams
         :alt: Supported implementations
         :target: https://pypi.python.org/pypi/straditize
 
-    .. |joss| image:: http://joss.theoj.org/papers/3535c28017003f0b5fb63b1b64118b60/status.svg
+    .. |joss| image:: http://joss.theoj.org/papers/10.21105/joss.01216/status.svg
         :alt: Journal of Open Source Software
-        :target: http://joss.theoj.org/papers/3535c28017003f0b5fb63b1b64118b60
+        :target: https://doi.org/10.21105/joss.01216
 
     .. |github| image:: https://img.shields.io/github/release/Chilipp/straditize.svg
         :target: https://github.com/Chilipp/straditize/releases/latest
@@ -102,6 +102,37 @@ Documentation
     gui/straditize
     api/straditize
     changelog
+
+.. _citation:
+
+How to cite straditize
+----------------------
+
+When using straditize, you should at least cite the publication in
+`the Journal of Open Source Software`_:
+
+.. only:: html and not epub
+
+    .. image:: http://joss.theoj.org/papers/10.21105/joss.01216/status.svg
+        :alt: Journal of Open Source Software
+        :target: https://doi.org/10.21105/joss.01216
+
+    .. image:: https://zenodo.org/badge/128653545.svg
+       :alt: zenodo
+       :target: https://zenodo.org/badge/latestdoi/128653545
+
+Sommer, Philipp, Dilan Rech, Manuel Chevalier, and Basil A. S. Davis. Straditize: Digitizing Stratigraphic Diagrams. *Journal of Open Source Software* , vol. 4, no. 34, 34, The Open Journal, Feb. 2019, p. 1216, doi:10.21105/joss.01216, https://doi.org/10.21105/joss.00363.
+
+:download:`BibTex <straditize_entry.bib>` - :download:`EndNote <straditize_entry.enw>`
+
+Furthermore, each release of straditize is
+associated with a DOI using zenodo.org_. If you want to cite a specific
+version or plugin, please refer to the `releases page of straditize`.
+
+
+.. _the Journal of Open Source Software: http://joss.theoj.org/
+.. _zenodo.org: https://zenodo.org/
+.. _releases page of straditize: https://github.com/Chilipp/straditize/releases/
 
 
 Indices and tables

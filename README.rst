@@ -13,7 +13,7 @@ Digitizing stratigraphic diagrams
     * - tests
       - |travis| |appveyor| |codecov|
     * - package
-      - |version| |conda| |github|
+      - |version| |conda| |joss| |github|
     * - implementations
       - |supported-versions| |supported-implementations|
 
@@ -37,9 +37,9 @@ Digitizing stratigraphic diagrams
     :alt: PyPI Package latest release
     :target: https://pypi.python.org/pypi/straditize
 
-.. |conda| image:: https://anaconda.org/chilipp/straditize/badges/version.svg
+.. |conda| image:: https://anaconda.org/conda-forge/straditize/badges/version.svg
     :alt: conda
-    :target: https://anaconda.org/chilipp/straditize
+    :target: https://anaconda.org/conda-forge/straditize
 
 .. |supported-versions| image:: https://img.shields.io/pypi/pyversions/straditize.svg?style=flat
     :alt: Supported versions
@@ -48,6 +48,10 @@ Digitizing stratigraphic diagrams
 .. |supported-implementations| image:: https://img.shields.io/pypi/implementation/straditize.svg?style=flat
     :alt: Supported implementations
     :target: https://pypi.python.org/pypi/straditize
+
+.. |joss| image:: http://joss.theoj.org/papers/10.21105/joss.01216/status.svg
+    :alt: Journal of Open Source Software
+    :target: https://doi.org/10.21105/joss.01216
 
 .. |github| image:: https://img.shields.io/github/release/Chilipp/straditize.svg
     :target: https://github.com/Chilipp/straditize/releases/latest
