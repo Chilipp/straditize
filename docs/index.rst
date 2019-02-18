@@ -127,7 +127,7 @@ Sommer, Philipp, Dilan Rech, Manuel Chevalier, and Basil A. S. Davis. Straditize
 
 Furthermore, each release of straditize is
 associated with a DOI using zenodo.org_. If you want to cite a specific
-version or plugin, please refer to the `releases page of straditize`.
+version or plugin, please refer to the `releases page of straditize`_.
 
 
 .. _the Journal of Open Source Software: http://joss.theoj.org/
