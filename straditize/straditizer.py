@@ -1202,7 +1202,8 @@ class Straditizer(LabelSelection):
 
         def new_mark(pos):
             return [_new_mark(
-                [np.array(starts + full_df.loc[np.round(pos[-1] - ylim[0])]),
+                [np.array(starts +
+                          full_df.loc[np.round(pos[-1] - ylim[0])].fillna(0)),
                  np.round(pos[-1])])]
 
         def new_mark_and_range(key, row, row_indices):
