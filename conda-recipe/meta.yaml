@@ -1,15 +1,15 @@
-{% set name = "straditize" %}
-{% set version = "0.1.1" %}
+{% set data = load_setup_py_data() %}
 
 package:
-  name: {{ name|lower }}
-  version: {{ version }}
+  name: conda-build-test-source-setup-py-data
+  version: {{ data.get('version') }}
 
 source:
-  path: ../
+  git_url: ../
 
 build:
-  number: 2
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+  string: {{ environ.get('GIT_BUILD_STR', '') }}{% if environ.get('GIT_BRANCH') %}_{{ environ.get('GIT_BRANCH') }}{% endif %}
   script: python -m pip install . --no-deps --ignore-installed -vvv
   skip: true  # [py == 27]
   entry_points:
