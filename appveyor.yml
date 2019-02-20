@@ -9,9 +9,9 @@ environment:
 
 install:
     - "SET ORIGPATH=%PATH%"
+    - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - setlocal
     - set CONDA_REPO_TOKEN=
-    - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - conda config --set always_yes yes --set changeps1 no
     - conda config --add channels conda-forge
     - conda config --add channels chilipp/label/dev
@@ -21,8 +21,9 @@ install:
     - conda install conda-build anaconda-client
     - conda info -a
     - conda list
-    - 'SET PYTHONWARNINGS=ignore:mode:DeprecationWarning:docutils.io:245'
     - endlocal
+    - 'SET PYTHONWARNINGS=ignore:mode:DeprecationWarning:docutils.io:245'
+    - "IF NOT DEFINED APPVEYOR_REPO_TAG_NAME (SET GIT_BRANCH=%APPVEYOR_REPO_BRANCH%)"
 
 build: off
 

@@ -83,6 +83,7 @@ install:
     - 'echo "backend : module://psyplot_gui.backend" > matplotlibrc'
     - 'export MATPLOTLIBRC=`pwd`/matplotlibrc'
     - export PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245'
+    - if [[ $TRAVIS_TAG == "" ]]; then export GIT_BRANCH=$TRAVIS_BRANCH; fi
     - if [[ $USE_PIP == true ]]; then pip install .; fi
     - conda info -a
     - conda list
