@@ -3308,7 +3308,7 @@ class BarDataReader(DataReader):
             'dims': 'bars{reader}_column',
             'long_name': 'number of bars per column'},
         'bars{reader}_bars': {
-            'dims': ('bar', 'limit'),
+            'dims': ('bars{reader}_bar', 'limit'),
             'long_name': 'Boundaries of bars', 'units': 'px'},
         'bars{reader}_nsplit': {
             'dims': 'bars{reader}_column',
