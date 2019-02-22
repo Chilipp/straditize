@@ -3399,7 +3399,7 @@ class BarDataReader(DataReader):
             ret.max_len = ds[v('max_len')].values
         if v('full_data_orig') in ds:
             ret._full_df_orig = pd.DataFrame(
-                ds[v('full_data_orig')].values, columns=ds.column.values)
+                ds[v('full_data_orig')].values, columns=ds[v('column')].values)
 
         return ret
 
