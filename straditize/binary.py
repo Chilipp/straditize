@@ -3542,9 +3542,9 @@ class BarDataReader(DataReader):
                                                       do_split)
             self._all_indices.append(indices)
             self._splitted[col] = splitted
-            df.iloc[:, col] = np.nan
+            df.loc[:, col] = np.nan
             for (i, j), v in zip(indices, values):
-                df.iloc[i:j, col] = v
+                df.loc[i:j, col] = v
         if inplace:
             self.full_df = df
         else:
