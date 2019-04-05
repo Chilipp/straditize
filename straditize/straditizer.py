@@ -1233,10 +1233,10 @@ class Straditizer(LabelSelection):
         full_df = reader._full_df
         self.remove_marks()
         ax = self.ax
-        idx_v = self.indexes['y']
-        idx_h = self.column_indexes
         xlim = self.data_xlim
         ylim = self.data_ylim
+        idx_v = self.indexes['y'][slice(*map(int, ylim))]
+        idx_h = self.column_indexes
         starts = reader.all_column_starts + xlim[0]
         if not len(df):
             self.marks = marks = []
