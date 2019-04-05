@@ -1435,7 +1435,13 @@ class DigitizingControl(StraditizerControlBase):
             samples = self.straditizer.data2px_y(samples)
         except ValueError:
             pass
-        self.straditizer.data_reader.add_samples(samples.astype(int))
+        # HACK: truncate to the available data region
+        # This could be better solved through a dialog with the user...
+        maxy = len(self.reader._full_df) - 1
+        samples[samples < 0] = 0
+        samples[samples > maxy] = maxy
+        self.straditizer.data_reader.add_samples(
+            np.unique(samples.astype(int)))
         self.straditizer_widgets.refresh()
 
     def edit_samples(self):
