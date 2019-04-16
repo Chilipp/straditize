@@ -1421,7 +1421,8 @@ class DigitizingControl(StraditizerControlBase):
             we ask for a name"""
         if fname is None or not isinstance(fname, six.string_types):
             fname = QFileDialog.getOpenFileName(
-                self.straditizer_widgets, 'samples', os.getcwd(),
+                self.straditizer_widgets, 'samples',
+                self.straditizer_widgets.menu_actions._start_directory,
                 'CSV files (*.csv);;'
                 'All files (*)'
                 )
