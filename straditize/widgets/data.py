@@ -21,12 +21,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import division
 import warnings
 import weakref
-import os
+import os.path as osp
 import six
 from functools import partial
 import re
 import numpy as np
+import pickle
 import pandas as pd
+import xarray as xr
 from straditize.widgets import StraditizerControlBase, get_icon
 from psyplot_gui.compat.qtcompat import (
     QPushButton, QLineEdit, QComboBox, QLabel, QDoubleValidator,
@@ -1424,13 +1426,25 @@ class DigitizingControl(StraditizerControlBase):
                 self.straditizer_widgets, 'samples',
                 self.straditizer_widgets.menu_actions._start_directory,
                 'CSV files (*.csv);;'
+                'Excel files (*.xls *.xlsx);;'
+                'Straditize projects (*.nc *.nc4 *.pkl);;'
                 'All files (*)'
                 )
             if with_qt5:  # the filter is passed as well
                 fname = fname[0]
         if not fname:
             return
-        df = pd.read_csv(fname)
+        base, ext = osp.splitext(fname)
+        if ext in ['.nc', '.nc4']:
+            with xr.open_dataset(fname) as ds:
+                df = self.straditizer.from_dataset(ds).final_df
+        elif ext == '.pkl':
+            with open(fname, 'rb') as f:
+                df = pickle.load(f).final_df
+        elif ext in ['.xls', '.xlsx']:
+            df = pd.read_excel(fname)
+        else:
+            df = pd.read_csv(fname)
         samples = df.iloc[:, 0].values
         try:
             samples = self.straditizer.data2px_y(samples)
