@@ -1437,15 +1437,15 @@ class DigitizingControl(StraditizerControlBase):
         base, ext = osp.splitext(fname)
         if ext in ['.nc', '.nc4']:
             with xr.open_dataset(fname) as ds:
-                df = self.straditizer.from_dataset(ds).final_df
+                df = self.straditizer.from_dataset(ds, plot=False).final_df
         elif ext == '.pkl':
             with open(fname, 'rb') as f:
                 df = pickle.load(f).final_df
         elif ext in ['.xls', '.xlsx']:
-            df = pd.read_excel(fname)
+            df = pd.read_excel(fname, index_col=0)
         else:
-            df = pd.read_csv(fname)
-        samples = df.iloc[:, 0].values
+            df = pd.read_csv(fname, index_col=0)
+        samples = df.index.values
         try:
             samples = self.straditizer.data2px_y(samples)
         except ValueError:
