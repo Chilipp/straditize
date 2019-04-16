@@ -918,7 +918,7 @@ class StraditizerMenuActions(StraditizerControlBase):
         global straditizer
         straditizer = self.straditizer
         if mainwindow is not None:
-            mainwindow.console.kernel_manager.kernel.shell.run_code(
+            mainwindow.console.run_command_in_shell(
                 'from %s import straditizer as stradi' % __name__)
         straditizer = None
 
