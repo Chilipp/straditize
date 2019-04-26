@@ -49,6 +49,7 @@ if not os.getenv('CONDA_BUILD'):
         import PyQt5
     except ImportError:
         dependencies.append('pyqt5!=5.12')
+        dependencies.append('PyQtWebEngine')
         dependencies.append('pyqt5-sip')
 
 
