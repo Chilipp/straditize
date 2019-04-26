@@ -21,7 +21,7 @@ requirements:
     - pip
   run:
     - python
-    - psyplot-gui >=1.2.2
+    - psyplot-gui >=1.2.3
     - psyplot >=1.2.0
     - netcdf4
     - pyqt >=5
@@ -36,7 +36,7 @@ test:
   requires:
     - pytest
     - codecov
-    - pytest-cov>=2.6.1
+    - pytest-cov >=2.6.1
     - tesserocr  # [not win]
     - psutil
   source_files:
