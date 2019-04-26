@@ -102,7 +102,7 @@ script:
           python setup.py test -a 'tests/widgets/test_beginner.py' &&
           python setup.py test -a 'tests/widgets/test_hoya_del_castillo.py';
       else
-          travis_wait 30 conda build conda-recipe --python $PYTHON_VERSION --clobber-file ci/recipe_clobber_${TRAVIS_OS_NAME}.yaml;
+          conda build conda-recipe --python $PYTHON_VERSION --clobber-file ci/recipe_clobber_${TRAVIS_OS_NAME}.yaml;
       fi
     # export the pw to make it available for the deploy
     - reset_secure
