@@ -685,7 +685,7 @@ class StraditizerWidgets(QWidget, DockMixin):
     def reset_control(self):
         """Reset the GUI of straditize"""
         if getattr(self.selection_toolbar, '_pattern_selection', None):
-            self.selection_toolbar._pattern_selection.dock.close()
+            self.selection_toolbar._pattern_selection.remove_plugin()
             del self.selection_toolbar._pattern_selection
         if getattr(self.digitizer, '_samples_editor', None):
             self.digitizer._close_samples_fig()

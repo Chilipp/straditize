@@ -199,7 +199,7 @@ class PatternSelectionWidget(QWidget, DockMixin):
             self.toggle_selection)
 
         self.btn_cancel.clicked.connect(self.cancel)
-        self.btn_close.clicked.connect(self.close)
+        self.btn_close.clicked.connect(self.remove_plugin)
 
     def toggle_template_selection(self):
         """Enable or disable the template selection"""
@@ -446,9 +446,9 @@ class PatternSelectionWidget(QWidget, DockMixin):
         if self.btn_select.isChecked():
             self.btn_select.setChecked(False)
             self.toggle_selection()
-        self.close()
+        self.remove_plugin()
 
-    def close(self):
+    def remove_plugin(self):
         from psyplot_gui.main import mainwindow
         if self.selector is not None:
             self.selector.disconnect_events()
@@ -463,10 +463,33 @@ class PatternSelectionWidget(QWidget, DockMixin):
             self.toggle_correlation_plot()
         if self.key_press_cid is not None:
             self.data_obj.ax.figure.canvas.mpl_disconnect(self.key_press_cid)
-        for attr in ['data_obj', 'arr', 'template', 'key_press_cid']:
+        try:
+            self.template_im.remove()
+        except (AttributeError, ValueError):
+            pass
+        try:
+            self.template_fig.delaxes(self.axes)
+        except (AttributeError, ValueError, RuntimeError):
+            pass
+        try:
+            self.template_fig.close()
+        except (AttributeError, RuntimeError):
+            pass
+        for attr in ['data_obj', 'arr', 'template', 'key_press_cid',
+                     '_orig_selection_arr', '_selected_labels', '_select_cmap',
+                     '_select_norm', '_correlation', 'axes', 'template_fig',
+                     'template_im']:
             try:
                 delattr(self, attr)
             except AttributeError:
                 pass
-        mainwindow.removeDockWidget(self.dock)
-        return super(PatternSelectionWidget, self).close()
+        try:
+            super().remove_plugin()
+        except RuntimeError:  # already removed
+            pass
+        if self.dock is not None:
+            try:
+                mainwindow.dockwidgets.remove(self.dock)
+            except (ValueError, AttributeError):
+                pass
+            del self.dock

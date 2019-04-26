@@ -664,7 +664,6 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             w.raise_()
         elif self._pattern_selection is not None:
             self._pattern_selection.cancel()
-            self._pattern_selection.close()
             self.uncheck_pattern_selection()
             del self._pattern_selection
 
@@ -844,7 +843,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
     def end_selection(self):
         """Finish the selection and disconnect everything"""
         if getattr(self, '_pattern_selection', None) is not None:
-            self._pattern_selection.close()
+            self._pattern_selection.remove_plugin()
             del self._pattern_selection
         self._selecting = False
         self._action_clicked = None
