@@ -493,7 +493,8 @@ class Tutorial(StraditizerControlBase, TutorialPage):
         src_file = self.src_base
         get_attr = self.straditizer_widgets.get_attr
         for stradi in self.straditizer_widgets._straditizers:
-            if osp.basename(get_attr(stradi, 'image_file')) == src_file:
+            if (get_attr(stradi, 'image_file') and
+                    osp.basename(get_attr(stradi, 'image_file')) == src_file):
                 return stradi
 
     def close(self):
@@ -615,10 +616,10 @@ class LoadImage(TutorialPage):
     @property
     def is_finished(self):
         stradi = self.tutorial.straditizer
+        get_attr = self.straditizer_widgets.get_attr
         return stradi is not None and (
-            osp.basename(
-                self.straditizer_widgets.get_attr(stradi, 'image_file')) ==
-            self.src_base)
+            get_attr(stradi, 'image_file') and osp.basename(
+                get_attr(stradi, 'image_file')) == self.src_base)
 
     def hint(self):
         if self.is_finished:
