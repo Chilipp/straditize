@@ -640,7 +640,8 @@ class Straditizer(LabelSelection):
             ymax, xmax = right[
                 :, right.shape[1] - 1 - right.max(0)[::-1].argmax()]
         else:
-            xmax = len(cum_y) - 1 - (cum_y[::-1] > max_v).any(axis=0).argmax()
+            xmax = cum_y.shape[1] - 1 - (cum_y[:, ::-1] > max_v).any(
+                axis=0).argmax()
             ymax = len(cum_x) - 1 - (cum_x[::-1] > max_h).any(axis=1).argmax()
 
         left = np.vstack(np.where((cum_xr > max_h) & (cum_yr > max_v)))
