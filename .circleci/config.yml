@@ -19,11 +19,11 @@ jobs:
             MINICONDA_FILE="Miniconda3-latest-Linux-x86_64.sh"
             curl -L -O "${MINICONDA_URL}/${MINICONDA_FILE}"
             bash $MINICONDA_FILE -bp $HOME/miniconda3
-            source $HOME/miniconda3/bin/activate root
       - run:
           name: Configure
           command: |
             echo ""
+            source $HOME/miniconda3/bin/activate root
             echo "Configuring conda."
             conda config --set always_yes yes --set changeps1 no
             conda config --add channels conda-forge
@@ -38,12 +38,15 @@ jobs:
       - run:
           name: Environment info
           command: |
+            source $HOME/miniconda3/bin/activate root
             conda info -a
             conda list
       - run:
           # Run, test and (if we have a BINSTAR_TOKEN) upload the distributions.
           name: Test
-          command: conda build conda-recipe --python 3.7 --clobber-file ci/recipe_clobber_osx.yaml;
+          command: |
+            source $HOME/miniconda3/bin/activate root
+            conda build conda-recipe --python 3.7 --clobber-file ci/recipe_clobber_osx.yaml;
 
 workflows:
   version: 2
