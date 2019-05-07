@@ -1,0 +1,52 @@
+# This file was generated automatically from conda-smithy. To update this configuration,
+# update the conda-forge.yml and/or the recipe/meta.yaml.
+# -*- mode: yaml -*-
+
+version: 2
+
+jobs:
+  build_conda:
+    working_directory: ~/test
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: Install conda
+          command: |
+            echo ""
+            echo "Installing a fresh version of Miniconda."
+            MINICONDA_URL="https://repo.continuum.io/miniconda"
+            MINICONDA_FILE="Miniconda3-latest-Linux-x86_64.sh"
+            curl -L -O "${MINICONDA_URL}/${MINICONDA_FILE}"
+            bash $MINICONDA_FILE -bp $HOME/miniconda3
+            source $HOME/miniconda3/bin/activate root
+      - run:
+          name: Configure
+          command: |
+            echo ""
+            echo "Configuring conda."
+            conda config --set always_yes yes --set changeps1 no
+            conda config --add channels conda-forge
+            conda config --add channels chilipp
+            conda config --add channels chilipp/label/master
+            conda config --add channels chilipp/label/dev
+            conda update -q conda
+            conda install conda-build anaconda-client
+            echo "backend : module://psyplot_gui.backend" > matplotlibrc
+            export MATPLOTLIBRC=`pwd`/matplotlibrc
+            export PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245'
+      - run:
+          name: Environment info
+          command: |
+            conda info -a
+            conda list
+      - run:
+          # Run, test and (if we have a BINSTAR_TOKEN) upload the distributions.
+          name: Test
+          command: conda build conda-recipe --python 3.7 --clobber-file ci/recipe_clobber_osx.yaml;
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build_conda
