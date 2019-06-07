@@ -1227,7 +1227,7 @@ class Straditizer(LabelSelection):
 
         reader = self.data_reader
         occ_val = reader.occurences_value
-        means = reader.all_column_bounds.mean(axis=1)
+        means = np.diff(reader.all_column_bounds, axis=1).ravel() / 2.
         if reader.full_df is None:
             reader.digitize()
         df = reader.sample_locs
