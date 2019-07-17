@@ -1483,9 +1483,7 @@ class DataReader(LabelSelection):
                 np.zeros_like(arr, dtype=bool))
 
         if remove:
-            rows = np.where(
-                full_mask.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
-            self.hline_locs = np.unique(np.r_[self.hline_locs, rows])
+            self.set_hline_locs_from_selection(full_mask)
 
         self._show_parts2remove(self.binary, remove, select_all=False,
                                 selection=full_mask, **kwargs)
@@ -1544,13 +1542,13 @@ class DataReader(LabelSelection):
             self._show_parts2remove(self.labels, False, select_all=False,
                                     selection=mask, **kwargs)
 
-    def set_hline_locs_from_selection(self):
+    def set_hline_locs_from_selection(self, selection=None):
         """Save the locations of horizontal lines
 
         This methods takes every pixel row in the :attr:`hline_locs`
         attribute where at least 30% is selected. The digitize method will
         interpolate at these indices."""
-        selection = self.selected_part
+        selection = self.selected_part if selection is None else selection
         rows = np.where(
             selection.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
         self.hline_locs = np.unique(np.r_[self.hline_locs, rows])
@@ -1603,7 +1601,8 @@ class DataReader(LabelSelection):
             elif i - yaxes[icol][-1][-1] == 1:
                 # if we do neither see a change in dominant color nor in the
                 # number of data points in the row, we extend the line
-                if ((dominant_color == line_color or line_color > 150) and
+                if ((abs(dominant_color - line_color) < 10 or
+                     line_color > 150 or dominant_color > 150) and
                         np.abs(np.nansum(binary[:, i]) / nvals - 1) < 0.05):
                     line_color = dominant_color
                     yaxes[icol][-1].append(i)
@@ -1637,28 +1636,60 @@ class DataReader(LabelSelection):
 
         # add small labels to account for ticks
         labeled = self.labels.copy()
+        labeled_save = labeled.copy()
         labels = np.unique(labeled[mask])
         labels = labels[labels > 0]
         labeled[mask] = 0
         n = int(max_lw * 2 * np.ceil(len(binary) * 0.01))
-        mask[binary.astype(bool) & np.isin(labeled, labels) &
-             (~skim.remove_small_objects(labeled.astype(bool), n))] = True
+        small = ~skim.remove_small_objects(labeled.astype(bool), n)
+        thresh = 0.02 * len(binary)
+        labeled_small = skim.label(small)
+        for label in np.unique(labeled_small[labeled_small > 0]):
+            lmask = labeled_small == label
+            if np.any(np.sum(lmask, axis=0) > thresh):
+                # do not remove small objects that span more than 2 percent of
+                # the column to not remove anything of the data
+                small[lmask] = False
+            else:
+                # additionally look for the dominant color, if it differs a lot
+                # from the line color, do not remove
+                line_color = np.bincount(
+                    grey[mask & (labeled_save == label)]).argmax()
+                small[lmask & ~((np.abs(grey[lmask] - line_color) < 10) |
+                                grey[lmask] > 150)] = False
+
+        mask[binary.astype(bool) & np.isin(labeled, labels) & small] = True
+
+        # Now remove light colors that are attached to the lines and whose
+        # neighbour belongs to a line
+        labeled = self.labels.copy()
+        labels = np.unique(labeled[mask])
+        labels = labels[labels > 0]
+        found = True
+        while found:
+            nulls = np.zeros(mask.shape[0], dtype=bool)
+            rgrey = np.where(np.c_[nulls, mask[:, :-1]], grey, 0)
+            lgrey = np.where(np.c_[mask[:, 1:], nulls], grey, 0)
+            light_colors = ~mask & ((rgrey > 150) | (lgrey > 150))
+            found = light_colors.any()
+            if found:
+                mask[light_colors] = True
 
         # now select up to the maximum for each line
+        # if 10% of the column is selected, select all
+        thresh = 0.1 * len(binary)
         for col, indices in yaxes.items():
-            s, e = bounds[col]
             for l in indices:
-                lmax = l[0] + 1 + np.where(
-                    mask[:, l[0]:l[-1] + max_lw + 1].any(axis=0))[0].max()
+                lmax = np.max(l[0] + 1 + np.where(
+                    mask[:, l[0]:l[0] + max_lw + 1].sum(axis=0) > thresh)[0])
                 mask[:, l[0]:lmax] = True
 
         if remove:
-            rows = np.where(
-                mask.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
-            self.vline_locs = np.unique(np.r_[self.vline_locs, rows])
+            self.set_vline_locs_from_selection(mask)
 
         self._show_parts2remove(binary, remove, select_all=False,
                                 selection=mask)
+        return mask
 
     @docstrings.with_indent(8)
     def recognize_vlines(self, fraction=0.3, min_lw=1, max_lw=None,
@@ -1713,12 +1744,12 @@ class DataReader(LabelSelection):
             self._show_parts2remove(self.labels, False, select_all=False,
                                     selection=mask, **kwargs)
 
-    def set_vline_locs_from_selection(self):
+    def set_vline_locs_from_selection(self, selection=None):
         """Save the locations of vertical lines
 
         This methods takes every pixel column in the :attr:`hline_locs`
         attribute where at least 30% is selected."""
-        selection = self.selected_part
+        selection = self.selected_part if selection is None else selection
         cols = np.where(
             selection.sum(axis=0) / self.binary.sum(axis=0) > 0.3)[0]
         self.vline_locs = np.unique(np.r_[self.vline_locs, cols])
@@ -1728,12 +1759,16 @@ class DataReader(LabelSelection):
     def _shift_column_starts(self, locs):
         """Shift the column starts after the removement of vertical lines"""
         starts = self._column_starts
+        starts0 = starts.copy()
         if starts is not None:
             locs = np.asarray(locs)
             mask = np.isin(starts, locs)
             while mask.any():
                 starts[mask] += 1
                 mask = np.isin(starts, locs)
+        # choose the mean of the starts because this is where we expect the 0
+        self._column_starts = np.round(
+            np.vstack([starts, starts0]).mean(axis=0)).astype(int)
 
     def _shift_occurences(self, locs):
         """Shift the occurences after the removement of vertical lines"""
