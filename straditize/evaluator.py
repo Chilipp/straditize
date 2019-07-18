@@ -291,8 +291,8 @@ class StraditizeEvaluator:
         ref = self.column_starts
         results = self.results.copy()
         missing_cols = len(ref) - len(starts)
-        results['starts_ref'] = len(ref)
-        results['starts_found'] = len(starts)
+        results['starts_missmatch'] = 100 * (len(starts) - len(ref)) / len(ref)
+        results['starts_missing'] = missing_cols
 
         if not missing_cols:
             diff = np.abs(starts - ref).sum()
@@ -353,8 +353,8 @@ class StraditizeEvaluator:
         nref = len(ref)
 
         results = self.results
-        results['samples_found'] = nfound
-        results['samples_ref'] = nref
+        results['samples_missmatch'] = 100 % abs(nfound - nref)/ nref
+        results['samples_missing'] = nref - nfound
 
         closest = list(map(
             partial(final.index.get_loc, method='nearest'),
