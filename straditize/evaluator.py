@@ -415,3 +415,8 @@ class BaselineScenario:
     def export_evaluator(self, evaluator, *args, **kwargs):
         evaluator.export(osp.join(self.output_dir, evaluator.name),
                          *args, **kwargs)
+
+    @property
+    def results(self):
+        return pd.concat([evaluator.results for evaluator in self.evaluators],
+                         axis=1)
