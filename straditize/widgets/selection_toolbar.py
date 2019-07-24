@@ -1132,7 +1132,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         self.data_obj.remove_selected_labels(disable=True)
 
     def _disable_selection(self):
-            return self.data_obj.disable_label_selection()
+        return self.data_obj.disable_label_selection()
 
     def start_selection(self, arr=None, rgba=None,
                         rect_callbacks=None, poly_callbacks=None,
