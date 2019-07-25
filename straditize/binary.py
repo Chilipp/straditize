@@ -1653,10 +1653,13 @@ class DataReader(LabelSelection):
             else:
                 # additionally look for the dominant color, if it differs a lot
                 # from the line color, do not remove
-                line_color = np.bincount(
-                    grey[mask & (labeled_save == label)]).argmax()
-                small[lmask & ~((np.abs(grey[lmask] - line_color) < 10) |
-                                grey[lmask] > 150)] = False
+                try:
+                    line_color = np.bincount(
+                        grey[mask & (labeled_save == label)]).argmax()
+                    small[lmask & ~((np.abs(grey[lmask] - line_color) < 10) |
+                                    grey[lmask] > 150)] = False
+                except ValueError:
+                    pass
 
         mask[binary.astype(bool) & np.isin(labeled, labels) & small] = True
 
