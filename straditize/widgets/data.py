@@ -1591,8 +1591,8 @@ class DigitizingControl(StraditizerControlBase):
         tb.data_obj = 'Reader'
         self.reader.recognize_xaxes(fraction=fraction, min_lw=min_lw,
                                     max_lw=max_lw)
-        self.straditizer_widgets.apply_button.clicked.connect(
-            self.reader.set_hline_locs_from_selection)
+        self.apply_button.clicked.connect(
+            lambda: self.reader.set_hline_locs_from_selection())
         tb.start_selection(rgba=tb.data_obj.image_array())
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
@@ -1613,8 +1613,8 @@ class DigitizingControl(StraditizerControlBase):
         tb.data_obj = 'Reader'
         self.reader.recognize_hlines(fraction=fraction, min_lw=min_lw,
                                      max_lw=max_lw)
-        self.straditizer_widgets.apply_button.clicked.connect(
-            self.reader.set_hline_locs_from_selection)
+        self.apply_button.clicked.connect(
+            lambda: self.reader.set_hline_locs_from_selection())
         tb.start_selection(rgba=tb.data_obj.image_array())
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
@@ -1635,8 +1635,8 @@ class DigitizingControl(StraditizerControlBase):
         tb.data_obj = 'Reader'
         self.reader.recognize_yaxes(fraction=fraction, min_lw=min_lw,
                                     max_lw=max_lw)
-        self.straditizer_widgets.apply_button.clicked.connect(
-            self.reader.set_vline_locs_from_selection)
+        self.apply_button.clicked.connect(
+            lambda: self.reader.set_vline_locs_from_selection())
         tb.start_selection(rgba=tb.data_obj.image_array())
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():
@@ -1657,8 +1657,8 @@ class DigitizingControl(StraditizerControlBase):
         tb.data_obj = 'Reader'
         self.reader.recognize_vlines(fraction=fraction, min_lw=min_lw,
                                      max_lw=max_lw)
-        self.straditizer_widgets.apply_button.clicked.connect(
-            self.reader.set_vline_locs_from_selection)
+        self.apply_button.clicked.connect(
+            lambda: self.reader.set_vline_locs_from_selection())
         tb.start_selection(rgba=tb.data_obj.image_array())
         tb.remove_select_action.setChecked(True)
         if not tb.wand_action.isChecked():

@@ -1315,15 +1315,19 @@ class DataReader(LabelSelection):
         """
         The estimated column starts as :class:`numpy.ndarray`.
 
-        We look for
+        We assume a new column a pixel column $i$ if
 
-        1. pixel columns without data and assume that this is the maximum
-           width for each column
-        2. pixel columns where the it doubled compared to the previous pixel
-           columnd and covers at least the given threshold
-        3. a steady increase of pixels per pixel column where the end of the
-           increase is at least twice the amount of the the start of the
-           increase and covers the given `threshold`
+        1. the previous pixel column $i-1$ did not contain any data
+           ($D(i-1) = 0$)
+        2. THE amount of data points doubled compared to $i-1$
+           ($D(i) \\geq 2\\cdot D(i-1)$)
+        3. the amount of data points steadily increases within the next few
+           columns to a value twice as large as the previous column
+           ($D(i+n) \\geq 2\\cdot D(i-1)$ with $n>0$ and
+           $D(i+j) \\geq D(i)$ for all $0 < j \\geq n$)
+
+        Each potential column starts must also be covered by a given
+        `threshold`.
 
         Parameters
         ----------
@@ -1345,11 +1349,10 @@ class DataReader(LabelSelection):
         diff = nulls[1:] - nulls[:-1]  # difference to the last col with values
         #: The valid columns that cover more than the threshold
         valid = (summed / binary.shape[0]) >= threshold
-        #: columns where we had nothing before and suddenly at least ten
-        #: percent of the column is covered by data
         if not len(nulls):
             starts = np.array([])
         else:
+            #: columns where we had nothing before and is then covered by data
             starts = np.r_[[nulls[0]] if diff[0] == 1 else [],
                            nulls[1:][diff > 1]].astype(int)
             starts = starts[valid[starts]]
@@ -1750,7 +1753,7 @@ class DataReader(LabelSelection):
     def set_vline_locs_from_selection(self, selection=None):
         """Save the locations of vertical lines
 
-        This methods takes every pixel column in the :attr:`hline_locs`
+        This methods takes every pixel column in the :attr:`vline_locs`
         attribute where at least 30% is selected."""
         selection = self.selected_part if selection is None else selection
         cols = np.where(
