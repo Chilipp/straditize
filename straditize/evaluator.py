@@ -284,7 +284,10 @@ class StraditizeEvaluator:
         self.set_xtranslation(stradi)
 
         if digitize:
-            stradi.data_reader.full_df = self.full_df
+            stradi.data_reader.digitize()
+            stradi.data_reader._full_df.loc[:] = np.where(
+                stradi.data_reader.full_df.values, self.full_df.values, 0)
+
         else:
             return stradi
 
@@ -305,15 +308,17 @@ class StraditizeEvaluator:
         if not missing_cols:
             diff = np.abs(starts - ref).sum()
             width = np.diff(self.data_xlim)[0]
-            results[base + 'diff'] = diff
-            results[base + 'diff_perc'] = diff / width * self.summed_perc
+            results[base + 'rmse'] = rmse(starts, ref) * self.summed_perc / width
+            results[base + 'abs'] = diff * self.summed_perc / width
 
             # now remove the yaxes
             stradi.data_reader.recognize_yaxes(remove=True)
-            diff = np.abs(stradi.data_reader.column_starts - ref).sum()
-            results[base + 'diff_removey'] = diff
-            results[base + 'diff_removey_perc'] = \
-                diff / width * self.summed_perc
+            starts = stradi.data_reader.column_starts
+            diff = np.abs(starts - ref).sum()
+            results[base + 'rmse_removey'] = rmse(starts, ref) * \
+                self.summed_perc / width
+            results[base + 'abs_removey'] = \
+                diff * self.summed_perc / width
 
         self.results = results
         return stradi.close() if close else stradi
@@ -360,11 +365,18 @@ class StraditizeEvaluator:
         full_df = stradi.full_df
         indexes = list(map(partial(full_df.index.get_loc, method='nearest'),
                            ref.index))
-        sim = full_df.iloc[indexes]
-        s = ref.size
-        results[base + 'rmse'] = rmse(sim.values, ref.values)
-        results[base + 'too_high'] = 100 * (sim.values > ref.values).sum() / s
-        results[base + 'too_low'] = 100 * (sim.values < ref.values).sum() / s
+        sim = full_df.iloc[indexes].values
+        ref = ref.values
+        results[base + 'rmse'] = rmse(sim, ref)
+        results[base + 'too_high'] = 100 * (sim > ref).sum() / ref.size
+        results[base + 'too_low'] = 100 * (sim < ref).sum() / ref.size
+
+        mask5p = ref.astype(bool) & (~np.isnan(ref)) & (ref <= 5)
+        sim = sim[mask5p]
+        ref = ref[mask5p]
+        results[base + '5p_rmse'] = rmse(sim, ref)
+        results[base + '5p_too_high'] = 100 * (sim > ref).sum() / ref.size
+        results[base + '5p_too_low'] = 100 * (sim < ref).sum() / ref.size
         self.results = results
         return stradi.close() if close else stradi
 
@@ -372,7 +384,7 @@ class StraditizeEvaluator:
                                  base='samples_'):
         stradi = stradi or self.init_stradi(samples=False)
         stradi.data_reader.add_samples(
-            *stradi.data_reader.find_samples())
+            *stradi.data_reader.find_samples(max_len=8))
 
         final = stradi.final_df
         ref = self.data
@@ -380,7 +392,7 @@ class StraditizeEvaluator:
         nref = len(ref)
 
         results = self.results
-        results[base + 'missmatch'] = 100 % abs(nfound - nref)/ nref
+        results[base + 'missmatch'] = 100 * abs(nfound - nref)/ nref
         results[base + 'missing'] = nref - nfound
 
         closest = list(map(
@@ -391,7 +403,7 @@ class StraditizeEvaluator:
 
         # normalized rmse of the age
         results[base + 'nrmse_y'] = rmse(
-            final.index[closest].values, ref.index.values) / age_range
+            final.index[closest].values, ref.index.values) / age_range * 100
 
         self.results = results
         return stradi.close() if close else stradi
@@ -400,8 +412,10 @@ class StraditizeEvaluator:
         stradi = self.evaluate_column_starts(False, 'full_starts_')
         self.set_xtranslation(stradi)
         if len(stradi.data_reader.column_starts) == len(self.column_starts):
-            stradi = self.evaluate_sample_accuracy(False, stradi, 'full_')
-            return self.evaluate_sample_position(close, stradi, 'full_')
+            stradi = self.evaluate_sample_accuracy(
+                False, stradi, 'full_samples_')
+            return self.evaluate_sample_position(
+                close, stradi, 'full_samples_')
 
     def run(self):
         """Run all evaluations"""
@@ -412,8 +426,10 @@ class StraditizeEvaluator:
         self.evaluate_full()
 
     def close(self):
+        import matplotlib.pyplot as plt
         self.sp.close(figs=True, data=True, ds=True)
         del self.sp
+        plt.close('all')
 
 
 class NoVerticalsEvaluator(StraditizeEvaluator):
@@ -435,8 +451,8 @@ class NoVerticalsEvaluator(StraditizeEvaluator):
         if not missing_cols:
             diff = np.abs(starts - ref).sum()
             width = np.diff(self.data_xlim)[0]
-            results[base + 'diff'] = diff
-            results[base + 'diff_perc'] = diff / width * self.summed_perc
+            results[base + 'rmse'] = rmse(starts, ref) * self.summed_perc / width
+            results[base + 'abs'] = diff * self.summed_perc / width
 
         self.results = results
         return stradi.close() if close else stradi
