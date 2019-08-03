@@ -1644,8 +1644,9 @@ class DataReader(LabelSelection):
         labels = labels[labels > 0]
         labeled[mask] = 0
         n = int(max_lw * 2 * np.ceil(len(binary) * 0.01))
-        small = ~skim.remove_small_objects(labeled.astype(bool), n)
-        thresh = 0.02 * len(binary)
+        small = labeled.astype(bool) & (~skim.remove_small_objects(
+            labeled.astype(bool), n))
+        thresh = np.ceil(0.02 * len(binary))
         labeled_small = skim.label(small)
         for label in np.unique(labeled_small[labeled_small > 0]):
             lmask = labeled_small == label
@@ -1658,7 +1659,7 @@ class DataReader(LabelSelection):
                 # from the line color, do not remove
                 try:
                     line_color = np.bincount(
-                        grey[mask & (labeled_save == label)]).argmax()
+                        grey[mask & lmask]).argmax()
                     small[lmask & ~((np.abs(grey[lmask] - line_color) < 10) |
                                     grey[lmask] > 150)] = False
                 except ValueError:
@@ -1667,13 +1668,13 @@ class DataReader(LabelSelection):
         mask[binary.astype(bool) & np.isin(labeled, labels) & small] = True
 
         # Now remove light colors that are attached to the lines and whose
-        # neighbour belongs to a line
+        # neighbour belongs to a line, too
         labeled = self.labels.copy()
         labels = np.unique(labeled[mask])
         labels = labels[labels > 0]
         found = True
+        nulls = np.zeros(mask.shape[0], dtype=bool)
         while found:
-            nulls = np.zeros(mask.shape[0], dtype=bool)
             rgrey = np.where(np.c_[nulls, mask[:, :-1]], grey, 0)
             lgrey = np.where(np.c_[mask[:, 1:], nulls], grey, 0)
             light_colors = ~mask & ((rgrey > 150) | (lgrey > 150))
@@ -1765,6 +1766,8 @@ class DataReader(LabelSelection):
     def _shift_column_starts(self, locs):
         """Shift the column starts after the removement of vertical lines"""
         starts = self._column_starts
+        if starts is None:
+            return
         starts0 = starts.copy()
         if starts is not None:
             locs = np.asarray(locs)
