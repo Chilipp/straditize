@@ -924,14 +924,16 @@ class DataReader(LabelSelection):
                 if self.shifted is not None:
                     self.create_variable(ds, 'shifted', self.shifted)
                 if self._sample_locs is not None and len(self._sample_locs):
-                    samples = self.sample_locs.drop_duplicates()
+                    samples = self.sample_locs[
+                        ~self.sample_locs.index.duplicated()]
                     self.create_variable(
                         ds, 'sample', samples.index)
                     self.create_variable(
                         ds, 'samples', samples.values)
+                    rough = self.rough_locs
                     self.create_variable(
                         ds, 'rough_locs',
-                        self.rough_locs.drop_duplicates().values.reshape(
+                        rough[~rough.index.duplicated()].values.reshape(
                             samples.shape + (2, )))
                 if self.occurences:
                     self.create_variable(ds, 'occurences',
