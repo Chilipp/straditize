@@ -56,7 +56,7 @@ class EditSamplesTest(bt.StraditizeWidgetsTestCase):
                 if irow and col == 0:
                     next(marks)  # the next mark is for the numbers of extrema
                 if irow == 2 and col == 1:
-                    val = self.reader.all_column_bounds[1].mean()
+                    val = np.diff(self.reader.all_column_bounds[1])[0] / 2.
                 self._test_position(model.get_cell_mark(irow, col + 1).pos,
                                     val, row, col)
 

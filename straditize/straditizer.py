@@ -1314,7 +1314,7 @@ class Straditizer(LabelSelection):
                     else:
                         artists = []
                 if val == occ_val:
-                    val = bounds[col].mean()
+                    val = np.diff(bounds[col])[0] / 2.
                 marks.append(_new_mark([val, key], ax, artists))
             for mark, val in zip(marks, row):
                 mark._is_occurence = [val == occ_val]
