@@ -17,6 +17,9 @@ install:
     - cmd: "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     # linux installation
     - sh: |
+          sudo apt-get update
+          sudo apt-get install alsa-lib libXScrnSaver libXcomposite libXcursor libXi libXrandr libXtst mesa-libEGL mesa-libGL
+    - sh: |
           MINICONDA_URL="https://repo.continuum.io/miniconda"
           MINICONDA_FILE="Miniconda3-latest-Linux-x86_64.sh"
           curl -L -O "${MINICONDA_URL}/${MINICONDA_FILE}"

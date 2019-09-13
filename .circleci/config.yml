@@ -11,6 +11,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: install apt requirements
+          command: |
+            sudo apt-get update
+            sudo apt-get install alsa-lib libXScrnSaver libXcomposite libXcursor libXi libXrandr libXtst mesa-libEGL mesa-libGL
+      - run:
           name: Install conda
           command: |
             echo ""
@@ -46,7 +51,7 @@ jobs:
           name: Test
           command: |
             source $HOME/miniconda3/bin/activate root
-            conda build conda-recipe --python 3.7 --clobber-file ci/recipe_clobber_osx.yaml;
+            conda build conda-recipe --python 3.7;
 
 workflows:
   version: 2
