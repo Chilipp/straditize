@@ -40,7 +40,7 @@ install:
     - sh: 'echo "backend : module://psyplot_gui.backend" > matplotlibrc'
     - sh: 'export MATPLOTLIBRC=`pwd`/matplotlibrc'
     - sh: export PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245'
-    - cmd: if [[ $APPVEYOR_REPO_TAG_NAME == "" ]]; then export GIT_BRANCH=$APPVEYOR_REPO_BRANCH; fi
+    - sh: if [[ $APPVEYOR_REPO_TAG_NAME == "" ]]; then export GIT_BRANCH=$APPVEYOR_REPO_BRANCH; fi
 
 build: off
 
