@@ -14,9 +14,7 @@ jobs:
           name: install apt requirements
           command: |
             sudo apt-get update
-            sudo apt-get install yum
-            sudo yum update -y
-            sudo yum install -y $(cat ci/yum_requirements.txt)
+            sudo apt-get install libgl1-mesa-glx
       - run:
           name: Install conda
           command: |
