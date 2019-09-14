@@ -73,6 +73,8 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         from straditize.widgets import get_straditizer_widgets
         from PyQt5.QtCore import QTimer
         if not running_in_gui:
+            import psyplot_gui
+            psyplot_gui.UNIT_TESTING = True
             cls.window = main.MainWindow.run(show=False)
         else:
             cls.window = main.mainwindow
