@@ -15,7 +15,8 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get install yum
-            sudo yum install $(cat ci/yum_requirements.txt)
+            sudo yum update -y
+            sudo yum install -y $(cat ci/yum_requirements.txt)
       - run:
           name: Install conda
           command: |
