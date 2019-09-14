@@ -14,7 +14,7 @@ jobs:
           name: install apt requirements
           command: |
             sudo apt-get update
-            sudo apt-get install libgl1-mesa-glx
+            sudo apt-get install libgl1-mesa-glx libegl1-mesa-dev
       - run:
           name: Install conda
           command: |

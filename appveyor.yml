@@ -18,7 +18,7 @@ install:
     # linux installation
     - sh: |
         sudo apt-get update
-        sudo apt-get install libgl1-mesa-glx
+        sudo apt-get install libgl1-mesa-glx libegl1-mesa-dev
     - sh: |
         MINICONDA_URL="https://repo.continuum.io/miniconda"
         MINICONDA_FILE="Miniconda3-latest-Linux-x86_64.sh"
