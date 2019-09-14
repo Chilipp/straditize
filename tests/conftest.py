@@ -8,6 +8,10 @@ from psutil import Process
 from collections import namedtuple
 from itertools import groupby
 
+# import skimage now to avoid
+# ImportError: dlopen: cannot load any more object with static TLS
+from skimage.feature import match_template
+
 
 _proc = Process(os.getpid())
 
