@@ -141,6 +141,12 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
     def tearDownClass(cls):
         if not running_in_gui:
             import psyplot_gui.main as main
+            # HACK TO CLOSE HTML PAGE
+            viewer = cls.window.help_explorer.viewers['HTML help']
+            viewer.html.page().close()
+            viewer.html.close()
+            del viewer.html
+
             cls.window.close()
             rcParams.update_from_defaultParams()
             psy_rcParams.update_from_defaultParams()
