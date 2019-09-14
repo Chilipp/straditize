@@ -17,12 +17,15 @@ install:
     - cmd: "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     # linux installation
     - sh: |
-          MINICONDA_URL="https://repo.continuum.io/miniconda"
-          MINICONDA_FILE="Miniconda3-latest-Linux-x86_64.sh"
-          curl -L -O "${MINICONDA_URL}/${MINICONDA_FILE}"
-          bash $MINICONDA_FILE -bp $HOME/miniconda3
-          source $HOME/miniconda3/bin/activate root
-          hash -r
+        sudo apt-get update
+        sudo apt-get install libgl1-mesa-glx
+    - sh: |
+        MINICONDA_URL="https://repo.continuum.io/miniconda"
+        MINICONDA_FILE="Miniconda3-latest-Linux-x86_64.sh"
+        curl -L -O "${MINICONDA_URL}/${MINICONDA_FILE}"
+        bash $MINICONDA_FILE -bp $HOME/miniconda3
+        source $HOME/miniconda3/bin/activate root
+        hash -r
     # conda config
     - conda config --set always_yes yes --set changeps1 no
     - conda config --add channels conda-forge
