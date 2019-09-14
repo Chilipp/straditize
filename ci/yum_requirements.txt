@@ -1,0 +1,9 @@
+alsa-lib
+libXScrnSaver
+libXcomposite
+libXcursor
+libXi
+libXrandr
+libXtst
+mesa-libEGL
+mesa-libGL
