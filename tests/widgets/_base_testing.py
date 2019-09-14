@@ -350,6 +350,23 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
                          Qt.LeftButton)
         return self.reader
 
+    def focus_on_mark(self, mark, dx=2, dy=2):
+        ax = mark.ax
+        try:
+            x = mark.x
+        except Exception:
+            pass
+        else:
+            xlim = ax.get_xlim()
+            ax.set_xlim(min(xlim[0], x-dx), max(xlim[1], x+dx))
+        try:
+            y = mark.y
+        except Exception:
+            pass
+        else:
+            ylim = ax.get_ylim()
+            ax.set_ylim(max(ylim[0], y+dy), min(ylim[1], y-dy))
+
     def move_mark(self, mark, by=None, to=None):
         if by is None and to is None:
             raise ValueError("Either `by` or `to` must be specified!")
@@ -357,8 +374,10 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
             raise ValueError("Only one of `by` and `to` can be specified!")
         elif by is not None:
             to = mark.pos + np.asarray(by)
+        by = np.asarray(to) - mark.pos
         ax = mark.ax
         canvas = mark.fig.canvas
+        self.focus_on_mark(mark, *np.abs(by))
         x0, y0 = ax.transData.transform([mark.pos])[0]
         x1, y1 = ax.transData.transform([to])[0]
         # select the mark
@@ -389,6 +408,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
 
     def remove_mark(self, mark):
         """Add a new mark at the given position"""
+        self.focus_on_mark(mark)
         marks = self.straditizer.marks
         n = len(marks)
         ax = mark.ax
