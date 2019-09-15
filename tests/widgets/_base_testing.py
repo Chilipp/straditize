@@ -399,6 +399,14 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
             canvas = marks[0].fig.canvas
         else:
             canvas = ax.figure.canvas
+        x, y = pos
+
+        # focus on the new position
+        xlim = ax.get_xlim()
+        ax.set_xlim(min(xlim[0], x-2), max(xlim[1], x+2))
+        ylim = ax.get_ylim()
+        ax.set_ylim(max(ylim[0], y+2), min(ylim[1], y-2))
+
         x0, y0 = ax.transData.transform([pos])[0]
         canvas.key_press_event('shift')
         canvas.button_press_event(x0, y0, 1)
