@@ -3,9 +3,9 @@ sudo: false # use container based build
 
 env:
     matrix:
-        - PYTHON_VERSION=3.7 USE_PIP=false
-        - PYTHON_VERSION=3.7 USE_PIP=true
-        - PYTHON_VERSION=3.6 USE_PIP=false
+        - PYTHON_VERSION=3.7 USE_PIP=false DEPLOY_CONDA=true
+        - PYTHON_VERSION=3.7 USE_PIP=true DEPLOY_CONDA=false
+        - PYTHON_VERSION=3.6 USE_PIP=false DEPLOY_CONDA=true
     global:
         - secure: "m3hFOyDrNPNT+UfC3jbn9QY4ZYK2DBgZDmF5Nf1jy7+gpERLWLy+BuG+bO7WifliZe6BUD5DNG9qkHewaRnYKiLJhyMK3yaS1iLSV6NLjfxG9bsnPzC8FCF/aB8EgYpA5pH2Wk6NEM/e+3QjwKHWMgia2HLeZ1AXmRQuzNzGUb0Ayad+EogZetygmVDiTiDbMOJ1hNQb9racYeGRgyyjY+wrQ11yjXqhwDRlAR6sHo98VDwPav+ecjyc7YY+y7bmoJ5TbpMg/VCY3wSgZPSdLEwsBAuTejI/U5bAzqo5lYy+tzqYLgWvRTHPwJ1aRfWdRd9LYJY0IfpPBYeZhuHi0K/yME0Kx4Dm+zZBpKrUF/mLrd6dfGLd3nc8xp6NtuEuaSKVcumtrRImbQOvnWx9fZxLKc0qwa0mZhWxZuWgNPpXBCcb6bgHAutK7To+eiCUJ6Swe/YZIHNK/t6Ag+cUisBY3AJpz6GVZIkgTY7GZCGCnYBWO/4USR840HBy5oDH1LUPxTiCcpFvWyOTC8w6n3mwoGQi2g6hZ11HtDE3DFYan1hntYk9aU2nE+705e9Hi/rRNvWpzzS/o1fqmEq6Pn3vA3RHUrKzpEl4coKpf0Wa9ZGRj3v267X+eY0r+uijigZC3eW2gG0x2pfEnNEsahHzAynr1Pxi3FJnys8a+nw="
 
@@ -13,11 +13,15 @@ os:
     - linux
     - osx
 
+services:
+    - xvfb
+
 matrix:
     allow_failures:
-        - env: PYTHON_VERSION=3.7 USE_PIP=true
+        - env: PYTHON_VERSION=3.7 USE_PIP=true DEPLOY_CONDA=false
 
 before_install:
+    - if [[ "$TRAVIS_EVENT_TYPE" == "cron" ]]; then export DEPLOY_CONDA=false; fi
     # Remove homebrew.
     - |
       if [[ $TRAVIS_OS_NAME == "osx" ]]; then
@@ -107,6 +111,6 @@ script:
     # export the pw to make it available for the deploy
     - reset_secure
     # deploy here (don't use travis deploy because it requires homebrew)
-    - if [[ $USE_PIP == "false" && $TRAVIS_PULL_REQUEST == "false" && $TRAVIS_REPO_SLUG == "Chilipp/straditize" ]]; then
+    - if [[ $DEPLOY_CONDA == "true" && $USE_PIP == "false" && $TRAVIS_PULL_REQUEST == "false" && $TRAVIS_REPO_SLUG == "Chilipp/straditize" ]]; then
           ci/deploy_anaconda.py;
       fi
