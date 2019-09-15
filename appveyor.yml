@@ -1,31 +1,17 @@
-image:
-    - Ubuntu
-    # - Visual Studio 2015
-
-
 environment:
     matrix:
         - PYTHON: "C:\\Miniconda37-x64"
           PYTHON_ARCH: "64"
           PYTHON_VERSION: 3.7
-        # - PYTHON: "C:\\Miniconda36-x64"
-        #   PYTHON_ARCH: "64"
-        #   PYTHON_VERSION: 3.6
+        - PYTHON: "C:\\Miniconda36-x64"
+          PYTHON_ARCH: "64"
+          PYTHON_VERSION: 3.6
 
 install:
     # windows config (for installation)
     - cmd: "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-    # linux installation
-    - sh: |
-        sudo apt-get update
-        sudo apt-get -y install libgl1-mesa-glx libegl1-mesa-dev
-    - sh: |
-        MINICONDA_URL="https://repo.continuum.io/miniconda"
-        MINICONDA_FILE="Miniconda3-latest-Linux-x86_64.sh"
-        curl -L -O "${MINICONDA_URL}/${MINICONDA_FILE}"
-        bash $MINICONDA_FILE -bp $HOME/miniconda3
-        source $HOME/miniconda3/bin/activate root
-        hash -r
+    - cmd: setlocal
+    - cmd: set CONDA_REPO_TOKEN=
     # conda config
     - conda config --set always_yes yes --set changeps1 no
     - conda config --add channels conda-forge
@@ -37,20 +23,17 @@ install:
     - conda info -a
     - conda list
     # windows config
+    - cmd: endlocal
     - cmd: 'SET PYTHONWARNINGS=ignore:mode:DeprecationWarning:docutils.io:245'
     - cmd: "IF NOT DEFINED APPVEYOR_REPO_TAG_NAME (SET GIT_BRANCH=%APPVEYOR_REPO_BRANCH%)"
-    # linux config
-    - sh: 'echo "backend : module://psyplot_gui.backend" > matplotlibrc'
-    - sh: 'export MATPLOTLIBRC=`pwd`/matplotlibrc'
-    - sh: export PYTHONWARNINGS='ignore:mode:DeprecationWarning:docutils.io:245'
-    - sh: if [[ $APPVEYOR_REPO_TAG_NAME == "" ]]; then export GIT_BRANCH=$APPVEYOR_REPO_BRANCH; fi
 
 build: off
 
 test_script:
+    - cmd: setlocal
+    - cmd: set CONDA_REPO_TOKEN=
     - cmd: conda build conda-recipe --python %PYTHON_VERSION%
-    - sh: conda build conda-recipe --python $PYTHON_VERSION
+    - cmd: endlocal
 
 deploy_script:
     - cmd: "python ci\\deploy_anaconda.py"
-    - sh: "python ci/deploy_anaconda.py"
