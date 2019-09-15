@@ -1,6 +1,11 @@
 language: generic
 sudo: false # use container based build
 
+# set clone depth to false to make sure that conda build can write the
+# correct GIT_BUILD_STR
+git:
+  depth: false
+
 env:
     matrix:
         - PYTHON_VERSION=3.7 USE_PIP=false DEPLOY_CONDA=true
