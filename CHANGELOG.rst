@@ -1,3 +1,9 @@
+v0.1.2
+======
+This release contains several small bug fixes, mainly for the bar data reader
+and for duplicated samples and occurences.
+
+
 v0.1.1
 ======
 .. image:: http://joss.theoj.org/papers/10.21105/joss.01216/status.svg
