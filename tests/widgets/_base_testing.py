@@ -73,6 +73,8 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         from straditize.widgets import get_straditizer_widgets
         from PyQt5.QtCore import QTimer
         if not running_in_gui:
+            import psyplot_gui
+            psyplot_gui.UNIT_TESTING = True
             cls.window = main.MainWindow.run(show=False)
         else:
             cls.window = main.mainwindow
@@ -348,6 +350,23 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
                          Qt.LeftButton)
         return self.reader
 
+    def focus_on_mark(self, mark, dx=2, dy=2):
+        ax = mark.ax
+        try:
+            x = mark.x
+        except Exception:
+            pass
+        else:
+            xlim = ax.get_xlim()
+            ax.set_xlim(min(xlim[0], x-dx), max(xlim[1], x+dx))
+        try:
+            y = mark.y
+        except Exception:
+            pass
+        else:
+            ylim = ax.get_ylim()
+            ax.set_ylim(max(ylim[0], y+dy), min(ylim[1], y-dy))
+
     def move_mark(self, mark, by=None, to=None):
         if by is None and to is None:
             raise ValueError("Either `by` or `to` must be specified!")
@@ -355,8 +374,10 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
             raise ValueError("Only one of `by` and `to` can be specified!")
         elif by is not None:
             to = mark.pos + np.asarray(by)
+        by = np.asarray(to) - mark.pos
         ax = mark.ax
         canvas = mark.fig.canvas
+        self.focus_on_mark(mark, *np.abs(by))
         x0, y0 = ax.transData.transform([mark.pos])[0]
         x1, y1 = ax.transData.transform([to])[0]
         # select the mark
@@ -378,6 +399,14 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
             canvas = marks[0].fig.canvas
         else:
             canvas = ax.figure.canvas
+        x, y = pos
+
+        # focus on the new position
+        xlim = ax.get_xlim()
+        ax.set_xlim(min(xlim[0], x-2), max(xlim[1], x+2))
+        ylim = ax.get_ylim()
+        ax.set_ylim(max(ylim[0], y+2), min(ylim[1], y-2))
+
         x0, y0 = ax.transData.transform([pos])[0]
         canvas.key_press_event('shift')
         canvas.button_press_event(x0, y0, 1)
@@ -387,6 +416,7 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
 
     def remove_mark(self, mark):
         """Add a new mark at the given position"""
+        self.focus_on_mark(mark)
         marks = self.straditizer.marks
         n = len(marks)
         ax = mark.ax
