@@ -1,3 +1,7 @@
+v0.1.3
+======
+Patch that forces the diagram limits to be integers.
+
 v0.1.2
 ======
 This release contains several small bug fixes, mainly for the bar data reader
