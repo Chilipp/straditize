@@ -218,9 +218,31 @@ class Straditizer(LabelSelection):
     #: data
     data_reader = None
 
-    data_xlim = None
+    @property
+    def data_xlim(self):
+        return self._data_xlim
 
-    data_ylim = None
+    @data_xlim.setter
+    def data_xlim(self, value):
+        value = np.asarray(value, int).ravel()
+        if value.size != 2:
+            raise ValueError("data_xlim must be an integer array of size 2!")
+        self._data_xlim = value
+
+    _data_xlim = None
+
+    @property
+    def data_ylim(self):
+        return self._data_ylim
+
+    @data_ylim.setter
+    def data_ylim(self, value):
+        value = np.asarray(value, int).ravel()
+        if value.size != 2:
+            raise ValueError("data_ylim must be an integer array of size 2!")
+        self._data_ylim = value
+
+    _data_ylim = None
 
     fig_w = fig_h = None
 
@@ -486,7 +508,7 @@ class Straditizer(LabelSelection):
             self.__class__,
             (self.image, None, False, self.attrs),
             {'data_reader': self.data_reader,
-             'data_xlim': self.data_xlim, 'data_ylim': self.data_ylim,
+             '_data_xlim': self._data_xlim, '_data_ylim': self._data_ylim,
              '_yaxis_px_orig': self._yaxis_px_orig,
              'yaxis_data': self.yaxis_data,
              '_colnames_reader': self._colnames_reader,
