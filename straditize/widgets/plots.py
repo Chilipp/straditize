@@ -721,7 +721,8 @@ class ResultsPlot(StraditizerControlBase):
         else:
             self.cb_transformed.setEnabled(True)
         try:
-            assert self.straditizer.data_reader.sample_locs is not None
+            assert (self.straditizer.data_reader._sample_locs is not None and
+                    len(self.straditizer.data_reader._sample_locs))
         except (AssertionError, AttributeError):
             self.cb_final.setEnabled(False)
         else:
