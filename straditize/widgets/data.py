@@ -2300,8 +2300,8 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
                 if y == hline.get_segments()[0][0, 1]:
                     hline.remove()
                     self.lines.remove(hline)
-                self.straditizer.draw_figure()
-                self.suggestions_fig.canvas.draw()
+            self.straditizer.draw_figure()
+            self.suggestions_fig.canvas.draw()
 
     def _get_col(self, item):
         """Convenience method for getting the column of a toplevel item"""
