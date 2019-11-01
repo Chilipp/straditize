@@ -1289,14 +1289,16 @@ class Straditizer(LabelSelection):
                 [mark._is_occurence for mark in self.marks], bool)
             data[is_occurence] = self.data_reader.occurences_value
             df = pd.DataFrame(data, index=index.astype(int)).sort_index()
-            self.data_reader.sample_locs = df.drop_duplicates()
+            self.data_reader.sample_locs = df.loc[
+                (~df.index.duplicated().values) &
+                (~df.index.duplicated().values)]
             self.data_reader._update_rough_locs()
         if remove:
             self.remove_marks()
             try:
                 del self._plotted_full_df
             except AttributeError:
-                    pass
+                pass
 
     def marks_for_samples_sep(self, nrows=3):
         def _new_mark(pos, ax, artists=[]):
