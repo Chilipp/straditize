@@ -2589,15 +2589,17 @@ class DataReader(LabelSelection):
             ret_locs, ret_rough = self.merge_close_samples(
                 ret_locs, ret_rough, pixel_tol)
         # insert *occurences value*
-        occurences = self.occurences_dict
-        for col, occs in occurences.items():
-            vmin, vmax = ret_rough.loc[:, col].T.values
-            occs = occs[:, np.newaxis]
-            ret_locs.iloc[
-                ((vmin[np.newaxis] <= occs) & (vmax > occs)).any(axis=0),
-                col] = self.occurences_value
+        self.merge_occurences(ret_locs)
 
         return ret_locs, ret_rough
+
+    def merge_occurences(self, locs):
+        occurences = self.occurences_dict
+        for col, occs in occurences.items():
+            closest = np.abs(
+                locs.index.values[np.newaxis] -
+                occs[:, np.newaxis]).argmin(axis=1)
+            locs.iloc[closest, col] = self.occurences_value
 
     def merge_close_samples(self, locs, rough_locs=None, pixel_tol=5):
         samples = locs.index.values.copy()
