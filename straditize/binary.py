@@ -571,7 +571,9 @@ class DataReader(LabelSelection):
     def get_labeled_array(self):
         """Create a connectivity-based labeled array of the :attr:`binary` data
         """
-        return skim.label(self.binary, 8, return_num=False)
+        return np.where(
+            self.binary, skim.label(self.binary, 8, return_num=False), 0
+        )
 
     def update_image(self, arr, amask):
         """Update the image after having removed binary data
