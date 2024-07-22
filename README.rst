@@ -2,6 +2,10 @@
 Digitizing stratigraphic diagrams
 =================================
 
+.. image:: http://unmaintained.tech/badge.svg
+    :target: http://unmaintained.tech/
+    :alt: No Maintenance Intended
+
 .. start-badges
 
 .. list-table::
@@ -58,6 +62,8 @@ Digitizing stratigraphic diagrams
     :alt: Latest github release
 
 .. end-badges
+
+**This module is not maintained!!!**
 
 STRADITIZE (Stratigraphic Diagram Digitizer) is an open-source program that
 allows stratigraphic figures to be digitized in a single semi-automated

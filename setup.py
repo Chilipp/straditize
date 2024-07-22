@@ -58,7 +58,7 @@ setup(name='straditize',
       description='Python package for digitizing pollen diagrams',
       long_description=readme(),
       classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 7 - Inactive',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Visualization',
         'Topic :: Scientific/Engineering :: GIS',
