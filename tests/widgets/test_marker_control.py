@@ -205,6 +205,24 @@ class MarkerControlTest(bt.StraditizeWidgetsTestCase):
         yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
         self.assertIn(maxy, yi)
 
+    def test_goto_lower_mark_03_multi_x_single_y(self):
+        """Navigate lower without crashing for horizontal multi-edge marks."""
+        self.straditizer.remove_marks()
+        self.marker_control.refresh()
+        ax = self.straditizer.ax
+        minx, maxx = xlim = sorted(self.data_xlim)
+        miny, maxy = sorted(self.data_ylim)
+        self.straditizer.marks = [cm.CrossMarks((xlim, miny), ax=ax),
+                                  cm.CrossMarks((xlim, maxy), ax=ax)]
+        self.marker_control.refresh()
+        ax.set_xlim(minx - 1, minx + 1)
+        ax.set_ylim(miny - 0.5, miny + 0.5)
+        self.marker_control.go_to_lower_mark()
+        xi = pd.Interval(*ax.get_xlim(), closed='both')
+        self.assertIn(minx, xi)
+        yi = pd.Interval(*sorted(ax.get_ylim()), closed='both')
+        self.assertIn(maxy, yi)
+
     def test_goto_upper_mark_01_single(self):
         """Test the navigation button to the right mark for one edge per mark
         """

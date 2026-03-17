@@ -7,6 +7,7 @@ import os
 from psutil import Process
 from collections import namedtuple
 from itertools import groupby
+from matplotlib.backend_bases import FigureCanvasBase, KeyEvent, MouseEvent
 
 # import skimage now to avoid
 # ImportError: dlopen: cannot load any more object with static TLS
@@ -14,6 +15,50 @@ from skimage.feature import match_template
 
 
 _proc = Process(os.getpid())
+
+
+def _install_canvas_event_shims():
+    """Restore test helper event methods removed from newer matplotlib."""
+    if not hasattr(FigureCanvasBase, 'button_press_event'):
+        def button_press_event(self, x, y, button=1, dblclick=False,
+                               guiEvent=None):
+            event = MouseEvent(
+                'button_press_event', self, x, y, button=button,
+                dblclick=dblclick, guiEvent=guiEvent)
+            self.callbacks.process('button_press_event', event)
+            return event
+
+        FigureCanvasBase.button_press_event = button_press_event
+
+    if not hasattr(FigureCanvasBase, 'button_release_event'):
+        def button_release_event(self, x, y, button=1, guiEvent=None):
+            event = MouseEvent(
+                'button_release_event', self, x, y, button=button,
+                guiEvent=guiEvent)
+            self.callbacks.process('button_release_event', event)
+            return event
+
+        FigureCanvasBase.button_release_event = button_release_event
+
+    if not hasattr(FigureCanvasBase, 'motion_notify_event'):
+        def motion_notify_event(self, x, y, guiEvent=None):
+            event = MouseEvent('motion_notify_event', self, x, y,
+                               guiEvent=guiEvent)
+            self.callbacks.process('motion_notify_event', event)
+            return event
+
+        FigureCanvasBase.motion_notify_event = motion_notify_event
+
+    if not hasattr(FigureCanvasBase, 'key_press_event'):
+        def key_press_event(self, key, guiEvent=None):
+            event = KeyEvent('key_press_event', self, key, guiEvent=guiEvent)
+            self.callbacks.process('key_press_event', event)
+            return event
+
+        FigureCanvasBase.key_press_event = key_press_event
+
+
+_install_canvas_event_shims()
 
 
 def get_consumed_ram():

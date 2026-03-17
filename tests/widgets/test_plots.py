@@ -78,6 +78,12 @@ class PlotControlTableTest(bt.StraditizeWidgetsTestCase):
         self.set_data_lims()
         self._test_plot('Diagram part')
 
+    def test_hiding_missing_diagram_part_is_noop(self):
+        row = list(self.table.get_artists_funcs).index('Diagram part')
+        cb = self.table.cellWidget(row, 0)
+        cb.setChecked(False)
+        cb.setChecked(True)
+
     def test_plot_column_starts(self):
         self.init_reader()
         self.reader.column_starts = self.column_starts

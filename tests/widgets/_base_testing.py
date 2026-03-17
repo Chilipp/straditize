@@ -8,7 +8,14 @@ import six
 import tempfile
 import os.path as osp
 import unittest
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
+from straditize.common import (
+    ensure_asyncio_event_loop,
+    patch_psyplot_gui_asyncio,
+    patch_psyplot_gui_backend,
+    patch_psyplot_gui_common,
+    patch_psyplot_gui_entrypoints,
+)
 
 
 test_dir = osp.dirname(__file__)
@@ -75,6 +82,11 @@ class StraditizeWidgetsTestCase(unittest.TestCase):
         if not running_in_gui:
             import psyplot_gui
             psyplot_gui.UNIT_TESTING = True
+            patch_psyplot_gui_asyncio()
+            patch_psyplot_gui_backend()
+            patch_psyplot_gui_common()
+            patch_psyplot_gui_entrypoints()
+            ensure_asyncio_event_loop()
             cls.window = main.MainWindow.run(show=False)
         else:
             cls.window = main.mainwindow

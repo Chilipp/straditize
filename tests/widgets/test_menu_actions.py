@@ -4,8 +4,10 @@ import pandas as pd
 import os.path as osp
 import _base_testing as bt
 import unittest
+from unittest import mock
 from psyplot_gui.compat.qtcompat import QTest, Qt
 from straditize.colnames import tesserocr
+from straditize.widgets.menu_actions import ExportDfDialog
 
 
 class MenuActionsTest(bt.StraditizeWidgetsTestCase):
@@ -41,6 +43,24 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
         self.assertEqual(self.reader._splitted, old_reader._splitted)
         self.assertFrameEqual(self.reader._full_df_orig,
                               old_reader._full_df_orig)
+
+    def test_netcdf_encoding_skips_string_like_variables(self):
+        """NetCDF compression should skip object and unicode variables."""
+        self.init_reader()
+        self.reader.digitize()
+        self.reader._get_sample_locs()
+        self.straditizer_widgets.refresh()
+
+        ds = self.straditizer.to_dataset()
+        encoding = self.straditizer_widgets.menu_actions._dataset_netcdf_encoding(
+            ds)
+
+        self.assertNotIn('reader_cls', encoding)
+        self.assertNotIn('reader_mod', encoding)
+        self.assertNotIn('colname', encoding)
+        self.assertEqual(encoding['reader_image']['zlib'], True)
+        self.assertEqual(encoding['reader_image']['complevel'], 4)
+        self.assertEqual(encoding['mirror_colnames']['zlib'], True)
 
     @unittest.skipIf(tesserocr is None, "requires tesserocr")
     def test_save_and_load_05_colnames(self):
@@ -148,7 +168,8 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
         self.straditizer_widgets.menu_actions.export_final(fname)
         self.assertTrue(osp.exists(fname), msg=fname + ' is missing!')
         exported = pd.read_csv(fname, index_col=0, comment='#')
-        self.assertFrameEqual(exported, self.straditizer.final_df)
+        self.assertFrameEqual(
+            exported, self.straditizer.final_df, check_index_type=False)
 
     def test_export_full_df(self):
         """Test the exporting of the final DataFrame"""
@@ -159,7 +180,36 @@ class MenuActionsTest(bt.StraditizeWidgetsTestCase):
         self.straditizer_widgets.menu_actions.export_full(fname)
         self.assertTrue(osp.exists(fname), msg=fname + ' is missing!')
         exported = pd.read_csv(fname, index_col=0, comment='#')
-        self.assertFrameEqual(exported, self.straditizer.full_df)
+        self.assertFrameEqual(
+            exported, self.straditizer.full_df, check_index_type=False)
+
+    def test_export_final_excel(self):
+        """Excel export should keep working with modern pandas."""
+        self.init_reader()
+        self.reader.digitize()
+        self.reader._get_sample_locs()
+        fname = self.get_random_filename(suffix='.xlsx')
+
+        self.straditizer_widgets.menu_actions.export_final(fname)
+
+        self.assertTrue(osp.exists(fname), msg=fname + ' is missing!')
+        exported = pd.read_excel(fname, sheet_name='Data', index_col=0)
+        self.assertFrameEqual(
+            exported, self.straditizer.final_df, check_index_type=False,
+            check_dtype=False)
+
+    def test_export_dialog_handles_qt_resize_with_integer_sizes(self):
+        """The export dialog should not pass float sizes to Qt resize."""
+        self.init_reader()
+
+        with mock.patch.object(
+                ExportDfDialog, 'exec_', autospec=True) as exec_:
+            dialog = ExportDfDialog.export_df(
+                self.straditizer_widgets, self.straditizer.full_df,
+                self.straditizer, exec_=False)
+
+        self.assertIsInstance(dialog, ExportDfDialog)
+        self.assertFalse(exec_.called)
 
 
 if __name__ == '__main__':

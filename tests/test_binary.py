@@ -3,8 +3,11 @@
 Test module for the :mod:`straditize.binary` module
 """
 import six
+import types
 import unittest
+import warnings
 from itertools import chain, starmap
+from unittest import mock
 import numpy as np
 from straditize import binary
 import pandas as pd
@@ -282,6 +285,180 @@ class DataReaderTest(unittest.TestCase, AlmostArrayEqualMixin):
             self.tearDown()
             self.setUp(seed=None, plot=False)
             test()
+
+    def test_set_hline_locs_from_selection_without_runtimewarning(self):
+        """Zero-valued rows should not trigger divide warnings."""
+        image = np.array([[0, 0, 0],
+                          [1, 1, 0],
+                          [0, 0, 0]], dtype=np.int8)
+        reader = binary.DataReader(image, plot=False)
+        selection = image.astype(bool)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', RuntimeWarning)
+            reader.set_hline_locs_from_selection(selection)
+
+        self.assertEqual(reader.hline_locs.tolist(), [1])
+
+    def test_set_vline_locs_from_selection_without_runtimewarning(self):
+        """Zero-valued columns should not trigger divide warnings."""
+        image = np.array([[0, 1, 0],
+                          [0, 1, 0],
+                          [0, 0, 0]], dtype=np.int8)
+        reader = binary.DataReader(image, plot=False)
+        selection = image.astype(bool)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', RuntimeWarning)
+            reader.set_vline_locs_from_selection(selection)
+
+        self.assertEqual(reader.vline_locs.tolist(), [1])
+
+    def test_init_2d_int8_image_without_overflow(self):
+        """2D int8 masks should still become an RGBA preview image."""
+        image = np.ones((3, 3), dtype=np.int8)
+
+        reader = binary.DataReader(image, plot=False)
+
+        rgba = np.asarray(reader.image)
+        self.assertEqual(rgba.dtype, np.uint8)
+        self.assertEqual(rgba.shape, (3, 3, 4))
+        self.assertTrue(np.all(rgba[..., :-1] == 255))
+        self.assertTrue(np.all(rgba[..., -1] == 255))
+        self.assertTrue(np.array_equal(reader.binary, image))
+
+    def test_plot_results_uses_headless_figure_helper(self):
+        """Headless plot rendering should avoid pyplot figure managers."""
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+
+        class _BlockSignals(object):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        class _FakeProject(object):
+            def __init__(self, axis):
+                self._array = types.SimpleNamespace(
+                    psy=types.SimpleNamespace(update=mock.Mock()))
+                self.axes = {
+                    axis: types.SimpleNamespace(update=mock.Mock())}
+                self.main = object()
+
+            def __getitem__(self, key):
+                return self._array
+
+        reader = binary.DataReader(np.array([[1, 0], [0, 1]], dtype=np.int8),
+                                   plot=False)
+        reader.all_column_starts = np.array([0])
+        reader.all_column_ends = np.array([2])
+        reader.columns = [0]
+        df = pd.DataFrame({0: [0.25, 0.75]}, index=[0, 1])
+
+        fig = Figure()
+        FigureCanvasAgg(fig)
+        axis = fig.subplots()
+        grouper = types.SimpleNamespace(
+            axes=[axis],
+            plotter_arrays=[types.SimpleNamespace(
+                psy=types.SimpleNamespace(arr_name='0'))])
+        reader.create_grouper = mock.Mock(return_value=grouper)
+
+        import psyplot.project as psy
+
+        with mock.patch(
+                'straditize.straditizer.should_use_headless_figure',
+                return_value=True), \
+                mock.patch(
+                    'straditize.straditizer.create_matplotlib_figure',
+                    return_value=fig) as create_fig, \
+                mock.patch(
+                    'matplotlib.pyplot.figure',
+                    side_effect=AssertionError(
+                        'pyplot.figure should not be used')), \
+                mock.patch.object(
+                    psy.Project, 'block_signals', _BlockSignals()), \
+                mock.patch.object(
+                    psy, 'gcp',
+                    return_value=lambda **kwargs: _FakeProject(axis)), \
+                mock.patch.object(psy, 'scp') as scp:
+            sp, groupers = reader.plot_results(df)
+
+        create_fig.assert_called_once_with(headless=True)
+        scp.assert_not_called()
+        self.assertIs(groupers[0], grouper)
+        self.assertIsNotNone(sp)
+
+    def test_plot_results_overlay_area_uses_background_fill_and_line(self):
+        """Area overlays should draw the image, fill, and boundary line."""
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+
+        reader = binary.DataReader(np.ones((6, 8), dtype=np.int8), plot=False,
+                                   extent=[2, 10, 6, 0])
+        reader.columns = [0]
+        reader.all_column_starts = np.array([0])
+        reader._full_df = pd.DataFrame({0: [1.0, 2.0, 3.0]}, index=[0, 1, 2])
+
+        fig = Figure()
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        image = np.zeros((8, 12, 4), dtype=np.uint8)
+
+        fig, ax, artists = reader.plot_results_overlay(
+            reader._full_df, ax=ax, samples=False, image=image,
+            image_extent=[0, 12, 8, 0])
+
+        self.assertIs(artists['image'], ax.images[0])
+        self.assertEqual(len(artists['fills']), 1)
+        self.assertEqual(len(artists['lines']), 1)
+
+    def test_plot_results_overlay_line_draws_lines_without_fill(self):
+        """Line overlays should not add area fills."""
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+
+        reader = binary.LineDataReader(
+            np.ones((6, 8), dtype=np.int8), plot=False, extent=[0, 8, 6, 0])
+        reader.columns = [0]
+        reader.all_column_starts = np.array([0])
+        reader._full_df = pd.DataFrame({0: [2.0, 3.0, 1.0]}, index=[0, 1, 2])
+
+        fig = Figure()
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+
+        _, _, artists = reader.plot_results_overlay(
+            reader._full_df, ax=ax, samples=False)
+
+        self.assertEqual(len(artists['fills']), 0)
+        self.assertEqual(len(artists['lines']), 1)
+
+    def test_plot_results_overlay_bar_samples_use_rough_locations(self):
+        """Bar sample overlays should use the rough sample spans."""
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+
+        reader = binary.BarDataReader(
+            np.ones((12, 8), dtype=np.int8), plot=False, extent=[1, 9, 12, 0])
+        reader.columns = [0]
+        reader.all_column_starts = np.array([0])
+        reader._sample_locs = pd.DataFrame({0: [2.0, 4.0]}, index=[5.0, 9.0])
+        reader._rough_locs = pd.DataFrame(
+            [[4.0, 7.0], [8.0, 11.0]], index=reader._sample_locs.index,
+            columns=pd.MultiIndex.from_product([[0], ['vmin', 'vmax']]))
+
+        fig = Figure()
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+
+        _, _, artists = reader.plot_results_overlay(
+            reader.sample_locs, ax=ax, samples=True)
+
+        self.assertEqual(len(artists['fills']), 2)
+        self.assertEqual(len(artists['lines']), 2)
 
 
 if __name__ == '__main__':

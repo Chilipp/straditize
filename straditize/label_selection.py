@@ -203,7 +203,8 @@ class LabelSelection(object):
         arr &= ~skim.remove_small_objects(arr, n)
         if not arr.any():
             return
-        labeled, num_labels = skim.label(arr, 8, return_num=True)
+        labeled, num_labels = skim.label(
+            arr, connectivity=2, return_num=True)
         min_height = np.ceil(0.05 * arr.shape[0])
         min_width = np.ceil(0.05 * arr.shape[1])
         self._ellipses = artists = []
@@ -279,7 +280,7 @@ class LabelSelection(object):
             self._select_img.set_norm(mcol.BoundaryNorm(bounds, len(bounds)-1))
             self._update_magni_img()
 
-    @docstrings.get_sectionsf('LabelSelection.enable_label_selection')
+    @docstrings.get_sections(base='LabelSelection.enable_label_selection')
     def enable_label_selection(self, arr, ncolors, img=None,
                                set_picker=False, **kwargs):
         """Start the selection of labels

@@ -4,16 +4,19 @@ channels:
     - chilipp/label/master
     - chilipp
 dependencies:
-    - python=3.7
-    - psyplot-gui>=1.2.0
+    - python=3.12
+    - psyplot-gui>=1.5.0
     - pygments
     - sphinx!=1.7.5
-    - psy-simple>=1.2.0
-    - psyplot>=1.2.0
+    - psy-simple>=1.5.0
+    - psyplot>=1.5.1
+    - pandas>=2.3
+    - matplotlib>=3.8
+    - xarray>=2024.7
     - netcdf4
     - openpyxl
     - scikit-image
-    - scipy
+    - scipy>=1.13
     - psy-strat
     - pip:
         - autodocsumm

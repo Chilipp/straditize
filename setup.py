@@ -21,7 +21,7 @@ class PyTest(TestCommand):
 
 
 def readme():
-    with open('README.rst') as f:
+    with open('README.rst', encoding = 'utf-8') as f:
         return f.read()
 
 
@@ -31,11 +31,16 @@ with open(osp.join('straditize', 'version.py')) as f:
 
 
 dependencies = [
-    'psyplot-gui>=1.2.3',
-    'psyplot>=1.2.0',
+    'numpy>=1.26',
+    'pandas>=2.3',
+    'matplotlib>=3.8',
+    'xarray>=2024.7',
+    'psyplot-gui>=1.5.0',
+    'psyplot>=1.5.1',
     'psy-strat',
-    'scipy',
+    'scipy>=1.13',
     'scikit-image',
+    'pillow',
     'openpyxl',
     'netCDF4',
 ]
@@ -65,8 +70,11 @@ setup(name='straditize',
         'Topic :: Scientific/Engineering',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
         'Operating System :: OS Independent',
       ],
       keywords=('visualization earth-sciences paleo climate paleoclimate '
@@ -75,6 +83,7 @@ setup(name='straditize',
       author='Philipp Sommer',
       author_email='philipp.sommer@unil.ch',
       license="GPLv3",
+      python_requires='>=3.10',
       packages=find_packages(exclude=['docs', 'tests*', 'examples']),
       install_requires=dependencies,
       package_data={'straditize': [

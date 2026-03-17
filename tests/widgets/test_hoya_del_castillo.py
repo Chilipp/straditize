@@ -286,7 +286,7 @@ class TutorialTest(bt.StraditizeWidgetsTestCase):
         self.skip_until(11)
         sw = self.straditizer_widgets
         self._test_hint(sw.attrs_button.text())
-        QTest.mouseClick(sw.attrs_button, Qt.LeftButton)
+        sw.attrs_button.click()
         self._test_hint('Add some meta')
 
         sw.straditizer.attrs.iloc[0, 0] = 'me'

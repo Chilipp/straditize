@@ -3,6 +3,7 @@
 This module test :mod:`straditize.__main__`"""
 import _base_testing as bt
 import unittest
+import warnings
 import pandas as pd
 from straditize.__main__ import start_app, get_parser
 
@@ -35,6 +36,19 @@ class CommandLineTest(bt.StraditizeWidgetsTestCase):
         parser.parse_known2func(cmd.split())
         df = pd.read_csv(temp_file, index_col=0)
         self.assertTrue(len(df))
+
+    def test_get_parser_avoids_dedents_deprecation(self):
+        with warnings.catch_warnings(record=True) as recorded:
+            warnings.simplefilter('always')
+            parser = get_parser(create=False)
+
+        self.assertIsNotNone(parser)
+        messages = [
+            str(w.message) for w in recorded
+            if issubclass(w.category, DeprecationWarning)]
+        self.assertFalse(
+            any('dedents method is deprecated' in msg for msg in messages),
+            msg='Unexpected deprecation warnings: %s' % messages)
 
 
 if __name__ == '__main__':

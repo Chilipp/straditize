@@ -1,7 +1,9 @@
 """Test the straditize.widgets.data module"""
 import numpy as np
 import pandas as pd
+import warnings
 from itertools import chain
+from unittest import mock
 from straditize import binary
 import os.path as osp
 import _base_testing as bt
@@ -299,17 +301,78 @@ class DigitizerTest(bt.StraditizeWidgetsTestCase):
         ref.index = ref.index.astype(int)
         ref.columns = ref.columns.astype(int)
         self.digitizer.load_samples(fname)
-        self.assertFrameEqual(ref, self.reader.sample_locs,
-                              check_names=False)
+        self.assertFrameEqual(
+            ref, self.reader.sample_locs,
+            check_names=False, check_column_type=False)
+
+    def test_load_samples_without_futurewarning(self):
+        """Loading samples should not rely on deprecated pandas indexing."""
+        self.test_digitize()
+        fname = self.get_fig_path(osp.join('data', 'data.csv'))
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always', FutureWarning)
+            self.digitizer.load_samples(fname)
+        self.assertFalse(
+            any(issubclass(w.category, FutureWarning) for w in caught),
+            msg=[str(w.message) for w in caught])
+
+    def test_find_samples_uses_reader_default_for_non_stacked_reader(self):
+        self.test_digitize()
+        calls = []
+        samples = pd.DataFrame([[1.0, 2.0, 3.0]], index=[10],
+                               columns=self.reader.columns)
+        rough = pd.DataFrame(
+            [[9, 11, 9, 11, 9, 11]], index=[10],
+            columns=pd.MultiIndex.from_product(
+                [self.reader.columns, ['vmin', 'vmax']]))
+
+        def fake_find_samples(**kwargs):
+            calls.append(kwargs)
+            return samples.copy(), rough.copy()
+
+        self.reader.find_samples = fake_find_samples
+
+        QTest.mouseClick(self.digitizer.btn_find_samples, Qt.LeftButton)
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]['pixel_tol'],
+                         self.digitizer.sp_pixel_tol.value())
+        self.assertFrameEqual(self.reader.sample_locs, samples)
 
     def test_plot_results(self):
-        """Test the plotting of the results"""
+        """Plot results should overlay the digitization on the source image."""
         sw = self.straditizer_widgets
+        self.assertFalse(hasattr(sw.plot_control.results_plot, 'cb_transformed'))
         self.assertFalse(sw.plot_control.results_plot.cb_final.isEnabled())
         self.test_load_samples()
-        sp, groupers = sw.plot_control.results_plot.plot_results()
-        self.assertEqual(
-            len(sp), len(self.straditizer.data_reader._full_df.columns))
+        fig, ax, artists = sw.plot_control.results_plot.plot_results()
+        dialog = sw.plot_control.results_plot.results_dialog
+        self.assertIsNotNone(dialog)
+        self.assertTrue(dialog.isVisible())
+        self.assertIs(artists['image'], ax.images[0])
+        self.assertGreaterEqual(len(artists['fills']), 1)
+        self.assertGreaterEqual(len(artists['lines']), 1)
+        QTest.mouseClick(dialog.btn_close, Qt.LeftButton)
+        self.assertFalse(dialog.isVisible())
+
+    def test_plot_results_dialog_exports_current_data(self):
+        """The result-review dialog should export the data it is showing."""
+        self.test_load_samples()
+        results_plot = self.straditizer_widgets.plot_control.results_plot
+        results_plot.cb_final.setChecked(True)
+
+        with mock.patch.object(
+                self.straditizer_widgets.menu_actions,
+                '_export_df') as export_df:
+            results_plot.plot_results()
+            dialog = results_plot.results_dialog
+            QTest.mouseClick(dialog.btn_export, Qt.LeftButton)
+
+        self.assertTrue(export_df.called)
+        exported = export_df.call_args[0][0]
+        self.assertFrameEqual(
+            exported, self.straditizer.final_df,
+            check_index_type=False, check_dtype=False)
 
 
 class ChildReaderFrameworkTest(bt.StraditizeWidgetsTestCase):
@@ -588,6 +651,34 @@ class BarReaderTest(bt.StraditizeWidgetsTestCase):
             self.assertEqual(len(set(indices)), len(indices))
             # check that the bars are valid
             self.assertLessEqual(set(indices), ref_bars)
+
+    def test_split_bars_uses_headless_figure_helper(self):
+        """Bar split suggestions should avoid GUI pyplot figures."""
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+
+        self.test_digitize()
+        self.assertTrue(any(self.reader._splitted.values()))
+
+        tree = self.digitizer.tree_bar_split
+        item = tree.topLevelItem(0).child(0)
+        fig = Figure()
+        FigureCanvasAgg(fig)
+
+        with mock.patch(
+                'straditize.widgets.data.should_use_headless_figure',
+                return_value=True), \
+                mock.patch(
+                    'straditize.widgets.data.create_matplotlib_figure',
+                    return_value=fig) as create_fig, \
+                mock.patch(
+                    'matplotlib.pyplot.figure',
+                    side_effect=AssertionError(
+                        'pyplot.figure should not be used')):
+            tree.start_splitting(item)
+
+        create_fig.assert_called_once_with(headless=True)
+        self.assertIs(tree.suggestions_fig, fig)
 
 
 if __name__ == '__main__':

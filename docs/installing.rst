@@ -7,75 +7,48 @@ Installation
 
 How to install
 --------------
-You can either install straditize through a package manager such as
-:ref:`conda <install-conda>` or :ref:`pip <install-pip>` or install it
-:ref:`from source <install-source>`.
+For the refreshed ``0.2`` line, the maintained path is to install straditize
+from a source checkout inside an isolated environment. The recommended options
+below differ only in how the environment itself is created.
 
 .. _install-conda:
 
 Installation using conda
 ^^^^^^^^^^^^^^^^^^^^^^^^
-We highly recommend to use conda_ for installing straditize. Here you can
-install it via manually via the `chilipp channel`_
+We recommend an isolated conda_ or mamba_ environment and a source install for
+the refreshed ``0.2`` release, because that keeps the Qt and scientific Python
+stack explicit.
 
-After having downloaded and installed  anaconda_, open a terminal (or the
-*Anaconda Prompt* on windows) and install straditize from the
-`conda-forge channel`_. You can choose: We recommend to install straditize into
-its own environment via::
+After having installed conda_ or mamba_, open a terminal (or the
+*Anaconda Prompt* on Windows) and create a dedicated environment via::
 
-    $ conda create -n straditize -c conda-forge straditize
-
-and then activate this environment via::
-
+    $ mamba create -n straditize python=3.12 "numpy>=1.26" "pandas>=2.3" "matplotlib>=3.8" "scipy>=1.13" "xarray>=2024.7" "psyplot=1.5.1" "psyplot-gui=1.5.0" "pyqt=5.15" pyqtwebengine netcdf4 openpyxl scikit-image pillow pip
     $ conda activate straditize
 
-In that way you do not mess up your base environment. Nevertheless you can also install it into an existing environment via::
+Then install straditize from a checkout via::
 
-    $ conda install -c conda-forge straditize
+    $ git clone https://github.com/Chilipp/straditize.git
+    $ cd straditize
+    $ pip install -e .
 
 In the same terminal, now type ``straditize`` to start the software.
 
-.. note::
-
-    The latest master branch on github is always available under the ``master``
-    label on the `chilipp channel`_. Just type::
-
-        $ conda install -c chilipp/label/master straditize
-
-    to install the latest version from the master branch. Note that you then
-    have to add the `conda-forge` channel to your default channels via::
-
-        $ conda config --add channels conda-forge
-
 .. _install-pip:
 
-Installation using pip
-^^^^^^^^^^^^^^^^^^^^^^
-If you do not want to use conda for managing your python packages and already
-have python3 installed on your computer, you can also
-use the python package manager ``pip``. To be on the safe side, make sure you
-have the :ref:`dependencies` installed. If so, open a terminal and install it
-via::
+Installation using ``venv`` + pip
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you already manage isolated environments with ``venv`` or another Python
+tool, first install the validated dependency stack and then install straditize
+from source::
 
-    $ pip install straditize
+    $ python -m venv .venv
+    $ .venv\\Scripts\\activate  # on Linux/macOS: source .venv/bin/activate
+    $ pip install "numpy>=1.26" "pandas>=2.3" "matplotlib>=3.8" "scipy>=1.13" "xarray>=2024.7" "psyplot==1.5.1" "psyplot-gui==1.5.0" "PyQt5!=5.12" PyQtWebEngine netCDF4 openpyxl scikit-image pillow
+    $ git clone https://github.com/Chilipp/straditize.git
+    $ cd straditize
+    $ pip install -e .
 
 To open the software, type ``straditize`` in the same terminal.
-
-.. _install-source:
-
-Installation from source
-^^^^^^^^^^^^^^^^^^^^^^^^
-To install it from source, make sure you have the :ref:`dependencies`
-installed. Download (or clone) the github_ repository, e.g. via::
-
-    git clone https://github.com/Chilipp/straditize.git
-
-and install it via::
-
-    pip install .  # or python setup.py install, but pip is recommended
-
-from your terminal. To open the software, type ``straditize`` in the same
-terminal.
 
 .. _dependencies:
 
@@ -83,15 +56,16 @@ Dependencies
 ------------
 Required dependencies
 ^^^^^^^^^^^^^^^^^^^^^
-straditize has been tested for python>=3.6. Furthermore the
+straditize ``0.2`` has been validated with python>=3.10. Furthermore the
 package is built upon multiple other packages, mainly
 
-- :ref:`psyplot-gui <psyplot_gui:psyplot-gui>`>1.2.0: The graphical user
+- :ref:`psyplot-gui <psyplot_gui:psyplot-gui>`>=1.5.0: The graphical user
   interface for psyplot
 - PyQt5_: Pythons Qt bindings that are required by psyplot-gui (note that
   PyQt4 is **not** supported!)
-- `numpy, scipy`_ and pandas_: for the data management and compuations
-- matplotlib_>=2.0: **The** python visualiation package
+- `numpy, scipy`_ and pandas_: for the data management and computations
+- matplotlib_>=3.8: **The** python visualization package
+- xarray_>=2024.7: dataset handling used by psyplot
 - pillow_: for reading and writing images
 - scikit-image_: For image recognition features
 - openpyxl_: For exports to Excel files
@@ -117,10 +91,12 @@ We furthermore recommend to use
 .. _anaconda: https://conda.io/en/latest/miniconda.html
 .. _chilipp channel: https://anaconda.org/chilipp
 .. _conda-forge channel: https://conda-forge.org/
+.. _mamba: https://mamba.readthedocs.io/
 .. _matplotlib: http://matplotlib.org
 .. _PyQt5: https://www.riverbankcomputing.com/software/pyqt/intro
 .. _numpy, scipy: https://docs.scipy.org/doc/
 .. _pandas: http://pandas.pydata.org/
+.. _xarray: https://docs.xarray.dev/
 .. _scikit-image: https://scikit-image.org/
 .. _pillow: https://pillow.readthedocs.io/en/stable/
 .. _openpyxl: https://openpyxl.readthedocs.io/en/stable/
@@ -130,34 +106,35 @@ We furthermore recommend to use
 
 Running the tests
 -----------------
-We use pytest_ to run our tests. So you can either run clone out the github_
-repository and run::
+We use pytest_ to run our tests. Clone the github_ repository and run::
 
-    $ python setup.py test
-
-or install pytest_ by yourself and run
-
-    $ py.test
+    $ python -m pytest -q
 
 Alternatively you can build the recipe in the `conda-recipe` directory via
 
     $ conda build conda-recipe
 
-which will also run the test suite.
+which will also run the test suite. The recipe is kept for release and
+compatibility work, but it is not the primary end-user installation path for
+``0.2``.
 
 .. warning::
 
-    Running the entire test suite in one single process (such as ``python setup.py test``) might be quite memory consumptive because it involves the creation and closing of many PyQt widgets and unfortunately some memory is leaked from one test to another. Therefore we recommend to split the tests into multiple processes, e.g.::
+    Running the entire test suite in one single process might be quite memory
+    consumptive because it involves the creation and closing of many PyQt
+    widgets and unfortunately some memory is leaked from one test to another.
+    Therefore we recommend to split the tests into multiple processes, e.g.::
 
         # run the test suite but ignore some modules
-        python setup.py test -a '--ignore=tests/widgets/test_selection_toolbar.py --ignore=tests/widgets/test_samples_table.py --ignore=tests/widgets/test_beginner.py --ignore=tests/widgets/test_hoya_del_castillo.py'
+        python -m pytest -q --ignore=tests/widgets/test_selection_toolbar.py --ignore=tests/widgets/test_samples_table.py --ignore=tests/widgets/test_beginner.py --ignore=tests/widgets/test_hoya_del_castillo.py
         # run the tests for the previously ignored modules
-        python setup.py test -a 'tests/widgets/test_selection_toolbar.py
-        tests/widgets/test_samples_table.py'
-        python setup.py test -a 'tests/widgets/test_beginner.py'
-        python setup.py test -a 'tests/widgets/test_hoya_del_castillo.py'
+        python -m pytest -q tests/widgets/test_selection_toolbar.py tests/widgets/test_samples_table.py
+        python -m pytest -q tests/widgets/test_beginner.py
+        python -m pytest -q tests/widgets/test_hoya_del_castillo.py
 
-    or equivalently with `py.test` instead of `python setup.py test -a`. Note that `conda build conda-recipe` already splits the session into multiple processes.
+    or equivalently with `pytest` instead of `python -m pytest -q`. Note that
+    `conda build conda-recipe` already splits the session into multiple
+    processes.
 
     Nevertheless, you should expect about ~180 tests to be ran and a total memory usage of about 3 to 4GB RAM.
 
@@ -196,41 +173,19 @@ Updating straditize
 
 Updating the software depends on how you installed it on your system.
 
-.. _update-conda:
-
-Updating via conda
-^^^^^^^^^^^^^^^^^^
-If you installed straditize via conda (see :ref:`install-conda`), you can
-update it via::
-
-    $ conda update -c chilipp straditize
-
-.. _update-pip:
-
-Updating via pip
-^^^^^^^^^^^^^^^^
-If you installed it via ``pip`` (see :ref:`install-pip`), you can update it
-via::
-
-    $ pip install -U straditize
-
-.. _update-source:
-
-Updating from source files
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-If you installed it via ``python setup.py install`` from the source repository
-(see :ref:`install-source`), just run that command again after having checked
-out the latest version from github.
+Updating from a source checkout
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Pull the latest version from github_ in your checkout and run
+``pip install -e .`` again inside the same environment.
 
 
 .. _uninstall:
 
 Uninstallation
 --------------
-The uninstallation depends on the system you used to install straditize. Either
-you did it via :ref:`conda <install-conda>` (see :ref:`uninstall-conda`), via
-:ref:`pip <install-pip>` or from the
-:ref:`source files <install-source>` (see :ref:`uninstall-pip`).
+The uninstallation depends on the environment you used for the source install.
+In practice this means either removing the whole dedicated environment or
+uninstalling the editable package from it.
 
 Anyway, if you may want to remove the psyplot configuration files. If you did
 not specify anything else (see :func:`psyplot.config.rcsetup.psyplot_fname`),
@@ -238,21 +193,10 @@ the configuration files for psyplot are located in the user home directory.
 Under linux and OSX, this is ``$HOME/.config/psyplot``. On other platforms it
 is in the ``.psyplot`` directory in the user home.
 
-.. _uninstall-conda:
-
-Uninstallation via conda
-^^^^^^^^^^^^^^^^^^^^^^^^
-If you installed straditize via :ref:`conda <install-conda>`, simply run::
-
-    conda uninstall straditize
-
 .. _uninstall-pip:
 
-Uninstallation via pip
-^^^^^^^^^^^^^^^^^^^^^^
-Uninstalling via pip simply goes via::
+Uninstallation from the active environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Uninstalling the editable package goes via::
 
     pip uninstall straditize
-
-Note, however, that you should use :ref:`conda <uninstall-conda>` if you also
-installed it via conda.

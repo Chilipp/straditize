@@ -1,0 +1,35 @@
+[workspace]
+authors = ["chmzs <chmzs@outlook.com>"]
+channels = ["conda-forge"]
+name = "straditize_pandas_233_modern_stack"
+platforms = ["win-64"]
+version = "0.1.0"
+
+[pypi-options]
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+extra-index-urls = ["https://pypi.org/simple"]
+
+[tasks]
+
+[dependencies]
+python = "3.9.*"
+netcdf4 = ">=1.6.1,<2"
+pyqt = ">=5.15.7,<6"
+pyqtwebengine = ">=5.15.7,<6"
+matplotlib = "3.8.*"
+pip = ">=24.0,<27"
+pandas = "2.3.*"
+scipy = "1.13.*"
+scikit-image = "0.19.*"
+xarray = "2024.7.*"
+openpyxl = ">=3.1,<4"
+pytest = ">=8.4.1,<9"
+psutil = ">=7.0.0,<8"
+psyplot = ">=1.5.1,<2"
+psyplot-gui = ">=1.5.0,<2"
+psy-strat = ">=0.1.1,<0.2"
+docrep = ">=0.3.2,<0.4"
+funcargparse = ">=0.2.5,<0.3"
+
+[pypi-dependencies]
+straditize = { path = "d:\\users\\chmzs\\Documents\\Pixi_env\\straditize\\straditize\\.worktrees\\pandas-3x-prep", editable = true }

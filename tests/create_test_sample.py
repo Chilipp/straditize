@@ -80,7 +80,7 @@ class TestSample(object):
         vals = np.zeros((nsamples, ncols), dtype=int)
         maxvals = np.zeros(ncols, dtype=int)
         summed_cols = width - ncols * 2  # the widths of all columns summed up
-        summed_row = np.int(width * 2 / 3.) - ncols * 2  # the sum for each row
+        summed_row = int(width * 2 / 3.) - ncols * 2  # the sum for each row
         minval = 0.01 * summed_row  # at minimum we need 1 for each column
         while (maxvals < minval).any():
             maxvals[:] = get_numbers(ncols, summed_cols)

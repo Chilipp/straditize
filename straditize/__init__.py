@@ -37,6 +37,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
+from straditize.common import configure_runtime_warning_filters
 from straditize.version import __version__
+
+configure_runtime_warning_filters()
 
 __author__ = "Philipp S. Sommer (philipp.sommer@unil.ch)"

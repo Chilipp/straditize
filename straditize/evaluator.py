@@ -4,17 +4,16 @@ import shutil
 import multiprocessing as mp
 import warnings
 from PIL import Image
-from functools import partial
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
-from straditize.common import docstrings
+from straditize.common import docstrings, nearest_index_position
 from straditize.straditizer import Straditizer
 from psy_strat.stratplot import stratplot
 from itertools import filterfalse
 
 
-docstrings.get_sectionsf('stratplot')(stratplot)
+docstrings.get_sections(base='stratplot')(stratplot)
 
 
 def rmse(sim, ref):
@@ -363,8 +362,8 @@ class StraditizeEvaluator:
         results = self.results
         ref = self.data.fillna(0)
         full_df = stradi.full_df
-        indexes = list(map(partial(full_df.index.get_loc, method='nearest'),
-                           ref.index))
+        indexes = [nearest_index_position(full_df.index, value)
+                   for value in ref.index]
         sim = full_df.iloc[indexes].values
         ref = ref.values
         results[base + 'rmse'] = rmse(sim, ref)
@@ -395,9 +394,8 @@ class StraditizeEvaluator:
         results[base + 'missmatch'] = 100 * abs(nfound - nref)/ nref
         results[base + 'missing'] = nref - nfound
 
-        closest = list(map(
-            partial(final.index.get_loc, method='nearest'),
-            ref.index))
+        closest = [nearest_index_position(final.index, value)
+                   for value in ref.index]
 
         age_range = ref.index.max() - ref.index.min()
 

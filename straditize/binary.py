@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """A module to read in and digitize the pollen diagram
 
 **Disclaimer**
@@ -27,7 +27,7 @@ from functools import wraps
 from itertools import chain, starmap, repeat, takewhile
 from collections import defaultdict
 import matplotlib.colors as mcol
-from straditize.common import docstrings
+from straditize.common import docstrings, nearest_index_position
 from straditize.label_selection import LabelSelection
 import xarray as xr
 from psyplot.data import safe_list
@@ -36,6 +36,17 @@ if six.PY2:
     from itertools import izip_longest as zip_longest
 else:
     from itertools import zip_longest
+
+
+RESULT_OVERLAY_COLORS = list(mcol.TABLEAU_COLORS.values())
+RESULT_OVERLAY_FILL_ALPHA = 0.3
+RESULT_OVERLAY_LINE_ALPHA = 0.95
+RESULT_OVERLAY_LINEWIDTH = 1.75
+
+
+def result_overlay_color(index):
+    """Return a stable overlay color for the given column index."""
+    return RESULT_OVERLAY_COLORS[index % len(RESULT_OVERLAY_COLORS)]
 
 
 def only_parent(func):
@@ -159,8 +170,9 @@ class DataReader(LabelSelection):
         if self.parent._sample_locs is not None:
             return self.parent._sample_locs
         elif self.parent._full_df is not None:
-            self.parent._sample_locs = pd.DataFrame(
-                [], columns=list(self.parent._full_df.columns))
+            empty = self.parent._full_df.iloc[0:0].copy()
+            empty.index = pd.Index([], name='sample')
+            self.parent._sample_locs = empty
             return self.parent._sample_locs
 
     @sample_locs.setter
@@ -180,7 +192,7 @@ class DataReader(LabelSelection):
         ``ncols * 2`` columns, where ``ncols`` is the number of columns
         in the :attr:`sample_locs`.
 
-        If the potential sample :attr:`sample_locs`\ ``.iloc[i, col]`` ranges
+        If the potential sample :attr:`sample_locs`\\ ``.iloc[i, col]`` ranges
         ``j`` to ``k`` (see the :meth:`find_potential_samples` method), the
         cell at ``rough_locs.iloc[i, col * 2]`` specifies the first y-pixel
         (``j``) and ``rough_locs.iloc[i, col * 2 + 1]`` the last y-pixel (+1),
@@ -199,7 +211,7 @@ class DataReader(LabelSelection):
         ``ncols * 2`` columns, where ``ncols`` is the number of columns
         in the :attr:`sample_locs`.
 
-        If the potential sample :attr:`sample_locs`\ ``.iloc[i, col]`` ranges
+        If the potential sample :attr:`sample_locs`\\ ``.iloc[i, col]`` ranges
         ``j`` to ``k`` (see the :meth:`find_potential_samples` method), the
         cell at ``rough_locs.iloc[i, col * 2]`` specifies the first y-pixel
         (``j``) and ``rough_locs.iloc[i, col * 2 + 1]`` the last y-pixel (+1),
@@ -448,7 +460,7 @@ class DataReader(LabelSelection):
 
     label_arrs = ['binary', 'labels', 'image_array']
 
-    @docstrings.get_sectionsf('DataReader')
+    @docstrings.get_sections(base='DataReader')
     def __init__(self, image, ax=None, extent=None,
                  plot=True, children=[], parent=None, magni=None,
                  plot_background=False, binary=None):
@@ -483,9 +495,11 @@ class DataReader(LabelSelection):
         if np.ndim(image) == 2:
             if binary is None:
                 self.binary = np.asarray(image, dtype=np.int8)
-            image = np.tile(
-                image[..., np.newaxis].astype(np.int8), (1, 1, 4)) * 255
-            image[..., -1] = 255
+            rgba = np.tile(
+                np.asarray(image, dtype=np.uint8)[..., np.newaxis], (1, 1, 4))
+            rgba[..., :-1] *= 255
+            rgba[..., -1] = 255
+            image = rgba
         elif binary is None:
                 self.binary = self.to_binary_pil(image)
 
@@ -571,7 +585,10 @@ class DataReader(LabelSelection):
     def get_labeled_array(self):
         """Create a connectivity-based labeled array of the :attr:`binary` data
         """
-        return skim.label(self.binary, 8, return_num=False)
+        return np.where(
+            self.binary, skim.label(
+                self.binary, connectivity=2, return_num=False), 0
+        )
 
     def update_image(self, arr, amask):
         """Update the image after having removed binary data
@@ -990,7 +1007,9 @@ class DataReader(LabelSelection):
             if 'column_ends' in ds:
                 reader._column_ends = ds['column_ends'].values
             if 'full_data' in ds:
-                reader._full_df = pd.DataFrame(ds['full_data'].values)
+                reader._full_df = pd.DataFrame(
+                    ds['full_data'].values,
+                    index=np.arange(ds['full_data'].shape[0]))
             if 'hline' in ds:
                 reader.hline_locs = ds['hline'].values
             if 'vline' in ds:
@@ -1375,7 +1394,7 @@ class DataReader(LabelSelection):
         mask = (np.r_[ret[1:], binary.shape[1]] - ret) > min_diff
         return ret[mask]
 
-    @docstrings.get_sectionsf('DataReader._filter_lines')
+    @docstrings.get_sections(base='DataReader._filter_lines')
     def _filter_lines(self, locs, min_lw=1, max_lw=None):
         """Filter consecutive locations based on their length
 
@@ -1447,7 +1466,7 @@ class DataReader(LabelSelection):
             selection = self._filter_lines(rows, min_lw, max_lw)
             mask[selection] = True
         if mask.any():
-            labeled = skim.label(arr, 8)
+            labeled = skim.label(arr, connectivity=2)
             labels = np.unique(labeled[mask])
             labels = labels[labels > 0]
             labeled[mask] = 0
@@ -1475,7 +1494,7 @@ class DataReader(LabelSelection):
             selection = self._filter_lines(rows, min_lw, max_lw)
             mask[selection] = True
         if mask.any():
-            labeled = skim.label(arr, 8)
+            labeled = skim.label(arr, connectivity=2)
             labels = np.unique(labeled[mask])
             labels = labels[labels > 0]
             labeled[mask] = 0
@@ -1554,8 +1573,11 @@ class DataReader(LabelSelection):
         attribute where at least 30% is selected. The digitize method will
         interpolate at these indices."""
         selection = self.selected_part if selection is None else selection
-        rows = np.where(
-            selection.sum(axis=1) / self.binary.sum(axis=1) > 0.3)[0]
+        totals = self.binary.sum(axis=1)
+        fractions = np.divide(
+            selection.sum(axis=1), totals,
+            out=np.zeros_like(totals, dtype=float), where=totals != 0)
+        rows = np.where(fractions > 0.3)[0]
         self.hline_locs = np.unique(np.r_[self.hline_locs, rows])
 
     def recognize_yaxes(self, fraction=0.3, min_lw=0, max_lw=None,
@@ -1759,8 +1781,11 @@ class DataReader(LabelSelection):
         This methods takes every pixel column in the :attr:`vline_locs`
         attribute where at least 30% is selected."""
         selection = self.selected_part if selection is None else selection
-        cols = np.where(
-            selection.sum(axis=0) / self.binary.sum(axis=0) > 0.3)[0]
+        totals = self.binary.sum(axis=0)
+        fractions = np.divide(
+            selection.sum(axis=0), totals,
+            out=np.zeros_like(totals, dtype=float), where=totals != 0)
+        cols = np.where(fractions > 0.3)[0]
         self.vline_locs = np.unique(np.r_[self.vline_locs, cols])
         self._shift_column_starts(cols)
         self._shift_occurences(cols)
@@ -1805,7 +1830,7 @@ class DataReader(LabelSelection):
             shape = binary.shape
             bins = np.r_[0, np.arange(1, 260 + categorize, categorize)]
             binary = pd.cut(binary.ravel(), bins, labels=False).reshape(shape)
-        return skim.label(binary, 8, return_num=False)
+        return skim.label(binary, connectivity=2, return_num=False)
 
     def image_array(self):
         """The RGBA values of the colored image"""
@@ -1884,7 +1909,7 @@ class DataReader(LabelSelection):
         return np.vstack([self.all_column_starts,
                           self.all_column_ends]).T
 
-    @docstrings.get_sectionsf('DataReader.digitize')
+    @docstrings.get_sections(base='DataReader.digitize')
     def digitize(self, use_sum=False, inplace=True):
         """Digitize the binary image to create the full dataframe
 
@@ -1969,7 +1994,7 @@ class DataReader(LabelSelection):
                 fraction=fraction, absolute=absolute, inplace=inplace,
                 return_mask=return_mask)
         if inplace:
-            non_exag = self.full_df.values
+            non_exag = self.full_df.values.copy()
         else:
             non_exag = self.full_df.values.copy()
         new_vals = self.digitize(inplace=False).values
@@ -2062,7 +2087,7 @@ class DataReader(LabelSelection):
         return np.where(coord == self.occurences_value, self.occurences_value,
                         intercept + slope * coord)
 
-    @docstrings.get_sectionsf('DataReader._plot_df')
+    @docstrings.get_sections(base='DataReader._plot_df')
     def _plot_df(self, df, ax=None, *args, **kwargs):
         """Plot a data frame as line plot in the diagram
 
@@ -2132,6 +2157,199 @@ class DataReader(LabelSelection):
             return
         self.sample_hlines = [ax.hlines(y, xmin, xmax, **kwargs)]
 
+    def _overlay_column_numbers(self, df):
+        """Infer the reader column numbers represented by a dataframe."""
+        try:
+            return [int(col) for col in df.columns]
+        except (TypeError, ValueError):
+            if self.columns is not None and len(df.columns) == len(self.columns):
+                return list(self.columns)
+            return list(range(df.shape[1]))
+
+    def _overlay_starts(self, column_numbers):
+        """Get absolute x-starts for the given column numbers."""
+        starts = np.asarray(self.all_column_starts, dtype=float)
+        x0 = float(self.extent[0] if self.extent is not None else 0.0)
+        return starts[column_numbers] + x0
+
+    def _overlay_ycoords(self, df):
+        """Get absolute y-positions for the row centers in `df`."""
+        y0 = float(self.extent[3] if self.extent is not None else 0.0)
+        return np.asarray(df.index, dtype=float) + 0.5 + y0
+
+    def _overlay_ybounds(self, vmin, vmax):
+        """Get absolute y-bounds for a vertical span."""
+        y0 = float(self.extent[3] if self.extent is not None else 0.0)
+        return float(vmin) + y0, float(vmax) + y0
+
+    def _overlay_values(self, values):
+        """Normalize plotted values for overlay rendering."""
+        ret = np.asarray(values, dtype=float).copy()
+        ret[ret == self.occurences_value] = np.nan
+        return ret
+
+    def _guess_overlay_image_extent(self, image):
+        """Infer the extent for the overlay background image."""
+        if image is None:
+            return self.extent
+        try:
+            width, height = image.size
+        except AttributeError:
+            height, width = np.shape(image)[:2]
+        try:
+            reader_width, reader_height = self.image.size
+        except AttributeError:
+            reader_height, reader_width = np.shape(self.image)[:2]
+        if width == reader_width and height == reader_height:
+            return self.extent
+        return [0, width, height, 0]
+
+    def _create_overlay_axes(self, ax=None, fig=None, image=None,
+                             image_extent=None):
+        """Create the figure, axes, and background for result overlays."""
+        from straditize.straditizer import (
+            create_matplotlib_figure, should_use_headless_figure)
+
+        if ax is None:
+            if fig is None:
+                fig = create_matplotlib_figure(
+                    headless=should_use_headless_figure())
+            ax = fig.subplots()
+        else:
+            fig = ax.figure
+
+        artists = {'image': None, 'fills': [], 'lines': []}
+        if image is None:
+            image = self.image
+        extent = image_extent or self._guess_overlay_image_extent(image)
+        if image is not None:
+            artists['image'] = ax.imshow(image, extent=extent, zorder=0)
+            ax.set_xlim(extent[0], extent[1])
+            ax.set_ylim(extent[2], extent[3])
+        ax.grid(False)
+        return fig, ax, artists
+
+    def _plot_area_overlay(self, df, ax, column_numbers, color_map):
+        """Plot area-like overlays with a fill and a boundary line."""
+        y = self._overlay_ycoords(df)
+        starts = self._overlay_starts(column_numbers)
+        artists = {'fills': [], 'lines': []}
+        for col_num, label, start in zip(column_numbers, df.columns, starts):
+            values = self._overlay_values(df.loc[:, label].values)
+            color = color_map[col_num]
+            artists['fills'].append(ax.fill_betweenx(
+                y, start, start + values, color=color,
+                alpha=RESULT_OVERLAY_FILL_ALPHA, zorder=2))
+            artists['lines'].append(ax.plot(
+                start + values, y, color=color,
+                alpha=RESULT_OVERLAY_LINE_ALPHA,
+                lw=RESULT_OVERLAY_LINEWIDTH, zorder=3)[0])
+        return artists
+
+    def _plot_line_overlay(self, df, ax, column_numbers, color_map):
+        """Plot line-reader overlays without fills."""
+        y = self._overlay_ycoords(df)
+        starts = self._overlay_starts(column_numbers)
+        artists = {'fills': [], 'lines': []}
+        for col_num, label, start in zip(column_numbers, df.columns, starts):
+            values = self._overlay_values(df.loc[:, label].values)
+            color = color_map[col_num]
+            artists['lines'].append(ax.plot(
+                start + values, y, color=color,
+                alpha=RESULT_OVERLAY_LINE_ALPHA,
+                lw=RESULT_OVERLAY_LINEWIDTH, zorder=3)[0])
+        return artists
+
+    def _plot_bar_overlay(self, df, ax, samples, column_numbers, color_map):
+        """Plot bar-reader overlays, using rough sample spans when available."""
+        artists = {'fills': [], 'lines': []}
+        starts = self._overlay_starts(column_numbers)
+        if samples and self.rough_locs is not None and len(df):
+            for row_key, row in df.iterrows():
+                rough_row = self.rough_locs.loc[row_key]
+                for col_num, label, start in zip(
+                        column_numbers, df.columns, starts):
+                    value = self._overlay_values([row[label]])[0]
+                    if np.isnan(value):
+                        continue
+                    try:
+                        vmin = rough_row[(col_num, 'vmin')]
+                        vmax = rough_row[(col_num, 'vmax')]
+                    except KeyError:
+                        ymin, ymax = self._overlay_ybounds(
+                            row_key, float(row_key) + 1.0)
+                    else:
+                        ymin, ymax = self._overlay_ybounds(vmin, vmax)
+                    color = color_map[col_num]
+                    artists['fills'].append(ax.fill_betweenx(
+                        [ymin, ymax], start, start + value, color=color,
+                        alpha=RESULT_OVERLAY_FILL_ALPHA, zorder=2))
+                    artists['lines'].append(ax.plot(
+                        [start + value, start + value], [ymin, ymax],
+                        color=color, alpha=RESULT_OVERLAY_LINE_ALPHA,
+                        lw=RESULT_OVERLAY_LINEWIDTH, zorder=3)[0])
+            return artists
+
+        y = self._overlay_ycoords(df)
+        for col_num, label, start in zip(column_numbers, df.columns, starts):
+            values = self._overlay_values(df.loc[:, label].values)
+            color = color_map[col_num]
+            artists['fills'].append(ax.fill_betweenx(
+                y, start, start + values, step='mid', color=color,
+                alpha=RESULT_OVERLAY_FILL_ALPHA, zorder=2))
+            artists['lines'].append(ax.step(
+                start + values, y, where='mid', color=color,
+                alpha=RESULT_OVERLAY_LINE_ALPHA,
+                lw=RESULT_OVERLAY_LINEWIDTH, zorder=3)[0])
+        return artists
+
+    def _plot_results_overlay_df(self, df, ax, samples=False,
+                                 column_numbers=None, color_map=None):
+        """Plot this reader's contribution to the overlay figure."""
+        column_numbers = column_numbers or self._overlay_column_numbers(df)
+        color_map = color_map or {
+            col: result_overlay_color(col) for col in column_numbers}
+        if isinstance(self, BarDataReader):
+            return self._plot_bar_overlay(
+                df, ax, samples=samples, column_numbers=column_numbers,
+                color_map=color_map)
+        if isinstance(self, LineDataReader):
+            return self._plot_line_overlay(df, ax, column_numbers, color_map)
+        return self._plot_area_overlay(df, ax, column_numbers, color_map)
+
+    def plot_results_overlay(self, df, ax=None, fig=None, samples=False,
+                             image=None, image_extent=None):
+        """Plot the digitized result over the source image for comparison."""
+        fig, ax, artists = self._create_overlay_axes(
+            ax=ax, fig=fig, image=image, image_extent=image_extent)
+        if df is None or df.empty:
+            return fig, ax, artists
+
+        column_numbers = self._overlay_column_numbers(df)
+        color_map = {
+            col_num: result_overlay_color(col_num)
+            for col_num in column_numbers}
+        reader_groups = []
+        for col_num, label in zip(column_numbers, df.columns):
+            reader = self.get_reader_for_col(col_num) or self
+            if getattr(reader, 'is_exaggerated', False):
+                continue
+            for group in reader_groups:
+                if group[0] is reader:
+                    group[1].append(col_num)
+                    group[2].append(label)
+                    break
+            else:
+                reader_groups.append([reader, [col_num], [label]])
+
+        for reader, cols, labels in reader_groups:
+            current = reader._plot_results_overlay_df(
+                df.loc[:, labels], ax=ax, samples=samples,
+                column_numbers=cols, color_map=color_map)
+            artists['fills'].extend(current['fills'])
+            artists['lines'].extend(current['lines'])
+        return fig, ax, artists
+
     def get_surrounding_slopes(self, indices, arr):
 
         def get_next_interval(i, step=1):
@@ -2175,7 +2393,7 @@ class DataReader(LabelSelection):
         intercept = y[0] - slope * x[0]
         return intercept, slope
 
-    @docstrings.get_sectionsf('DataReader.find_potential_samples',
+    @docstrings.get_sections(base='DataReader.find_potential_samples',
                               sections=['Parameters', 'Returns'])
     def find_potential_samples(self, col, min_len=None,
                                max_len=None, filter_func=None):
@@ -2342,7 +2560,7 @@ class DataReader(LabelSelection):
     docstrings.delete_params('DataReader.find_potential_samples.parameters',
                              'col')
 
-    @docstrings.get_sectionsf('DataReader.plot_potential_samples')
+    @docstrings.get_sections(base='DataReader.plot_potential_samples')
     @docstrings.with_indent(8)
     def plot_potential_samples(
             self, excluded=False, ax=None, plot_kws={}, *args, **kwargs):
@@ -2417,7 +2635,7 @@ class DataReader(LabelSelection):
     def get_occurences(self):
         """Extract the positions of the occurences from the selection"""
         selected = self.selected_part
-        labeled, num = skim.label(selected, 8, return_num=True)
+        labeled, num = skim.label(selected, connectivity=2, return_num=True)
         if self._column_starts is None:
             bounds = []
         else:
@@ -2445,7 +2663,7 @@ class DataReader(LabelSelection):
                      if not child.is_exaggerated and col in child.columns),
                     None)
 
-    @docstrings.get_sectionsf('DataReader.unique_bars')
+    @docstrings.get_sections(base='DataReader.unique_bars')
     @docstrings.dedent
     def unique_bars(self, min_fract=None, asdict=True, *args, **kwargs):
         """
@@ -2503,7 +2721,7 @@ class DataReader(LabelSelection):
     docstrings.delete_params(
         'DataReader.find_potential_samples.parameters', 'col')
 
-    @docstrings.get_sectionsf('DataReader.find_samples',
+    @docstrings.get_sections(base='DataReader.find_samples',
                               sections=['Parameters', 'Returns'])
     @docstrings.dedent
     @only_parent
@@ -2630,7 +2848,7 @@ class DataReader(LabelSelection):
                 for i, ((col, vals), (_, col_widths)) in enumerate(
                         zip(locs.items(), widths.items())):
                     locs.iloc[j-1:k, i] = vals.iloc[
-                        vals.index.get_loc(new_loc, 'nearest')]
+                        nearest_index_position(vals.index, new_loc)]
 
                     col_mask = (col_widths > 0).values
                     if col_mask.sum() > 1:
@@ -2694,8 +2912,9 @@ class DataReader(LabelSelection):
         samples, rough_locs, find_samples, sample_locs
         """
         if self.sample_locs is None:
-            self.sample_locs = pd.DataFrame([], index='sample',
-                                            columns=self._full_df.columns)
+            empty = self._full_df.iloc[0:0].copy()
+            empty.index = pd.Index([], name='sample')
+            self.sample_locs = empty
         if samples.ndim == 2:
             self._add_samples_from_df(samples)
         else:
@@ -2723,6 +2942,7 @@ class DataReader(LabelSelection):
             missing = df.index[~df.index.isin(self._rough_locs.index)]
         # add missing samples
         if len(missing):
+            missing = np.asarray(missing)
             rough = np.tile(missing[:, np.newaxis], (1, len(df.columns) * 2))
             rough[:, 1::2] += 1
             new = pd.DataFrame(
@@ -2746,7 +2966,7 @@ class DataReader(LabelSelection):
         new = self._full_df.loc[samples]
         self.sample_locs = new.combine_first(df)
 
-    @docstrings.get_sectionsf('DataReader.get_disconnected_parts')
+    @docstrings.get_sections(base='DataReader.get_disconnected_parts')
     def get_disconnected_parts(self, fromlast=5, from0=10,
                                cross_column=False):
         """Identify parts in the :attr:`binary` data that are not connected
@@ -2844,7 +3064,7 @@ class DataReader(LabelSelection):
     docstrings.delete_params(
         'LabelSelection.enable_label_selection.parameters', 'arr', 'ncolors')
 
-    @docstrings.get_sectionsf('DataReader._show_parts2remove')
+    @docstrings.get_sections(base='DataReader._show_parts2remove')
     @docstrings.with_indent(8)
     def _show_parts2remove(self, arr, remove=False, select_all=True,
                            selection=None, **kwargs):
@@ -2880,7 +3100,8 @@ class DataReader(LabelSelection):
                 self.magni_plot_im.set_array(self.labels)
         else:
             kwargs.setdefault('zorder', self.plot_im.zorder + 0.1)
-            labels, num_labels = skim.label(arr, 8, return_num=True)
+            labels, num_labels = skim.label(
+                arr, connectivity=2, return_num=True)
             self.enable_label_selection(labels, num_labels, **kwargs)
             if select_all:
                 self.select_all_labels()
@@ -2930,10 +3151,10 @@ class DataReader(LabelSelection):
             The labeled binary image with the same shape as the
             :attr:`label` data"""
         binary = self.merged_binaries()
-        return skim.label(binary, 8, return_num=False)
+        return skim.label(binary, connectivity=2, return_num=False)
 
     @only_parent
-    @docstrings.get_sectionsf('DataReader.get_cross_column_features')
+    @docstrings.get_sections(base='DataReader.get_cross_column_features')
     def get_cross_column_features(self, min_px=50):
         """Get features that are contained in two or more columns
 
@@ -2986,7 +3207,7 @@ class DataReader(LabelSelection):
         mask = arr & (~skim.remove_small_objects(arr, n))
         self._show_parts2remove(mask.astype(int), remove, **kwargs)
 
-    @docstrings.get_sectionsf('DataReader.get_parts_at_column_ends')
+    @docstrings.get_sections(base='DataReader.get_parts_at_column_ends')
     def get_parts_at_column_ends(self, npixels=2):
         """Identify parts in the :attr:`binary` data that touch the next column
 
@@ -3080,9 +3301,14 @@ class DataReader(LabelSelection):
         import matplotlib.pyplot as plt
         import matplotlib.transforms as mt
         import psyplot.project as psy
+        from straditize.straditizer import (
+            create_matplotlib_figure, should_use_headless_figure)
+
+        headless = should_use_headless_figure()
 
         if ax is None:
-            fig = fig or plt.figure()
+            if fig is None:
+                fig = create_matplotlib_figure(headless=headless)
             bbox = mt.Bbox.from_extents(
                 mpl.rcParams['figure.subplot.left'],
                 mpl.rcParams['figure.subplot.bottom'],
@@ -3093,7 +3319,9 @@ class DataReader(LabelSelection):
             fig = ax.figure
         else:  # the bbox is given
             bbox = ax
-            fig = fig or plt.gcf()
+            if fig is None:
+                fig = (create_matplotlib_figure(headless=True) if headless
+                       else plt.gcf())
         x0 = bbox.x0
         y0 = bbox.y0
         height = bbox.height
@@ -3134,13 +3362,15 @@ class DataReader(LabelSelection):
                 if ax_bbox.x1 != x1:
                     d['right'] = ':'
                 p.update(axislinestyle=d, draw=False)
-        psy.scp(sp.main)
-        psy.scp(sp)
+        if (not headless and
+                getattr(getattr(fig, 'canvas', None), 'manager', None) is not None):
+            psy.scp(sp.main)
+            psy.scp(sp)
         if df.index[0] < df.index[-1]:
             ax0.invert_yaxis()
         return sp, groupers
 
-    @docstrings.get_sectionsf('DataReader.get_bbox_for_cols')
+    @docstrings.get_sections(base='DataReader.get_bbox_for_cols')
     def get_bbox_for_cols(self, columns, x0, y0, width, height):
         """Get the boundary boxes for the columns of this reader in the results
         plot
@@ -3214,6 +3444,13 @@ class DataReader(LabelSelection):
         -------
         psy_strat.stratplot.StratGroup
             The grouper that visualizes the given `columns` in the `fig`"""
+        import psyplot.utils as psy_utils
+        # Older psy_strat releases still import DefaultOrderedDict from
+        # psyplot.utils. Newer psyplot exposes the same behavior as
+        # Defaultdict, so provide the legacy alias before importing psy_strat.
+        if (not hasattr(psy_utils, 'DefaultOrderedDict') and
+                hasattr(psy_utils, 'Defaultdict')):
+            psy_utils.DefaultOrderedDict = psy_utils.Defaultdict
         from psy_strat.stratplot import strat_groupers
         import psyplot.project as psy
         mp = psy.gcp(True)
@@ -3447,11 +3684,13 @@ class BarDataReader(DataReader):
             ret.max_len = ds[v('max_len')].values
         if v('full_data_orig') in ds:
             ret._full_df_orig = pd.DataFrame(
-                ds[v('full_data_orig')].values, columns=ds[v('column')].values)
+                ds[v('full_data_orig')].values,
+                columns=ds[v('column')].values,
+                index=np.arange(ds[v('full_data_orig')].shape[0]))
 
         return ret
 
-    @docstrings.get_sectionsf('BarDataReader.get_bars')
+    @docstrings.get_sections(base='BarDataReader.get_bars')
     def get_bars(self, arr, do_split=False):
         """Find the distinct bars in an array
 
@@ -3792,3 +4031,4 @@ readers = {
     'rounded bars': RoundedBarDataReader,
     'line': LineDataReader,
     }
+

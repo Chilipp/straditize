@@ -20,8 +20,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
-import six
+import os
 import os.path as osp
+from functools import lru_cache
+import six
 from psyplot_gui.compat.qtcompat import (
     QWidget, QtCore, QPushButton, QTreeWidget, QTreeWidgetItem,
     QVBoxLayout, QHBoxLayout, Qt, QToolButton, QIcon, with_qt5,
@@ -30,7 +32,15 @@ from psyplot_gui.common import (
     DockMixin, get_icon as get_psy_icon, PyErrorMessage)
 import numpy as np
 import glob
-from straditize.common import docstrings
+from straditize.common import (
+    docstrings,
+    patch_psyplot_gui_backend,
+    patch_psyplot_gui_common,
+)
+
+
+patch_psyplot_gui_backend()
+patch_psyplot_gui_common()
 
 
 if with_qt5:
@@ -44,10 +54,34 @@ def get_doc_file(fname):
     return osp.join(osp.dirname(__file__), 'docs', fname)
 
 
+@lru_cache(maxsize=None)
 def read_doc_file(fname):
     """Return the content of a rst documentation file"""
     with open(get_doc_file(fname)) as f:
         return f.read()
+
+
+def should_auto_show_docs():
+    """Whether help explorer rendering is safe in the current environment."""
+    try:
+        import psyplot_gui
+    except ImportError:
+        unit_testing = False
+    else:
+        unit_testing = bool(getattr(psyplot_gui, 'UNIT_TESTING', False))
+
+    platform = os.environ.get('QT_QPA_PLATFORM', '').strip().lower()
+    return not unit_testing and platform != 'offscreen'
+
+
+def get_mainwindow(widget=None):
+    """Return the active psyplot main window for widget and test sessions."""
+    if widget is not None:
+        mainwindow = widget.window()
+        if hasattr(mainwindow, 'plugins'):
+            return mainwindow
+    from psyplot_gui.main import mainwindow
+    return mainwindow
 
 
 def get_icon(fname):
@@ -67,6 +101,14 @@ class EnableButton(QPushButton):
     #: enabled or disabled
     enabled = QtCore.pyqtSignal(bool)
 
+    def __init__(self, *args, **kwargs):
+        super(EnableButton, self).__init__(*args, **kwargs)
+        # Hidden test windows may never lay these buttons out, so keep a
+        # usable fallback size for synthetic mouse events.
+        hint = self.sizeHint()
+        self.setMinimumSize(hint)
+        self.resize(hint)
+
     def setEnabled(self, b):
         """Reimplemented to emit the :attr:`enabled` signal"""
         if b is self.isEnabled():
@@ -78,7 +120,7 @@ class EnableButton(QPushButton):
 class InfoButton(QToolButton):
     """A button to display help informations in the help explorer"""
 
-    @docstrings.get_sectionsf('InfoButton')
+    @docstrings.get_sections(base='InfoButton')
     def __init__(self, parent, fname=None, rst=None, name=None):
         """
         Parameters
@@ -113,6 +155,8 @@ class InfoButton(QToolButton):
 
         Shows the docs in the
         in the :attr:`~psyplot_gui.main.MainWindow.help_explorer`"""
+        if not should_auto_show_docs():
+            return
         from psyplot_gui.main import mainwindow
         if self.fname is not None:
             rst = read_doc_file(self.fname)
@@ -138,7 +182,7 @@ def get_straditizer_widgets(mainwindow=None):
     StraditizerWidgets
         The straditizer widgets of the given `mainwindow`"""
     if mainwindow is None:
-        from psyplot_gui.main import mainwindow
+        mainwindow = get_mainwindow()
     if mainwindow is None:
         raise NotImplementedError(
             "Not running in interactive psyplot GUI!")
@@ -435,23 +479,26 @@ class StraditizerWidgets(QWidget, DockMixin):
             mainwindow.resizeDocks([self.dock], [hsize], Qt.Horizontal)
             self.tree.resizeColumnToContents(0)
             self.tree.resizeColumnToContents(1)
-        self.info_button.click()
+        if should_auto_show_docs():
+            self.info_button.click()
 
     def to_dock(self, main, *args, **kwargs):
         ret = super(StraditizerWidgets, self).to_dock(main, *args, **kwargs)
         if self.menu_actions.window_layout_action is None:
-            main.window_layouts_menu.addAction(self.window_layout_action)
             main.callbacks['straditize'] = self.open_external.emit
             main.addToolBar(self.selection_toolbar)
             self.dock.toggleViewAction().triggered.connect(
                 self.show_or_hide_toolbar)
             self.menu_actions.setup_menu_actions(main)
+            self.window_layout_action = self.menu_actions.window_layout_action
             self.menu_actions.setup_children(self.menu_actions_item)
             try:
                 main.open_file_options['Straditize project'] = \
                     self.create_straditizer_from_args
             except AttributeError:  # psyplot-gui <= 1.1.0
                 pass
+        else:
+            self.window_layout_action = self.menu_actions.window_layout_action
         return ret
 
     def show_or_hide_toolbar(self):
@@ -538,8 +585,8 @@ class StraditizerWidgets(QWidget, DockMixin):
             model.insertRow(n)
             model.setData(model.index(n, 0), key)
             model.setData(model.index(n, 1), '', change_type=six.text_type)
-        from psyplot_gui.main import mainwindow
         from straditize.straditizer import common_attributes
+        mainwindow = get_mainwindow(self)
         attrs = self.straditizer.attrs
         editor = mainwindow.new_data_frame_editor(
             attrs, 'Straditizer attributes')
@@ -590,7 +637,7 @@ class StraditizerWidgets(QWidget, DockMixin):
 
     docstrings.delete_params('InfoButton.parameters', 'parent')
 
-    @docstrings.get_sectionsf('StraditizerWidgets.add_info_button')
+    @docstrings.get_sections(base='StraditizerWidgets.add_info_button')
     @docstrings.with_indent(8)
     def add_info_button(self, child, fname=None, rst=None, name=None,
                         connections=[]):
@@ -756,7 +803,7 @@ class StraditizerControlBase(object):
         """The cancel button of the :attr:`straditizer_widgets`"""
         return self.straditizer_widgets.cancel_button
 
-    @docstrings.get_sectionsf('StraditizerControlBase.init_straditizercontrol')
+    @docstrings.get_sections(base='StraditizerControlBase.init_straditizercontrol')
     def init_straditizercontrol(self, straditizer_widgets, item=None):
         """Initialize the straditizer control widget
 

@@ -52,9 +52,13 @@ class Magnifier(object):
         if ax is None:
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots()
-            fig.canvas.set_window_title(
-                'Figure %i: Zoom of figure %i' % (fig.number,
-                                                  ax_src.figure.number))
+            title = 'Figure %i: Zoom of figure %i' % (
+                fig.number, ax_src.figure.number)
+            manager = getattr(fig.canvas, 'manager', None)
+            if manager is not None and hasattr(manager, 'set_window_title'):
+                manager.set_window_title(title)
+            elif hasattr(fig.canvas, 'set_window_title'):
+                fig.canvas.set_window_title(title)
         self.ax = ax
         self.point = ax.plot(
             [np.mean(ax.get_xlim())], [np.mean(ax.get_ylim())], 'ro',

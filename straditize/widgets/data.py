@@ -30,6 +30,8 @@ import pickle
 import pandas as pd
 import xarray as xr
 from straditize.widgets import StraditizerControlBase, get_icon
+from straditize.straditizer import (
+    create_matplotlib_figure, get_toolbar_mode, should_use_headless_figure)
 from psyplot_gui.compat.qtcompat import (
     QPushButton, QLineEdit, QComboBox, QLabel, QDoubleValidator,
     Qt, QHBoxLayout, QVBoxLayout, QWidget, QTreeWidgetItem,
@@ -552,7 +554,6 @@ class DigitizingControl(StraditizerControlBase):
         self.sp_pixel_tol.setValue(5)
         self.sp_pixel_tol.setToolTip(
             'Minimum distance between two samples in pixels')
-
         self.btn_select_occurences = QPushButton('Select occurences')
         self.btn_select_occurences.setToolTip(
             'Select where a measurement was reported but without an '
@@ -1369,14 +1370,14 @@ class DigitizingControl(StraditizerControlBase):
         Parameters
         ----------
         s: str
-            A string matching ``'Columns (\d.*)'``, where the numbers are the
+            A string matching ``'Columns (\\d.*)'``, where the numbers are the
             columns of the reader to use"""
         if not self._change_reader:
             return
-        match = re.search('Columns (\d.*)', txt)
+        match = re.search(r'Columns (\d.*)', txt)
         if not match:
             return
-        cols = set(map(int, re.findall('\d+', match.group(1))))
+        cols = set(map(int, re.findall(r'\d+', match.group(1))))
         old = self.straditizer.data_reader
         children = chain([old], old.children)
         filter_func = filter if txt.startswith('exag') else filterfalse
@@ -1404,8 +1405,12 @@ class DigitizingControl(StraditizerControlBase):
             kws['min_len'] = int(self.txt_min_len.text())
         if self.txt_max_len.text().strip():
             kws['max_len'] = int(self.txt_max_len.text())
-        self.straditizer.data_reader.add_samples(
-            *self.straditizer.data_reader.find_samples(**kws))
+        reader = self.straditizer.data_reader
+        finder = reader.find_samples
+        if (get_reader_name(reader) == 'stacked area' and
+                hasattr(reader, 'find_consensus_samples')):
+            finder = reader.find_consensus_samples
+        reader.add_samples(*finder(**kws))
         self.straditizer_widgets.refresh()
 
     def load_samples(self, fname=None):
@@ -1445,7 +1450,7 @@ class DigitizingControl(StraditizerControlBase):
             df = pd.read_excel(fname, index_col=0)
         else:
             df = pd.read_csv(fname, index_col=0)
-        samples = df.index.values
+        samples = np.array(df.index.values, copy=True)
         try:
             samples = self.straditizer.data2px_y(samples)
         except ValueError:
@@ -1924,6 +1929,12 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
     #: The action in the matplotlib toolbar to go to the previous bar to split
     prev_action = None
 
+    #: The action in the matplotlib toolbar to go to the next bar to split
+    next_action = None
+
+    #: Separator inserted before the navigation actions
+    tb_separator = None
+
     #: A figure to show the other columns
     suggestions_fig = None
 
@@ -2102,19 +2113,25 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
 
         # plot suggestions
         if self.suggestions_fig is None:
-            import matplotlib.pyplot as plt
-            self.suggestions_fig = fig = plt.figure()
-            fig.add_subplot('131', sharey=ax)
-            fig.add_subplot('132', sharey=ax)
-            fig.add_subplot('133', sharey=ax)
+            headless = should_use_headless_figure()
+            self.suggestions_fig = fig = create_matplotlib_figure(
+                headless=headless)
+            fig.add_subplot(131, sharey=ax)
+            fig.add_subplot(132, sharey=ax)
+            fig.add_subplot(133, sharey=ax)
             for ax in fig.axes:
                 ax.callbacks.connect(
                     'xlim_changed', self.set_suggestions_fig_titles)
             from psyplot_gui.main import mainwindow
-            if mainwindow.figures:
+            source_manager = getattr(self.straditizer.fig.canvas, 'manager',
+                                     None)
+            target_manager = getattr(fig.canvas, 'manager', None)
+            source_window = getattr(source_manager, 'window', None)
+            target_window = getattr(target_manager, 'window', None)
+            if (not headless and mainwindow.figures and
+                    source_window is not None and target_window is not None):
                 mainwindow.splitDockWidget(
-                    self.straditizer.fig.canvas.manager.window,
-                    fig.canvas.manager.window, Qt.Vertical)
+                    source_window, target_window, Qt.Vertical)
         else:
             fig = self.suggestions_fig
             for im in self.images:
@@ -2193,7 +2210,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         """
         reader = self.straditizer.data_reader
         if (event.inaxes != reader.ax or event.button not in [1, 3] or
-                reader.fig.canvas.manager.toolbar.mode != ''):
+                get_toolbar_mode(reader.fig) != ''):
             return
         y = int(np.floor(event.ydata - 0.5))
         extent = reader.extent or [0] * 4
@@ -2210,7 +2227,7 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         elif self.selected_child.childCount():
             self.revert_split(y, y0)
 
-    @docstrings.get_sectionsf('BarSplitter.new_split')
+    @docstrings.get_sections(base='BarSplitter.new_split')
     def new_split(self, y, y0, draw_figure=True):
         """Mark the current item to be splitted at `y`
 
@@ -2385,10 +2402,14 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
             except AttributeError:
                 pass
             else:
-                tb.removeAction(self.next_action)
+                if self.next_action is not None:
+                    tb.removeAction(self.next_action)
                 tb.removeAction(self.prev_action)
-                tb.removeAction(self.tb_separator)
-            del self.prev_action
+                if self.tb_separator is not None:
+                    tb.removeAction(self.tb_separator)
+            self.prev_action = None
+            self.next_action = None
+            self.tb_separator = None
         import matplotlib.pyplot as plt
         plt.close(self.suggestions_fig)
         del self.suggestions_fig, self.images
@@ -2406,8 +2427,10 @@ class BarSplitter(QTreeWidget, StraditizerControlBase):
         self.expandItem(item.parent())
         self.expandItem(item)
         self.scrollToItem(item)
-        self.next_action.setEnabled(self.next_item is not None)
-        self.prev_action.setEnabled(self.previous_item is not None)
+        if self.next_action is not None:
+            self.next_action.setEnabled(self.next_item is not None)
+        if self.prev_action is not None:
+            self.prev_action.setEnabled(self.previous_item is not None)
 
     def enable_or_disable_widgets(self, b):
         if not b:

@@ -18,10 +18,23 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import sys
-from psyplot_gui import docstrings
-import straditize
 import os
 import os.path as osp
+from straditize.common import (
+    configure_runtime_warning_filters,
+    configure_qt_opengl,
+    ensure_asyncio_event_loop,
+    patch_psyplot_gui_common,
+    patch_psyplot_gui_asyncio,
+    patch_psyplot_gui_backend,
+    patch_psyplot_gui_entrypoints,
+    patch_psyplot_gui_opengl,
+)
+from straditize.version import __version__
+from psyplot_gui import docstrings
+
+
+configure_runtime_warning_filters()
 
 
 docstrings.delete_params('psyplot_gui.start_app.parameters', 'fnames',
@@ -64,6 +77,13 @@ def start_app(fname=None, output=None, xlim=None, ylim=None,
         from psyplot_gui.compat.qtcompat import QApplication
         from psyplot_gui import start_app, send_files_to_psyplot
         exec_ = kwargs.pop('exec_', True)
+        patch_psyplot_gui_asyncio()
+        patch_psyplot_gui_backend()
+        patch_psyplot_gui_common()
+        patch_psyplot_gui_entrypoints()
+        patch_psyplot_gui_opengl()
+        ensure_asyncio_event_loop()
+        configure_qt_opengl(kwargs.get('opengl_implementation'))
         if exec_:
             app = QApplication(sys.argv)
         cwd = osp.abspath(kwargs.get('pwd') or os.getcwd())
@@ -161,12 +181,12 @@ def get_parser(create=True):
     parser.update_arg('full', group=stradi_grp, short='f')
 
     parser.update_arg('version', short='V', long='version', action='version',
-                      version=straditize.__version__, if_existent=False,
+                      version=__version__, if_existent=False,
                       group=stradi_grp)
 
     if create:
         parser.create_arguments()
-    parser.epilog = docstrings.dedents("""
+    parser.epilog = docstrings.dedent("""
     STRADITIZE  Copyright (C) 2018-2019  Philipp S. Sommer
 
     This program comes with ABSOLUTELY NO WARRANTY.

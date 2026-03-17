@@ -263,7 +263,7 @@ intersphinx_mapping = {
         'http://psyplot.readthedocs.io/en/latest/', None),
 }
 if six.PY3:
-    intersphinx_mapping['python'] = ('https://docs.python.org/3.6/', None)
+    intersphinx_mapping['python'] = ('https://docs.python.org/3.12/', None)
 else:
     intersphinx_mapping['python'] = ('https://docs.python.org/2.7/', None)
 

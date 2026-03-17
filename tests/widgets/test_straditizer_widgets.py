@@ -7,6 +7,12 @@ import numpy as np
 class StraditizerWidgetsTest(bt.StraditizeWidgetsTestCase):
     """Test case for the :class:`straditizer.widgets.StraditizerWidgets`"""
 
+    def test_window_layout_action_initialized(self):
+        """The docked widget should keep a reference to its layout action."""
+        action = self.straditizer_widgets.menu_actions.window_layout_action
+        self.assertIsNotNone(action)
+        self.assertIs(action, self.straditizer_widgets.window_layout_action)
+
     def test_edit_attrs(self):
         """Test editing the attributes"""
         self.open_img()

@@ -925,7 +925,7 @@ class MarkerControl(StraditizerControlBase, QWidget):
             ax.set_ylim(y - dy, y + dy)
         else:
             distances = (
-                (mark.ya > y).any() and (mark.xa[mark.ya > y] - y).min()
+                (mark.ya > y).any() and (mark.ya[mark.ya > y] - y).min()
                 for mark in marks)
             try:
                 dist, mark = min((t for t in zip(distances, marks) if t[0]),

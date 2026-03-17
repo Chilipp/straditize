@@ -3,6 +3,7 @@ import numpy as np
 import _base_testing as bt
 from itertools import chain
 import unittest
+from unittest import mock
 from psyplot_gui.compat.qtcompat import QTest, Qt
 from psyplot.utils import unique_everseen
 
@@ -296,6 +297,16 @@ class EditSamplesSepTest(EditSamplesTest):
             tuple(pos), (value, row),
             msg='Wrong position of mark at index %1.1f, column %i' % (
                 row, col))
+
+    def test_creation_avoids_pyplot_subplots(self):
+        """Separate sample editing should not require pyplot subplots."""
+        import matplotlib.pyplot as plt
+
+        with mock.patch.object(
+                plt, 'subplots',
+                side_effect=AssertionError(
+                    'marks_for_samples_sep should not call pyplot.subplots')):
+            self.test_creation()
 
     def test_add_mark(self):
         """Test the adding of a new measurment"""

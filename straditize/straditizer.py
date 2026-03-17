@@ -22,9 +22,10 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>."""
 import six
 import weakref
+import os
 from copy import copy
 from collections import OrderedDict
-from itertools import chain
+from itertools import chain, count
 import numpy as np
 import pandas as pd
 import pickle
@@ -49,6 +50,61 @@ default_attrs = pd.DataFrame(
     columns=[0], index=common_attributes)
 
 default_attrs.loc[:, :] = ''
+
+
+def should_use_headless_figure():
+    """Whether plotting should avoid GUI-backed matplotlib figures."""
+    # Tests and offscreen Qt sessions cannot safely create GUI-backed pyplot
+    # windows, so these paths switch to canvas-only figures instead.
+    try:
+        import psyplot_gui
+    except ImportError:
+        unit_testing = False
+    else:
+        unit_testing = bool(getattr(psyplot_gui, 'UNIT_TESTING', False))
+
+    platform = os.environ.get('QT_QPA_PLATFORM', '').strip().lower()
+    return unit_testing or platform == 'offscreen'
+
+
+_headless_figure_numbers = count(1000000)
+
+
+def create_matplotlib_figure(headless=None):
+    """Create a matplotlib figure for GUI and headless sessions."""
+    if headless is None:
+        headless = should_use_headless_figure()
+    if headless:
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+
+        fig = Figure()
+        FigureCanvasAgg(fig)
+        # Headless figures are not tracked by pyplot, but downstream code still
+        # expects a figure identifier for close bookkeeping.
+        fig.number = next(_headless_figure_numbers)
+        return fig
+    import matplotlib.pyplot as plt
+    return plt.figure()
+
+
+def create_matplotlib_subplots(*args, headless=None, **kwargs):
+    """Create matplotlib subplots without forcing a GUI figure manager."""
+    if headless is None:
+        headless = should_use_headless_figure()
+    if headless:
+        fig = create_matplotlib_figure(headless=True)
+        return fig, fig.subplots(*args, **kwargs)
+    import matplotlib.pyplot as plt
+    return plt.subplots(*args, **kwargs)
+
+
+def get_toolbar_mode(fig):
+    """Safely read the matplotlib toolbar mode for GUI and headless figures."""
+    canvas = getattr(fig, 'canvas', None)
+    manager = getattr(canvas, 'manager', None)
+    toolbar = getattr(manager, 'toolbar', None)
+    return getattr(toolbar, 'mode', '') or ''
 
 
 def format_coord_func(ax, ref):
@@ -110,31 +166,36 @@ def _create_magni_marks(magni, marks):
     return magni_marks
 
 
-def _new_mark_factory(marks, mark_added, func, fignum, magnifier=None,
-                      magni_marks=None):
+def _new_mark_factory(marks, mark_added, func, fig, axes=None,
+                      magnifier=None, magni_marks=None):
+    axes = list(fig.axes if axes is None else axes)
+
     def ret(event):
-        import matplotlib.pyplot as plt
-        fig = plt.figure(fignum)
-        axes = fig.axes
         if (event.key != 'shift' or event.button != 1 or
                 event.inaxes not in axes or
-                fig.canvas.manager.toolbar.mode != ''):
+                get_toolbar_mode(fig) != ''):
             return
-        new_marks = _new_mark(event.xdata, event.ydata)
-        for m in new_marks:
+        try:
+            new_marks = _new_mark(event.xdata, event.ydata)
+        except ValueError as exc:
+            if str(exc) != "Cannot use more than 2 marks!":
+                raise
+            return
+        for m in new_marks or []:
             mark_added.emit(m)
 
     def _new_mark(x, y, **kwargs):
         new_marks = func((x, y), **kwargs)
-        if new_marks:
-            try:
-                marks.extend(new_marks)
-            except TypeError:
-                new_marks = [new_marks]
-                marks.extend(new_marks)
-            if magnifier is not None:
-                magni_marks.extend(_create_magni_marks(magnifier, new_marks))
-        marks[0].ax.figure.canvas.draw_idle()
+        if not new_marks:
+            return new_marks
+        try:
+            marks.extend(new_marks)
+        except TypeError:
+            new_marks = [new_marks]
+            marks.extend(new_marks)
+        if magnifier is not None:
+            magni_marks.extend(_create_magni_marks(magnifier, new_marks))
+        new_marks[0].ax.figure.canvas.draw_idle()
         return new_marks
     return ret, _new_mark
 
@@ -322,7 +383,7 @@ class Straditizer(LabelSelection):
             shape = arr.shape
             bins = np.r_[0, np.arange(1, 260 + categorize, categorize)]
             arr = pd.cut(arr.ravel(), bins, labels=False).reshape(shape)
-        return skim.label(arr, 8, return_num=False)
+        return skim.label(arr, connectivity=2, return_num=False)
 
     def image_array(self):
         return np.asarray(self.image)
@@ -406,8 +467,7 @@ class Straditizer(LabelSelection):
     def plot_image(self, ax=None, **kwargs):
         ax = ax or self.ax
         if ax is None:
-            import matplotlib.pyplot as plt
-            fig = plt.figure()
+            fig = create_matplotlib_figure()
             ax = fig.add_axes([0.1, 0.1, 0.9, 0.9])
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
@@ -423,7 +483,10 @@ class Straditizer(LabelSelection):
         kwargs.setdefault('extent', extent)
         self.plot_im = ax.imshow(self.image, **kwargs)
         ax.grid(False)
-        self.magni = Magnifier(ax, image=self.image, **kwargs)
+        if should_use_headless_figure():
+            self.magni = None
+        else:
+            self.magni = Magnifier(ax, image=self.image, **kwargs)
         if self._orig_format_coord is None:
             self._orig_format_coord = ax.format_coord
             ax.format_coord = format_coord_func(ax, weakref.ref(self))
@@ -681,7 +744,7 @@ class Straditizer(LabelSelection):
         # now check the right corner, whether the object extents further to the
         # right
         if mask[ymax, xmax]:
-            labeled = skim.label(arr, 8, return_num=False)
+            labeled = skim.label(arr, connectivity=2, return_num=False)
             label = labeled[ymax, xmax]
             xmax = np.where(labeled[ymin:ymax+1] == label)[1].max()
 
@@ -970,7 +1033,10 @@ class Straditizer(LabelSelection):
             for l in self.magni.ax.lines[:]:
                 if (l.get_label() or '').startswith('cross_mark'):
                     l.remove()
-        if hasattr(self, '_mark_fig_num'):
+        fig = getattr(self, '_mark_fig', None)
+        if fig is not None:
+            del self._mark_fig
+        elif hasattr(self, '_mark_fig_num'):
             import matplotlib.pyplot as plt
             fig = plt.figure(self._mark_fig_num)
             del self._mark_fig_num
@@ -1156,7 +1222,7 @@ class Straditizer(LabelSelection):
         if (not self.marks or
                 event.inaxes not in (m.ax for m in self.marks) or
                 event.button == 1 or
-                any(m.fig.canvas.manager.toolbar.mode != ''
+                any(get_toolbar_mode(m.fig) != ''
                     for m in self.marks)):
             return
         return next(filter(lambda m: m.is_selected_by(event, buttons),
@@ -1208,7 +1274,7 @@ class Straditizer(LabelSelection):
         else:
             axes = list(axes)
         ret, self._new_mark = _new_mark_factory(
-            self.marks, self.mark_added, func, axes[0].figure.number,
+            self.marks, self.mark_added, func, axes[0].figure, axes,
             self.magni, self.magni_marks)
         return ret
 
@@ -1290,8 +1356,8 @@ class Straditizer(LabelSelection):
             data[is_occurence] = self.data_reader.occurences_value
             df = pd.DataFrame(data, index=index.astype(int)).sort_index()
             self.data_reader.sample_locs = df.loc[
-                (~df.index.duplicated().values) &
-                (~df.index.duplicated().values)]
+                (~df.index.duplicated()) &
+                (~df.index.duplicated())]
             self.data_reader._update_rough_locs()
         if remove:
             self.remove_marks()
@@ -1350,7 +1416,7 @@ class Straditizer(LabelSelection):
 
         get_child = self.get_reader_for_column
 
-        import matplotlib.pyplot as plt
+        headless = should_use_headless_figure()
 
         reader = self.data_reader
         occ_val = reader.occurences_value
@@ -1361,13 +1427,14 @@ class Straditizer(LabelSelection):
         full_df = reader._full_df.copy(True)
         full_df['nextrema'] = reader.found_extrema_per_row()
         self.remove_marks()
-        fig, axes = plt.subplots(
-            nrows, int(np.ceil((df.shape[1] + 1) / nrows)), sharey=True)
+        fig, axes = create_matplotlib_subplots(
+            nrows, int(np.ceil((df.shape[1] + 1) / nrows)), sharey=True,
+            headless=headless)
         for ax in axes.ravel()[len(df.columns) + 1:]:
             fig.delaxes(ax)
         axes = axes.ravel()[:len(df.columns) + 1]
         idx_v = self.indexes['y'][:full_df.shape[0]]
-        for (col, s), ax in zip(full_df.iteritems(), axes):
+        for (col, s), ax in zip(full_df.items(), axes):
             if col != 'nextrema':
                 ax.imshow(get_child(col).get_binary_for_col(col),
                           cmap='binary')
@@ -1398,7 +1465,7 @@ class Straditizer(LabelSelection):
         self.mark_cids.add(fig.canvas.mpl_connect(
             'button_press_event', self._remove_mark_event))
         self._plotted_full_df = full_df
-        self._mark_fig_num = fig.number
+        self._mark_fig = fig
         return fig, axes
 
     def update_samples_sep(self, remove=True):

@@ -39,7 +39,7 @@ except FileNotFoundError:
     tesseract_version = tesserocr = None
 else:
     tesseract_version = re.findall(
-        '\d+\.\d+\.*', tesseract_version.decode('utf-8'))[0]
+        r'\d+\.\d+\.*', tesseract_version.decode('utf-8'))[0]
     if tesseract_version.startswith('4.0.'):
         import locale
         locale.setlocale(locale.LC_ALL, 'C')

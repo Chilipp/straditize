@@ -21,6 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>."""
 from itertools import chain
+import inspect
 import six
 import numpy as np
 from straditize.widgets import get_icon, StraditizerControlBase, InfoButton
@@ -42,6 +43,21 @@ class PointOrRectangleSelector(mwid.RectangleSelector):
 
     This class reimplements the :class:`matplotlib.widgets.RectangleSelector`
     to select points"""
+
+    _rectangle_selector_params = set(
+        inspect.signature(mwid.RectangleSelector).parameters)
+
+    def __init__(self, ax, onselect, **kwargs):
+        if ('props' in self._rectangle_selector_params and
+                'rectprops' in kwargs and 'props' not in kwargs):
+            props = dict(kwargs.pop('rectprops'))
+            lineprops = kwargs.pop('lineprops', None) or {}
+            lineprops = dict(lineprops)
+            if 'c' in lineprops and 'edgecolor' not in props:
+                props['edgecolor'] = lineprops.pop('c')
+            props.update(lineprops)
+            kwargs['props'] = props
+        super(PointOrRectangleSelector, self).__init__(ax, onselect, **kwargs)
 
     def press(self, *args, **kwargs):
         ret = super(PointOrRectangleSelector, self).press(*args, **kwargs)
@@ -788,7 +804,8 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
             self._action_clicked = next(key for key, a in self._actions.items()
                                         if a.isChecked())
 
-        self.toolbar.set_message(self.toolbar.mode)
+        if self.toolbar is not None:
+            self.toolbar.set_message(self.toolbar.mode)
 
     def enable_or_disable_widgets(self, b):
         super(SelectionToolbar, self).enable_or_disable_widgets(b)
@@ -824,7 +841,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         ax = self.ax
         if ax is None:
             return
-        if (event.inaxes is ax and self.toolbar._active == '' and
+        if (event.inaxes is ax and self.toolbar.mode.name == '' and
                 self.selector is not None):
             if self._lastCursor != cursors.SELECT_REGION:
                 self.toolbar.set_cursor(cursors.SELECT_REGION)
@@ -834,7 +851,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
         ax = self.ax
         if ax is None:
             return
-        if (event.inaxes is ax and self.toolbar._active == '' and
+        if (event.inaxes is ax and self.toolbar.mode.name == '' and
                 self.selector is not None):
             if self._lastCursor != cursors.POINTER:
                 self.toolbar.set_cursor(cursors.POINTER)
@@ -1115,7 +1132,7 @@ class SelectionToolbar(QToolBar, StraditizerControlBase):
                         axis=-1)] = True
         if not self.cb_whole_fig.isChecked():
             import skimage.morphology as skim
-            all_labels = skim.label(mask, 8, return_num=False)
+            all_labels = skim.label(mask, connectivity=2, return_num=False)
             selected_labels = np.unique(all_labels[sly, slx])
             mask[~np.isin(all_labels, selected_labels)] = False
         if self.remove_select_action.isChecked():

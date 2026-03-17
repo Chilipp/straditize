@@ -23,6 +23,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 import os.path as osp
 import numpy as np
 from PyQt5 import QtWidgets
+from straditize.widgets import get_mainwindow, should_auto_show_docs
 from straditize.widgets.tutorial.beginner import (
     Tutorial, TutorialPage as TutorialPageBase, LoadImage as LoadImageBase,
     FinishPage, SelectDataPart as SelectDataPartBase, CreateReader,
@@ -74,6 +75,8 @@ class HoyaDelCastilloTutorial(Tutorial):
 
     def show(self):
         """Show the documentation of the tutorial"""
+        if not should_auto_show_docs():
+            return
         from straditize.colnames import tesserocr
         intro, files = self.get_doc_files()
         self.filename = osp.splitext(osp.basename(intro))[0]
@@ -609,7 +612,7 @@ class EditMeta(TutorialPage):
             self.straditizer_widgets.straditizer.set_attr(attr, val)
 
     def hint(self):
-        from psyplot_gui.main import mainwindow
+        mainwindow = get_mainwindow(self.straditizer_widgets)
         df = self.straditizer_widgets.straditizer.attrs
         btn = self.straditizer_widgets.attrs_button
         editor = next((editor for editor in mainwindow.dataframeeditors
@@ -619,6 +622,11 @@ class EditMeta(TutorialPage):
                 "Click the <i>%s</i> button to edit the meta data" % (
                     btn.text()), btn)
         elif not self.is_finished:
+            if not should_auto_show_docs():
+                self.show_tooltip_at_widget(
+                    "Add some meta information in the first column",
+                    editor.table)
+                return
             # Check if the editor is visible
             if editor.visibleRegion().isEmpty():
                 dock = next(

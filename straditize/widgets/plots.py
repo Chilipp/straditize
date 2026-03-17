@@ -19,11 +19,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 from itertools import chain
 from collections import OrderedDict
+import numpy as np
 from straditize.widgets import StraditizerControlBase
 from psyplot_gui.compat.qtcompat import (
     QTableWidget, QCheckBox, QToolButton, QIcon, Qt, with_qt5, QtCore, QWidget,
-    QHBoxLayout, QVBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem)
+    QHBoxLayout, QVBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem,
+    QDialog, QDialogButtonBox)
 from psyplot_gui.common import get_icon
+from matplotlib.figure import Figure
+
+if with_qt5:
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+else:
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 if with_qt5:
     from PyQt5.QtWidgets import QHeaderView
@@ -145,24 +153,26 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         def hide_or_show(checked):
             checked = checked is True or checked == Qt.Checked
             artist = None
-            for artist in get_artists():
+            artists = [artist for artist in get_artists() if artist is not None]
+            for artist in artists:
                 artist.set_visible(checked)
             if artist is not None:
-                self.draw_figs(get_artists())
+                self.draw_figs(artists)
 
         def trigger_plot_btn():
-            a = next(iter(get_artists()), None)
+            artists = [artist for artist in get_artists() if artist is not None]
+            a = next(iter(artists), None)
             if a is None:
                 if can_be_plotted is None or can_be_plotted():
                     plot_func()
                     cb.setChecked(True)
                     btn.setIcon(QIcon(get_icon('invalid.png')))
                     btn.setToolTip('Remove ' + what)
-                    self.draw_figs(get_artists())
+                    self.draw_figs([artist for artist in get_artists()
+                                    if artist is not None])
                     cb.setEnabled(True)
             else:
-                fig = a.axes.figure
-                figs = {a.axes.figure for a in get_artists()}
+                figs = {artist.axes.figure for artist in artists}
                 remove_func()
                 btn.setIcon(QIcon(get_icon('valid.png')))
                 btn.setToolTip('Show ' + what)
@@ -322,15 +332,20 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
         --------
         plot_data_box
         """
+        ret = []
         try:
-            ret = [self.straditizer.data_box]
+            data_box = self.straditizer.data_box
         except AttributeError:
-            ret = [None]
+            data_box = None
+        if data_box is not None:
+            ret.append(data_box)
         try:
-            ret.append(self.straditizer.magni_data_box)
+            magni_data_box = self.straditizer.magni_data_box
         except AttributeError:
-            pass
-        return ret if ret else []
+            magni_data_box = None
+        if magni_data_box is not None:
+            ret.append(magni_data_box)
+        return ret
 
     def can_plot_data_box(self):
         """Test whether the box around the diagram part can be plotted
@@ -662,21 +677,22 @@ class PlotControlTable(StraditizerControlBase, QTableWidget):
 
 
 class ResultsPlot(StraditizerControlBase):
-    """A widget for plotting the final results
+    """A widget for reviewing digitized results on the source image.
 
-    This widgets contains a QPushButton :attr:`btn_plot` to plot the results
-    using the :meth:`straditize.binary.DataReader.plot_results` method"""
+    This widget contains a QPushButton :attr:`btn_plot` that opens a
+    comparison figure using
+    :meth:`straditize.binary.DataReader.plot_results_overlay`.
+    """
 
     #: The QPushButton to call the :meth:`plot_results` method
     btn_plot = None
 
-    #: A QCheckBox whether x- and y-axis should be translated from pixel to
-    #: data units
-    cb_transformed = None
-
     #: A QCheckBox whether the samples or the full digitized data shall be
     #: plotted
     cb_final = None
+
+    #: The dialog showing the current result review figure
+    results_dialog = None
 
     def __init__(self, straditizer_widgets):
         self.init_straditizercontrol(straditizer_widgets)
@@ -685,18 +701,91 @@ class ResultsPlot(StraditizerControlBase):
 
         self.cb_final = QCheckBox("Samples")
         self.cb_final.setToolTip(
-            "Create the diagram based on the samples only, not on the full "
-            "digized data")
-        self.cb_final.setChecked(True)
+            "Compare only the sample-based reconstruction on the source image")
+        self.cb_final.setChecked(False)
         self.cb_final.setEnabled(False)
 
-        self.cb_transformed = QCheckBox("Translated")
-        self.cb_transformed.setToolTip(
-            "Use the x-axis and y-axis translation")
-        self.cb_transformed.setChecked(True)
-        self.cb_transformed.setEnabled(False)
-
         self.btn_plot.clicked.connect(self.plot_results)
+
+    def _get_current_results(self):
+        """Return the dataframe and mode for the current plot settings."""
+        samples = self.cb_final.isEnabled() and self.cb_final.isChecked()
+        if samples:
+            df = self.straditizer.data_reader.sample_locs
+        else:
+            df = self.straditizer.data_reader._full_df
+        return df, samples
+
+    def _get_export_df(self, df, samples):
+        """Return the dataframe that should be exported from the review."""
+        translated = self.straditizer.final_df if samples else \
+            self.straditizer.full_df
+        return translated if translated is not None else df
+
+    def _format_axis_value(self, value):
+        """Format axis labels without noisy trailing decimals."""
+        if np.isclose(value, round(value)):
+            return str(int(round(value)))
+        return ('%g' % value)
+
+    def _apply_yaxis_translation(self, ax):
+        """Show translated y ticks when a y-axis calibration exists."""
+        stradi = self.straditizer
+        if (stradi is None or stradi.data_ylim is None or
+                stradi.yaxis_data is None or stradi._yaxis_px_orig is None):
+            return
+        values = np.linspace(stradi.yaxis_data[0], stradi.yaxis_data[1], 5)
+        positions = np.asarray(stradi.data2px_y(values), dtype=float) + \
+            float(np.min(stradi.data_ylim))
+        ax.set_yticks(positions)
+        ax.set_yticklabels(list(map(self._format_axis_value, values)))
+        ylabel = stradi.get_attr('Y-axis name') or ''
+        if ylabel:
+            ax.set_ylabel(ylabel)
+
+    def _apply_xaxis_translation(self, ax):
+        """Show per-column translated x ticks when x calibrations exist."""
+        reader = getattr(self.straditizer, 'data_reader', None)
+        if reader is None:
+            return
+        ticks = []
+        labels = []
+        for child in reader.iter_all_readers:
+            if getattr(child, 'is_exaggerated', False):
+                continue
+            if child.xaxis_data is None or child._xaxis_px_orig is None:
+                continue
+            try:
+                x_positions = np.asarray(child.xaxis_px, dtype=float)
+            except ValueError:
+                continue
+            x_values = np.asarray(child.xaxis_data, dtype=float)
+            extent_x0 = float(child.extent[0] if child.extent is not None else 0)
+            for col in child.columns:
+                start = float(child.all_column_starts[col]) + extent_x0
+                for pos, value in zip(x_positions, x_values):
+                    ticks.append(start + pos)
+                    labels.append(self._format_axis_value(value))
+        if ticks:
+            ax.set_xticks(ticks)
+            ax.set_xticklabels(labels)
+
+    def _apply_axis_translations(self, ax):
+        """Reflect existing axis calibrations in the review dialog."""
+        self._apply_yaxis_translation(ax)
+        self._apply_xaxis_translation(ax)
+
+    def _close_results_dialog(self):
+        """Close an existing result-review dialog."""
+        dialog = self.results_dialog
+        self.results_dialog = None
+        if dialog is not None:
+            dialog.close()
+            dialog.deleteLater()
+
+    def export_plot_data(self, df):
+        """Export the dataframe currently shown in the review dialog."""
+        self.straditizer_widgets.menu_actions._export_df(df)
 
     def setup_children(self, item):
         tree = self.straditizer_widgets.tree
@@ -707,19 +796,11 @@ class ResultsPlot(StraditizerControlBase):
         widget = QWidget()
         vbox = QVBoxLayout()
         vbox.addWidget(self.cb_final)
-        vbox.addWidget(self.cb_transformed)
         widget.setLayout(vbox)
 
         tree.setItemWidget(child, 0, widget)
 
     def refresh(self):
-        try:
-            self.straditizer.yaxis_px
-            self.straditizer.data_reader.xaxis_px
-        except (AttributeError, ValueError):
-            self.cb_transformed.setEnabled(False)
-        else:
-            self.cb_transformed.setEnabled(True)
         try:
             assert (self.straditizer.data_reader._sample_locs is not None and
                     len(self.straditizer.data_reader._sample_locs))
@@ -732,31 +813,70 @@ class ResultsPlot(StraditizerControlBase):
                 self.straditizer.data_reader._full_df is not None)
         except AttributeError:
             self.btn_plot.setEnabled(False)
+        if not self.btn_plot.isEnabled():
+            self._close_results_dialog()
 
     def plot_results(self):
-        """Plot the results
+        """Plot the digitized result over the source image."""
+        df, samples = self._get_current_results()
+        export_df = self._get_export_df(df, samples)
+        image = self.straditizer.image
+        image_extent = [0, image.size[0], image.size[1], 0]
+        self._close_results_dialog()
+        dialog = ResultsPlotDialog(self, export_df)
+        fig = dialog.canvas.figure
+        fig, ax, artists = self.straditizer.data_reader.plot_results_overlay(
+            df, fig=fig, samples=samples, image=image, image_extent=image_extent)
+        self._apply_axis_translations(ax)
+        dialog.canvas.draw_idle()
+        self.results_dialog = dialog
+        dialog.destroyed.connect(lambda *args: setattr(self, 'results_dialog', None))
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+        return fig, ax, artists
 
-        What is plotted depends on the :attr:`cb_transformed` and the
-        :attr:`cb_final`
 
-        :attr:`cb_transformed` and :attr:`cb_final` are checked
-            Plot the :attr:`straditize.straditizer.Straditizer.final_df`
-        :attr:`cb_transformed` is checked but not :attr:`cb_final`
-            Plot the :attr:`straditize.straditizer.Straditizer.full_df`
-        :attr:`cb_transformed` is not checked but :attr:`cb_final`
-            Plot the :attr:`straditize.binary.DataReader.sample_locs`
-        :attr:`cb_transformed` and :attr:`cb_final` are both not checked
-            Plot the :attr:`straditize.binary.DataReader.full_df`"""
-        transformed = self.cb_transformed.isEnabled() and \
-            self.cb_transformed.isChecked()
-        if self.cb_final.isEnabled() and self.cb_final.isChecked():
-            df = self.straditizer.final_df if transformed else \
-                self.straditizer.data_reader.sample_locs
-        else:
-            df = self.straditizer.full_df if transformed else \
-                self.straditizer.data_reader._full_df
-        return self.straditizer.data_reader.plot_results(
-            df, transformed=transformed)
+class ResultsPlotDialog(QDialog):
+    """A dialog that previews the result overlay and exports shown data."""
+
+    def __init__(self, results_plot, df, *args, **kwargs):
+        super(ResultsPlotDialog, self).__init__(
+            results_plot.straditizer_widgets, *args, **kwargs)
+        self.results_plot = results_plot
+        self.df = df.copy()
+        self.setWindowTitle('Digitized result review')
+        self.setModal(False)
+
+        self.canvas = FigureCanvas(Figure())
+        self.canvas.figure.set_tight_layout(True)
+
+        self.btn_export = QPushButton('Export data')
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Close)
+        self.btn_close = self.button_box.button(QDialogButtonBox.Close)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        buttons.addWidget(self.btn_export)
+        buttons.addWidget(self.button_box)
+        layout.addLayout(buttons)
+        self.setLayout(layout)
+
+        self.btn_export.clicked.connect(self._export)
+        self.button_box.rejected.connect(self.close)
+
+        parent = self.parentWidget()
+        if parent is not None:
+            width = max(720, int(parent.width() * 0.8))
+            height = max(540, int(parent.height() * 0.8))
+            self.resize(width, height)
+
+    def _export(self):
+        """Export the dataframe currently visualized in this dialog."""
+        self.results_plot.export_plot_data(self.df)
 
 
 class PlotControl(StraditizerControlBase, QWidget):

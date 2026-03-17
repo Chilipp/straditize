@@ -22,7 +22,7 @@ import six
 from psyplot.data import Signal
 from psyplot.utils import _temp_bool_prop
 from itertools import chain, repeat, product
-from straditize.common import docstrings
+from straditize.common import docstrings, nearest_index_value
 
 if six.PY2:
     from itertools import izip_longest as zip_longest
@@ -186,7 +186,7 @@ class CrossMarks(object):
     #: the list of vertical lines
     vlines = []
 
-    @docstrings.get_sectionsf('CrossMarks')
+    @docstrings.get_sections(base='CrossMarks')
     @docstrings.dedent
     def __init__(self, pos=(0, 0), ax=None, selectable=['h', 'v'],
                  draggable=['h', 'v'], idx_h=None, idx_v=None,
@@ -543,10 +543,13 @@ class CrossMarks(object):
         -------
         bool
             True, if it is selected"""
+        manager = getattr(self.fig.canvas, 'manager', None)
+        toolbar = getattr(manager, 'toolbar', None)
+        mode = getattr(toolbar, 'mode', '')
         return not (
             self.lock is not None or
             event.inaxes != self.ax or event.button not in buttons or
-            self.fig.canvas.manager.toolbar.mode != '' or
+            mode != '' or
             not self.contains(event))
 
     def set_current_point(self, x, y, nearest=False):
@@ -672,7 +675,7 @@ class CrossMarks(object):
                     y1 = mark.pos[1]
                     break
             if self.idx_v is not None:
-                y1 = self.idx_v[self.idx_v.get_loc(y1, method='nearest')]
+                y1 = nearest_index_value(self.idx_v, y1)
             self.hline.set_ydata([y1] * len(self.hline.get_ydata()))
             self.y = y1
             # first we move the horizontal line that is associated with this
@@ -697,7 +700,7 @@ class CrossMarks(object):
                     x1 = mark.pos[0]
                     break
             if self.idx_h is not None:
-                x1 = self.idx_h[self.idx_h.get_loc(x1, method='nearest')]
+                x1 = nearest_index_value(self.idx_h, x1)
             self.vline.set_xdata([x1] * len(self.vline.get_xdata()))
             self.x = x1
             # first we move the vertical line that is associated with this mark
@@ -896,7 +899,7 @@ class DraggableHLine(CrossMarks):
     docstrings.delete_params('CrossMarks.parameters', 'pos', 'ax',
                              'selectable', 'draggable')
 
-    @docstrings.get_sectionsf('DraggableHLine')
+    @docstrings.get_sections(base='DraggableHLine')
     @docstrings.dedent
     def __init__(self, y, ax=None, *args, **kwargs):
         """
@@ -943,7 +946,7 @@ class DraggableVLine(CrossMarks):
 
     hide_horizontal = True
 
-    @docstrings.get_sectionsf('DraggableVLine')
+    @docstrings.get_sections(base='DraggableVLine')
     @docstrings.dedent
     def __init__(self, x, ax=None, *args, **kwargs):
         """
@@ -998,7 +1001,7 @@ class CrossMarkText(CrossMarks):
     #: The value of this cross mark
     value = None
 
-    @docstrings.get_sectionsf('CrossMarkText')
+    @docstrings.get_sections(base='CrossMarkText')
     @docstrings.dedent
     def __init__(self, *args, **kwargs):
         """

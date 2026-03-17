@@ -3,6 +3,7 @@
 import _base_testing as bt
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
+from unittest import mock
 import unittest
 
 
@@ -257,6 +258,44 @@ class TutorialTest(bt.StraditizeWidgetsTestCase):
         self.assertFalse(self.navigation.btn_hint.isEnabled())
         self.assertFalse(self.navigation.btn_next.isEnabled())
         self.assertFalse(self.navigation.btn_skip.isEnabled())
+
+
+class TutorialDocsSafetyTest(unittest.TestCase):
+
+    def test_tutorial_show_skips_doc_rendering_when_docs_disabled(self):
+        from straditize.widgets.tutorial.beginner import Tutorial
+
+        tutorial = Tutorial.__new__(Tutorial)
+        tutorial.tutorial_docs = mock.Mock()
+        tutorial.lock_viewer = mock.Mock()
+        tutorial.get_doc_files = mock.Mock()
+
+        with mock.patch(
+                'straditize.widgets.tutorial.beginner.should_auto_show_docs',
+                return_value=False):
+            Tutorial.show(tutorial)
+
+        tutorial.get_doc_files.assert_not_called()
+        tutorial.lock_viewer.assert_not_called()
+        tutorial.tutorial_docs.show_rst.assert_not_called()
+
+    def test_tutorial_page_show_skips_doc_rendering_when_docs_disabled(self):
+        from straditize.widgets.tutorial.beginner import TutorialPage
+
+        page = TutorialPage.__new__(TutorialPage)
+        page.filename = 'beginner-tutorial-intro'
+        page.src_dir = 'unused'
+        page.lock_viewer = mock.Mock()
+        page.tutorial = mock.Mock()
+
+        with mock.patch(
+                'straditize.widgets.tutorial.beginner.should_auto_show_docs',
+                return_value=False):
+            TutorialPage.show(page)
+
+        page.lock_viewer.assert_not_called()
+        page.tutorial.tutorial_docs.browse.assert_not_called()
+        page.tutorial.tutorial_docs.show_rst.assert_not_called()
 
 
 if __name__ == '__main__':

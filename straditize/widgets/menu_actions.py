@@ -45,7 +45,7 @@ _updating = []
 class ExportDfDialog(QDialog):
     """A QDialog to export a :class:`pandas.DataFrame` to Excel or CSV"""
 
-    @docstrings.get_sectionsf('ExportDfDialog')
+    @docstrings.get_sections(base='ExportDfDialog')
     def __init__(self, df, straditizer, fname=None, *args, **kwargs):
         """
         Parameters
@@ -139,9 +139,10 @@ class ExportDfDialog(QDialog):
         meta = self.stradi.valid_attrs
         if ending in ['.xls', '.xlsx']:
             with pd.ExcelWriter(fname) as writer:
-                self.df.to_excel(writer, 'Data')
+                self.df.to_excel(writer, sheet_name='Data')
                 if self.cb_include_meta.isChecked() and len(meta):
-                    meta.to_excel(writer, 'Metadata', header=False)
+                    meta.to_excel(
+                        writer, sheet_name='Metadata', header=False)
         else:
             with open(fname, 'w') as f:
                 if self.cb_include_meta.isChecked():
@@ -175,7 +176,7 @@ class ExportDfDialog(QDialog):
             height = dialog.sizeHint().height()
             # The plot creator window should cover at least one third of the
             # screen
-            dialog.resize(max(available_width, width), height)
+            dialog.resize(int(max(available_width, width)), int(height))
             if exec_:
                 dialog.exec_()
             else:
@@ -374,7 +375,7 @@ class StraditizerMenuActions(StraditizerControlBase):
                 return osp.splitext(current)[0]
         return os.getcwd()
 
-    @docstrings.get_sectionsf('StraditizerMenuActions._open_image')
+    @docstrings.get_sections(base='StraditizerMenuActions._open_image')
     def _open_image(self, fname=None):
         """Open an image file
 
@@ -788,6 +789,14 @@ class StraditizerMenuActions(StraditizerControlBase):
             fname = None
         return self.save_straditizer_as(fname)
 
+    def _dataset_netcdf_encoding(self, ds):
+        """Compression settings for NetCDF variables supported by netCDF4."""
+        comp = dict(zlib=True, complevel=4)
+        return {
+            name: comp.copy() for name, var in ds.data_vars.items()
+            if np.dtype(var.dtype).kind in 'biufc'
+        }
+
     def save_straditizer_as(self, fname=None):
         """Save the straditizer to a file
 
@@ -823,13 +832,10 @@ class StraditizerMenuActions(StraditizerControlBase):
             self.straditizer.save(fname)
         else:
             ds = self.straditizer.to_dataset()
-            # -- Compression with a level of 4. Requires netcdf4 engine
-            comp = dict(zlib=True, complevel=4)
-            encoding = {var: comp for var in ds.data_vars}
-
+            encoding = self._dataset_netcdf_encoding(ds)
             ds.to_netcdf(fname, encoding=encoding, engine='netcdf4')
 
-    @docstrings.get_sectionsf('StraditizerMenuActions._save_image')
+    @docstrings.get_sections(base='StraditizerMenuActions._save_image')
     def _save_image(self, image, fname=None):
         """Save an image to a file
 
@@ -922,7 +928,7 @@ class StraditizerMenuActions(StraditizerControlBase):
                 'from %s import straditizer as stradi' % __name__)
         straditizer = None
 
-    @docstrings.get_sectionsf('StraditizerMenuActions._export_df')
+    @docstrings.get_sections(base='StraditizerMenuActions._export_df')
     def _export_df(self, df, fname=None):
         """Export a data frame to a file
 

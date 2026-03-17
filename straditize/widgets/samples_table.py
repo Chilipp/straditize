@@ -30,7 +30,7 @@ from psyplot_gui.compat.qtcompat import (
     QPushButton, Qt, QMenu, QCheckBox, QTableView)
 from psyplot_gui.common import DockMixin, PyErrorMessage
 from psyplot_gui.dataframeeditor import DataFrameDock, FrozenTableView
-from straditize.common import docstrings
+from straditize.common import docstrings, nearest_index_position
 from collections import defaultdict
 
 
@@ -62,7 +62,7 @@ class MultiCrossMarksModel(QtCore.QAbstractTableModel):
     #: and plots a reconstruction based on them
     lines = []
 
-    @docstrings.get_sectionsf('MultiCrossMarksModel')
+    @docstrings.get_sections(base='MultiCrossMarksModel')
     def __init__(self, marks, columns, straditizer, axes=None,
                  occurences_value=-9999):
         """
@@ -376,7 +376,7 @@ class SingleCrossMarksModel(MultiCrossMarksModel):
     #: :class:`straditize.cross_mark.CrossMarks` instance
     marks = []
 
-    @docstrings.get_sectionsf('SingleCrossMarksModel')
+    @docstrings.get_sections(base='SingleCrossMarksModel')
     @docstrings.dedent
     def __init__(self, *args, **kwargs):
         """
@@ -728,7 +728,7 @@ class MultiCrossMarksView(QTableView):
                 continue
             mark = model.get_cell_mark(row, col)
             old_pos = mark.pos
-            xa = df.loc[df.index.get_loc(mark.y, method='nearest')].iloc[col-1]
+            xa = df.iloc[nearest_index_position(df.index, mark.y)].iloc[col-1]
             if np.isnan(xa):
                 xa = 0
             mark.set_pos((xa, mark.ya))
@@ -840,8 +840,8 @@ class SingleCrossMarksView(MultiCrossMarksView):
             mark = model.get_cell_mark(row, col)
             xa = mark.xa
             old_pos = mark.pos
-            x = df.loc[
-                df.index.get_loc(mark.y - y0, method='nearest')].iloc[col-1]
+            x = df.iloc[
+                nearest_index_position(df.index, mark.y - y0)].iloc[col-1]
             if np.isnan(x):
                 x = 0
             xa[col - 1] = x + starts[col - 1]
@@ -1025,9 +1025,11 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
             del self._fit2selection_cid
 
     def _fit2selection(self, event):
+        from straditize.straditizer import get_toolbar_mode
+
         model = self.table.model()
         if (not event.inaxes or event.button != 1 or
-                model.fig.canvas.manager.toolbar.mode != ''):
+                get_toolbar_mode(model.fig) != ''):
             return
         y = int(np.round(event.ydata))
         data = self.table.full_df.loc[y]
@@ -1040,7 +1042,7 @@ class MultiCrossMarksEditor(DockMixin, QWidget):
                 continue
             mark = model.get_cell_mark(row, col)
             old_pos = mark.pos
-            xa = data[col - 1]
+            xa = data.iloc[col - 1]
             if np.isnan(xa):
                 xa = 0
             mark.set_pos((xa, mark.ya))
@@ -1117,9 +1119,11 @@ class SingleCrossMarksEditor(MultiCrossMarksEditor):
         self.straditizer().update_samples(remove=False)
 
     def _fit2selection(self, event):
+        from straditize.straditizer import get_toolbar_mode
+
         model = self.table.model()
         if (not event.inaxes or event.button != 1 or
-                model.fig.canvas.manager.toolbar.mode != ''):
+                get_toolbar_mode(model.fig) != ''):
             return
         y = int(np.round(event.ydata)) - model._y0
         data = self.table.full_df.loc[y]
@@ -1132,7 +1136,7 @@ class SingleCrossMarksEditor(MultiCrossMarksEditor):
                 continue
             mark = model.get_cell_mark(row, col)
             old_pos = mark.pos
-            x = data[col - 1]
+            x = data.iloc[col - 1]
             if np.isnan(x):
                 x = 0
             xa = mark.xa

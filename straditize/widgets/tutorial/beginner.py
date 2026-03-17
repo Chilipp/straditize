@@ -26,7 +26,8 @@ import shutil
 import glob
 from itertools import chain
 import numpy as np
-from straditize.widgets import StraditizerControlBase, get_icon, get_doc_file
+from straditize.widgets import (
+    StraditizerControlBase, get_icon, get_doc_file, should_auto_show_docs)
 import straditize.cross_mark as cm
 from PyQt5 import QtWidgets, QtCore, QtGui
 from psyplot_gui.common import get_icon as get_psy_icon, DockMixin
@@ -296,6 +297,8 @@ class TutorialPage(object):
     def show(self):
         """Show the page and browse the :attr:`filename` in the tutorial docs
         """
+        if not should_auto_show_docs():
+            return
         try:
             self.lock_viewer(False)
             self.tutorial.tutorial_docs.browse(self.filename)
@@ -445,6 +448,8 @@ class Tutorial(StraditizerControlBase, TutorialPage):
 
     def show(self):
         """Show the documentation of the tutorial"""
+        if not should_auto_show_docs():
+            return
         intro, files = self.get_doc_files()
         self.filename = osp.splitext(osp.basename(intro))[0]
         with open(intro) as f:
